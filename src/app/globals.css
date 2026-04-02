@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0e0e0e;
+  --foreground: #ffffff;
+  --surface: #0e0e0e;
+  --surface-card: #1a1a1a;
+  --surface-low: #131313;
+  --surface-elevated: #262626;
+  --surface-high: #20201f;
+  --primary: #cafd00;
+  --primary-dim: #beee00;
+  --primary-text: #f3ffca;
+  --on-primary: #3a4a00;
+  --secondary: #00f4fe;
+  --on-secondary: #00575b;
+  --on-surface: #ffffff;
+  --on-surface-variant: #adaaaa;
+  --border: #484847;
+  --border-dim: #2a2a2a;
+  --error: #ff7351;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-card: var(--surface-card);
+  --color-surface-low: var(--surface-low);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-high: var(--surface-high);
+  --color-primary: var(--primary);
+  --color-primary-dim: var(--primary-dim);
+  --color-primary-text: var(--primary-text);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-border: var(--border);
+  --color-border-dim: var(--border-dim);
+  --color-error: var(--error);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  overscroll-behavior: none;
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.fill-icon {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+/* Kinetic gradient */
+.kinetic-gradient {
+  background: linear-gradient(135deg, #f3ffca 0%, #cafd00 100%);
+}
+.kinetic-text {
+  background: linear-gradient(135deg, #f3ffca 0%, #cafd00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass-nav {
+  background: rgba(14, 14, 14, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 15px rgba(202, 253, 0, 0.35);
+}
+.glow-secondary {
+  box-shadow: 0 0 10px rgba(0, 244, 254, 0.35);
+}
+.bar-glow {
+  box-shadow: 0 0 8px rgba(0, 244, 254, 0.5);
+}
+.bar-glow-primary {
+  box-shadow: 0 0 10px rgba(202, 253, 0, 0.45);
+}
