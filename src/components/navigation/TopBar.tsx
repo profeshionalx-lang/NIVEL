@@ -1,4 +1,5 @@
 import { Profile } from "@/lib/types";
+import LogoutButton from "./LogoutButton";
 
 interface TopBarProps {
   profile: Pick<Profile, "full_name" | "avatar_url" | "role">;
@@ -38,10 +39,8 @@ export default function TopBar({ profile }: TopBarProps) {
         </span>
       </div>
 
-      {/* Right: Notifications */}
-      <button className="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface transition-colors">
-        <span className="material-symbols-outlined">notifications</span>
-      </button>
+      {/* Right: Logout */}
+      <LogoutButton />
     </header>
   );
 }
