@@ -139,7 +139,7 @@ export default function NewGoalPage() {
       <main className="px-6 pt-6 pb-36">
         <div className="mb-8">
           <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">
-            Найди свою{" "}
+            Опиши свою{" "}
             <span className="kinetic-text">проблему.</span>
           </h1>
         </div>
@@ -147,16 +147,13 @@ export default function NewGoalPage() {
         {/* Search input — always visible */}
         <div className="mb-4">
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">
-              search
-            </span>
-            <input
-              type="text"
+            <textarea
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Опиши проблему..."
               autoFocus
-              className="w-full bg-surface-card rounded-2xl pl-12 pr-4 py-4 text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none border border-border/40 focus:border-primary/50 transition-colors"
+              rows={3}
+              className="w-full bg-surface-card rounded-2xl px-5 py-4 text-base text-on-surface placeholder:text-on-surface-variant/50 outline-none border border-border/40 focus:border-primary/50 transition-colors resize-none"
             />
             {isSearching && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -190,30 +187,8 @@ export default function NewGoalPage() {
           </div>
         )}
 
-        {/* Submit button */}
-        <div className="mb-10">
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
-            className={`w-full py-4 rounded-2xl font-black text-lg transition-all ${
-              canSubmit
-                ? "kinetic-gradient text-on-primary active:scale-[0.98]"
-                : "bg-surface-elevated text-on-surface-variant opacity-50 cursor-not-allowed"
-            }`}
-            style={
-              canSubmit
-                ? {
-                    boxShadow:
-                      "0 10px 30px rgba(202,253,0,0.25), 0 4px 12px rgba(0,0,0,0.4)",
-                  }
-                : undefined
-            }
-          >
-            {submitting ? "Создаём..." : "Создать цель"}
-          </button>
-        </div>
-
-        {/* All problems list */}
+        {/* All problems list — only when not searching */}
+        {searchQuery.length < 3 && searchResults.length === 0 && (
         <div>
           <p className="text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-4">
             Все проблемы
@@ -287,7 +262,31 @@ export default function NewGoalPage() {
             })}
           </div>
         </div>
+        )}
       </main>
+
+      {/* Fixed bottom button */}
+      <div className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-gradient-to-t from-background via-background to-transparent z-20">
+        <button
+          onClick={handleSubmit}
+          disabled={!canSubmit || submitting}
+          className={`w-full py-4 rounded-2xl font-black text-lg transition-all ${
+            canSubmit
+              ? "kinetic-gradient text-on-primary active:scale-[0.98]"
+              : "bg-surface-elevated text-on-surface-variant opacity-50 cursor-not-allowed"
+          }`}
+          style={
+            canSubmit
+              ? {
+                  boxShadow:
+                    "0 10px 30px rgba(202,253,0,0.25), 0 4px 12px rgba(0,0,0,0.4)",
+                }
+              : undefined
+          }
+        >
+          {submitting ? "Создаём..." : "Создать цель"}
+        </button>
+      </div>
     </div>
   );
 }
