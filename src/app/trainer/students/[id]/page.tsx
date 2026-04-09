@@ -66,6 +66,7 @@ export default async function TrainerStudentDetailPage({
 
       return {
         id: goal.id as string,
+        custom_problem: (goal.custom_problem as string) || null,
         status: goal.status as string,
         problems,
         completed_sessions: count || 0,
@@ -176,14 +177,20 @@ export default async function TrainerStudentDetailPage({
                       + Занятие
                     </Link>
                   </div>
-                  {goal.problems.map((p) => (
-                    <p
-                      key={p.id}
-                      className="text-sm font-semibold leading-snug text-on-surface mb-1"
-                    >
-                      {p.name}
+                  {goal.problems.length > 0 ? (
+                    goal.problems.map((p) => (
+                      <p
+                        key={p.id}
+                        className="text-sm font-semibold leading-snug text-on-surface mb-1"
+                      >
+                        {p.name}
+                      </p>
+                    ))
+                  ) : goal.custom_problem ? (
+                    <p className="text-sm font-semibold leading-snug text-on-surface mb-1">
+                      {goal.custom_problem}
                     </p>
-                  ))}
+                  ) : null}
                 </div>
               ))}
             </div>

@@ -41,6 +41,7 @@ export interface Exercise {
 export interface Goal {
   id: string;
   user_id: string;
+  custom_problem: string | null;
   status: "active" | "completed" | "cancelled";
   created_at: string;
 }

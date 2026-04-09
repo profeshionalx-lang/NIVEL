@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createGoal(
-  problemId: number
+  problemId: number | null,
+  customProblem: string | null
 ): Promise<{ success: true; goalId: string } | { success: false; error: string }> {
   try {
     const supabase = await createClient();
@@ -20,7 +21,7 @@ export async function createGoal(
 
     const { data: goal, error: goalError } = await supabase
       .from("goals")
-      .insert({ user_id: user.id })
+      .insert({ user_id: user.id, custom_problem: customProblem })
       .select("id")
       .single();
 
@@ -28,12 +29,14 @@ export async function createGoal(
       return { success: false, error: goalError?.message ?? "Failed to create goal" };
     }
 
-    const { error: problemsError } = await supabase
-      .from("goal_problems")
-      .insert({ goal_id: goal.id, problem_id: problemId });
+    if (problemId) {
+      const { error: problemsError } = await supabase
+        .from("goal_problems")
+        .insert({ goal_id: goal.id, problem_id: problemId });
 
-    if (problemsError) {
-      return { success: false, error: problemsError.message };
+      if (problemsError) {
+        return { success: false, error: problemsError.message };
+      }
     }
 
     revalidatePath("/dashboard");

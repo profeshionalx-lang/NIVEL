@@ -52,6 +52,7 @@ export default async function DashboardPage() {
 
       return {
         id: goal.id as string,
+        custom_problem: (goal.custom_problem as string) || null,
         status: goal.status as string,
         created_at: goal.created_at as string,
         problems,
@@ -162,28 +163,38 @@ export default async function DashboardPage() {
                         {goal.completed_sessions} занятий
                       </span>
                     </div>
-                    {goal.problems.map((p) => (
-                      <p
-                        key={p.id}
-                        className="text-sm font-semibold leading-snug text-on-surface mb-1"
-                      >
-                        {p.name.length > 50
-                          ? p.name.slice(0, 50) + "..."
-                          : p.name}
+                    {goal.problems.length > 0 ? (
+                      <>
+                        {goal.problems.map((p) => (
+                          <p
+                            key={p.id}
+                            className="text-sm font-semibold leading-snug text-on-surface mb-1"
+                          >
+                            {p.name.length > 50
+                              ? p.name.slice(0, 50) + "..."
+                              : p.name}
+                          </p>
+                        ))}
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {[
+                            ...new Set(goal.problems.map((p) => p.category_name)),
+                          ].map((cat) => (
+                            <span
+                              key={cat}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-high text-on-surface-variant"
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : goal.custom_problem ? (
+                      <p className="text-sm font-semibold leading-snug text-on-surface mb-1">
+                        {goal.custom_problem.length > 50
+                          ? goal.custom_problem.slice(0, 50) + "..."
+                          : goal.custom_problem}
                       </p>
-                    ))}
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {[
-                        ...new Set(goal.problems.map((p) => p.category_name)),
-                      ].map((cat) => (
-                        <span
-                          key={cat}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-high text-on-surface-variant"
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
+                    ) : null}
                   </div>
                 ))}
             </div>
