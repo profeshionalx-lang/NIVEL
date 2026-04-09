@@ -41,7 +41,6 @@ export interface Exercise {
 export interface Goal {
   id: string;
   user_id: string;
-  session_count: number;
   status: "active" | "completed" | "cancelled";
   created_at: string;
 }

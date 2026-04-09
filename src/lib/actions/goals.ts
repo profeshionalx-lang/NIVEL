@@ -4,8 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createGoal(
-  problemIds: number[],
-  sessionCount: number
+  problemId: number
 ): Promise<{ success: true; goalId: string } | { success: false; error: string }> {
   try {
     const supabase = await createClient();
@@ -21,7 +20,7 @@ export async function createGoal(
 
     const { data: goal, error: goalError } = await supabase
       .from("goals")
-      .insert({ user_id: user.id, session_count: sessionCount })
+      .insert({ user_id: user.id })
       .select("id")
       .single();
 
@@ -29,14 +28,9 @@ export async function createGoal(
       return { success: false, error: goalError?.message ?? "Failed to create goal" };
     }
 
-    const goalProblems = problemIds.map((problemId) => ({
-      goal_id: goal.id,
-      problem_id: problemId,
-    }));
-
     const { error: problemsError } = await supabase
       .from("goal_problems")
-      .insert(goalProblems);
+      .insert({ goal_id: goal.id, problem_id: problemId });
 
     if (problemsError) {
       return { success: false, error: problemsError.message };

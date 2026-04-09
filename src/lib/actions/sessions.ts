@@ -176,21 +176,7 @@ export async function createSession(
       }
     }
 
-    // 7. Check if goal is now completed
-    const { data: goal, error: goalError } = await supabase
-      .from("goals")
-      .select("session_count")
-      .eq("id", goalId)
-      .single();
-
-    if (!goalError && goal && sessionNumber >= goal.session_count) {
-      await supabase
-        .from("goals")
-        .update({ status: "completed" })
-        .eq("id", goalId);
-    }
-
-    // 8. Revalidate paths
+    // 7. Revalidate paths
     revalidatePath("/dashboard");
     revalidatePath(`/sessions/${session.id}`);
     revalidatePath(`/goals/${goalId}`);

@@ -52,7 +52,6 @@ export default async function DashboardPage() {
 
       return {
         id: goal.id as string,
-        session_count: goal.session_count as number,
         status: goal.status as string,
         created_at: goal.created_at as string,
         problems,
@@ -148,13 +147,7 @@ export default async function DashboardPage() {
               className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5"
               style={{ scrollbarWidth: "none" }}
             >
-              {goals.map((goal) => {
-                const progress = goal.session_count > 0
-                  ? Math.round(
-                      (goal.completed_sessions / goal.session_count) * 100
-                    )
-                  : 0;
-                return (
+              {goals.map((goal) => (
                   <div
                     key={goal.id}
                     className="flex-shrink-0 w-52 bg-surface-card rounded-2xl p-4"
@@ -166,7 +159,7 @@ export default async function DashboardPage() {
                         style={{ boxShadow: "0 0 6px #cafd00" }}
                       />
                       <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                        {goal.completed_sessions} / {goal.session_count}
+                        {goal.completed_sessions} занятий
                       </span>
                     </div>
                     {goal.problems.map((p) => (
@@ -191,16 +184,8 @@ export default async function DashboardPage() {
                         </span>
                       ))}
                     </div>
-                    {/* Progress bar */}
-                    <div className="mt-3 h-1 w-full bg-surface-elevated rounded-full">
-                      <div
-                        className="h-full kinetic-gradient rounded-full"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
                   </div>
-                );
-              })}
+                ))}
             </div>
           </section>
 

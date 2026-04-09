@@ -28,7 +28,7 @@ export default async function SessionDetailPage({
   // Fetch session with goal info
   const { data: session } = await supabase
     .from("sessions")
-    .select("*, goals(user_id, session_count)")
+    .select("*, goals(user_id)")
     .eq("id", id)
     .single();
 

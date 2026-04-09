@@ -66,7 +66,6 @@ export default async function TrainerStudentDetailPage({
 
       return {
         id: goal.id as string,
-        session_count: goal.session_count as number,
         status: goal.status as string,
         problems,
         completed_sessions: count || 0,
@@ -168,7 +167,7 @@ export default async function TrainerStudentDetailPage({
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                      {goal.completed_sessions} / {goal.session_count} занятий
+                      {goal.completed_sessions} занятий
                     </span>
                     <Link
                       href={`/trainer/sessions/new?goalId=${goal.id}&studentId=${studentId}`}
@@ -185,19 +184,6 @@ export default async function TrainerStudentDetailPage({
                       {p.name}
                     </p>
                   ))}
-                  <div className="mt-3 h-1.5 w-full bg-surface-elevated rounded-full">
-                    <div
-                      className="h-full kinetic-gradient rounded-full bar-glow-primary"
-                      style={{
-                        width: `${
-                          goal.session_count > 0
-                            ? (goal.completed_sessions / goal.session_count) *
-                              100
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </div>
                 </div>
               ))}
             </div>
