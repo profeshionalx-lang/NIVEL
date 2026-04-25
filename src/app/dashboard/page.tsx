@@ -131,7 +131,10 @@ export default async function DashboardPage() {
   const firstName = profile.full_name?.split(" ")[0] || "Player";
   const isEmpty = goals.length === 0 && skillProgress.length === 0;
 
-  const planGoal = goals.find((g) => g.session_count > 0) ?? goals[0];
+  const planGoal =
+    goals.find((g) => g.total_sessions > 0) ??
+    goals.find((g) => g.session_count > 0) ??
+    goals[0];
   const planPercent = planGoal && planGoal.session_count > 0
     ? Math.min(100, Math.round((planGoal.total_sessions / planGoal.session_count) * 100))
     : 0;
