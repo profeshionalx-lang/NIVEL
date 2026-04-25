@@ -48,7 +48,7 @@ export default async function DashboardLayout({
 
       <main className="px-5 pt-4 pb-36">{children}</main>
 
-      <BottomNav role={typedProfile.role} currentPath="/dashboard" />
+      <BottomNav role={typedProfile.role} />
     </div>
   );
 }

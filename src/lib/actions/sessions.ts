@@ -190,123 +190,82 @@ export async function createSession(
   }
 }
 
-export async function submitStudentInsight(
-  sessionId: string,
-  insight: string
-): Promise<{ success: true } | { success: false; error: string }> {
-  try {
-    const supabase = await createClient();
+/**
+ * Marks a session as completed if (a) trainer has finished reviewing insight cards
+ * and (b) every approved card has a student_decision. Safe to call repeatedly.
+ */
+export async function maybeCompleteSession(
+  sessionId: string
+): Promise<{ completed: boolean }> {
+  const supabase = await createClient();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("status, trainer_review_completed")
+    .eq("id", sessionId)
+    .single();
 
-    if (authError || !user) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    // Fetch current session to check if trainer_notes already exists
-    const { data: session, error: fetchError } = await supabase
-      .from("sessions")
-      .select("trainer_notes, goal_id")
-      .eq("id", sessionId)
-      .single();
-
-    if (fetchError || !session) {
-      return { success: false, error: fetchError?.message ?? "Session not found" };
-    }
-
-    const updateData: Record<string, unknown> = { student_insight: insight };
-
-    if (session.trainer_notes) {
-      updateData.status = "completed";
-      updateData.completed_at = new Date().toISOString();
-    }
-
-    const { error: updateError } = await supabase
-      .from("sessions")
-      .update(updateData)
-      .eq("id", sessionId);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-
-    revalidatePath("/dashboard");
-    revalidatePath(`/sessions/${sessionId}`);
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
-    };
+  if (!session || session.status === "completed") {
+    return { completed: session?.status === "completed" };
   }
+
+  if (!session.trainer_review_completed) {
+    return { completed: false };
+  }
+
+  const { count: pending } = await supabase
+    .from("insight_cards")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", sessionId)
+    .eq("trainer_status", "approved")
+    .is("student_decision", null);
+
+  if ((pending ?? 0) > 0) {
+    return { completed: false };
+  }
+
+  await supabase
+    .from("sessions")
+    .update({ status: "completed", completed_at: new Date().toISOString() })
+    .eq("id", sessionId);
+
+  return { completed: true };
 }
 
-export async function submitTrainerNotes(
+export async function setTrainerReviewCompleted(
   sessionId: string,
-  notes: string
+  completed: boolean
 ): Promise<{ success: true } | { success: false; error: string }> {
-  try {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    // Verify trainer role
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-      return { success: false, error: "Not authenticated" };
-    }
+  if (!user) return { success: false, error: "Not authenticated" };
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
-    if (profileError || !profile || profile.role !== "trainer") {
-      return { success: false, error: "Only trainers can submit notes" };
-    }
-
-    // Fetch current session to check if student_insight already exists
-    const { data: session, error: fetchError } = await supabase
-      .from("sessions")
-      .select("student_insight, goal_id")
-      .eq("id", sessionId)
-      .single();
-
-    if (fetchError || !session) {
-      return { success: false, error: fetchError?.message ?? "Session not found" };
-    }
-
-    const updateData: Record<string, unknown> = { trainer_notes: notes };
-
-    if (session.student_insight) {
-      updateData.status = "completed";
-      updateData.completed_at = new Date().toISOString();
-    }
-
-    const { error: updateError } = await supabase
-      .from("sessions")
-      .update(updateData)
-      .eq("id", sessionId);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-
-    revalidatePath("/dashboard");
-    revalidatePath(`/sessions/${sessionId}`);
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
-    };
+  if (profile?.role !== "trainer") {
+    return { success: false, error: "Only trainers can finish review" };
   }
+
+  const { error } = await supabase
+    .from("sessions")
+    .update({ trainer_review_completed: completed })
+    .eq("id", sessionId);
+
+  if (error) return { success: false, error: error.message };
+
+  await maybeCompleteSession(sessionId);
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath(`/trainer/sessions/${sessionId}/insights`);
+
+  return { success: true };
 }

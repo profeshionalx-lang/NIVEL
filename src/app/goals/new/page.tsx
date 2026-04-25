@@ -110,7 +110,7 @@ export default function NewGoalPage() {
       router.push("/dashboard");
     } else {
       setSubmitting(false);
-      alert(result.error || "Ошибка при создании цели");
+      alert(result.error || "Failed to create goal");
     }
   };
 
@@ -139,8 +139,8 @@ export default function NewGoalPage() {
       <main className="px-6 pt-6 pb-36">
         <div className="mb-8">
           <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">
-            Опиши свою{" "}
-            <span className="kinetic-text">проблему.</span>
+            Describe your{" "}
+            <span className="kinetic-text">problem.</span>
           </h1>
         </div>
 
@@ -150,7 +150,7 @@ export default function NewGoalPage() {
             <textarea
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Опиши проблему..."
+              placeholder="Describe the problem..."
               autoFocus
               rows={3}
               className="w-full bg-surface-card rounded-2xl px-5 py-4 text-base text-on-surface placeholder:text-on-surface-variant/50 outline-none border border-border/40 focus:border-primary/50 transition-colors resize-none"
@@ -191,7 +191,7 @@ export default function NewGoalPage() {
         {searchQuery.length < 3 && searchResults.length === 0 && (
         <div>
           <p className="text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-4">
-            Все проблемы
+            All problems
           </p>
           <div className="space-y-3">
             {categories.map((category) => {
@@ -284,7 +284,7 @@ export default function NewGoalPage() {
               : undefined
           }
         >
-          {submitting ? "Создаём..." : "Создать цель"}
+          {submitting ? "Creating..." : "Create goal"}
         </button>
       </div>
     </div>

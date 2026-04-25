@@ -36,7 +36,7 @@ export default async function LibraryPage() {
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Библиотека
+          Library
         </span>
         <div className="w-10" />
       </header>
@@ -45,7 +45,7 @@ export default async function LibraryPage() {
         {/* Exercises */}
         <section>
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4">
-            Упражнения ({exercises?.length || 0})
+            Exercises ({exercises?.length || 0})
           </h3>
           {exercises && exercises.length > 0 ? (
             <div className="space-y-2">
@@ -60,14 +60,14 @@ export default async function LibraryPage() {
                   <span className="text-[10px] text-on-surface-variant">
                     {new Date(
                       exercise.created_at as string
-                    ).toLocaleDateString("ru-RU")}
+                    ).toLocaleDateString("en-US")}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-on-surface-variant text-sm bg-surface-card rounded-2xl p-4">
-              Упражнения создаются при добавлении занятий
+              Exercises are created as sessions are added
             </p>
           )}
         </section>
@@ -75,7 +75,7 @@ export default async function LibraryPage() {
         {/* Skills */}
         <section>
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4">
-            Скилы ({skills?.length || 0})
+            Skills ({skills?.length || 0})
           </h3>
           {skills && skills.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ export default async function LibraryPage() {
             </div>
           ) : (
             <p className="text-on-surface-variant text-sm bg-surface-card rounded-2xl p-4">
-              Скилы создаются при добавлении занятий
+              Skills are created as sessions are added
             </p>
           )}
         </section>

@@ -129,9 +129,9 @@ function NewSessionContent() {
     const result = await createSession(goalId, studentId, exerciseData);
 
     if (result.success) {
-      router.push(`/trainer/students/${studentId}`);
+      router.push(`/trainer/sessions/${result.sessionId}/insights`);
     } else {
-      alert(result.error || "Ошибка при создании занятия");
+      alert(result.error || "Failed to create session");
       setSubmitting(false);
     }
   };
@@ -146,7 +146,7 @@ function NewSessionContent() {
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Новое занятие
+          New session
         </span>
         <div className="w-10" />
       </header>
@@ -154,10 +154,10 @@ function NewSessionContent() {
       <main className="px-5 pt-6 pb-36 max-w-lg mx-auto space-y-6">
         <div>
           <p className="text-secondary font-black text-[10px] tracking-[0.2em] uppercase mb-2">
-            Упражнения
+            Exercises
           </p>
           <p className="text-on-surface-variant text-sm">
-            Добавьте упражнения и привяжите к ним скилы
+            Add exercises and bind skills to them
           </p>
         </div>
 
@@ -170,7 +170,7 @@ function NewSessionContent() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                  Упражнение {exIdx + 1}
+                  Exercise {exIdx + 1}
                 </span>
                 {exercises.length > 1 && (
                   <button
@@ -198,7 +198,7 @@ function NewSessionContent() {
                   onBlur={() =>
                     setTimeout(() => setActiveExerciseIndex(null), 200)
                   }
-                  placeholder="Название упражнения..."
+                  placeholder="Exercise name..."
                   className="w-full bg-surface-elevated rounded-xl px-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/50 border border-border/40 focus:border-primary focus:outline-none"
                 />
                 {activeExerciseIndex === exIdx &&
@@ -223,7 +223,7 @@ function NewSessionContent() {
               {/* Skills */}
               <div>
                 <p className="text-[10px] font-bold text-on-surface-variant mb-2">
-                  Скилы:
+                  Skills:
                 </p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {exercise.skillNames.map((skill) => (
@@ -267,7 +267,7 @@ function NewSessionContent() {
                         );
                       }
                     }}
-                    placeholder="Добавить скил (Enter)..."
+                    placeholder="Add a skill (Enter)..."
                     className="w-full bg-surface-elevated rounded-lg px-3 py-2 text-xs text-on-surface placeholder-on-surface-variant/50 border border-border/30 focus:border-secondary focus:outline-none"
                   />
                   {activeSkillIndex === exIdx &&
@@ -297,7 +297,7 @@ function NewSessionContent() {
           onClick={addExercise}
           className="w-full py-3 rounded-xl border border-dashed border-border text-on-surface-variant text-sm font-semibold hover:border-primary hover:text-primary transition-colors"
         >
-          + Добавить упражнение
+          + Add exercise
         </button>
 
         {/* Submit */}
@@ -318,7 +318,7 @@ function NewSessionContent() {
               : undefined
           }
         >
-          {submitting ? "Создаём..." : "Создать занятие"}
+          {submitting ? "Creating..." : "Create session"}
         </button>
       </main>
     </div>

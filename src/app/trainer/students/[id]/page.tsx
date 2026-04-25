@@ -117,7 +117,7 @@ export default async function TrainerStudentDetailPage({
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Ученик
+          Student
         </span>
         <div className="w-10" />
       </header>
@@ -152,11 +152,11 @@ export default async function TrainerStudentDetailPage({
         {/* Active Goals */}
         <section>
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4">
-            Активные цели
+            Active goals
           </h3>
           {activeGoals.length === 0 ? (
             <p className="text-on-surface-variant text-sm bg-surface-card rounded-2xl p-4">
-              Нет активных целей
+              No active goals
             </p>
           ) : (
             <div className="space-y-3">
@@ -168,13 +168,13 @@ export default async function TrainerStudentDetailPage({
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                      {goal.completed_sessions} занятий
+                      {goal.completed_sessions} {goal.completed_sessions === 1 ? "session" : "sessions"}
                     </span>
                     <Link
                       href={`/trainer/sessions/new?goalId=${goal.id}&studentId=${studentId}`}
                       className="text-secondary text-xs font-bold uppercase tracking-wider"
                     >
-                      + Занятие
+                      + Session
                     </Link>
                   </div>
                   {goal.problems.length > 0 ? (
@@ -201,7 +201,7 @@ export default async function TrainerStudentDetailPage({
         {skillProgress.length > 0 && (
           <section className="bg-surface-high rounded-3xl p-6">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-5">
-              Скилы
+              Skills
             </h3>
             <div className="space-y-5">
               {skillProgress.map((sp, i) => (
@@ -211,7 +211,7 @@ export default async function TrainerStudentDetailPage({
                   value={sp.points_in_level}
                   max={10}
                   variant={i % 2 === 0 ? "secondary" : "primary"}
-                  sublabel={`${sp.points_in_level}/10 · Ур.${sp.level}`}
+                  sublabel={`${sp.points_in_level}/10 · Lv.${sp.level}`}
                 />
               ))}
             </div>
@@ -222,7 +222,7 @@ export default async function TrainerStudentDetailPage({
         {sessions.length > 0 && (
           <section>
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4">
-              История занятий
+              Session history
             </h3>
             <div className="space-y-2">
               {sessions.map((session: Record<string, unknown>) => (
@@ -236,17 +236,17 @@ export default async function TrainerStudentDetailPage({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm">
-                      Занятие {session.session_number as number}
+                      Session {session.session_number as number}
                     </p>
                     <p className="text-[11px] text-on-surface-variant">
                       {new Date(
                         session.created_at as string
-                      ).toLocaleDateString("ru-RU", {
+                      ).toLocaleDateString("en-US", {
                         day: "numeric",
                         month: "long",
                       })}
-                      {!session.trainer_notes && (
-                        <span className="text-error ml-2">Нужны заметки</span>
+                      {!session.trainer_review_completed && (
+                        <span className="text-error ml-2">Needs review</span>
                       )}
                     </p>
                   </div>

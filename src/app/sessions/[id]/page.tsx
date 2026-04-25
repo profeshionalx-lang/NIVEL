@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import InsightForm from "@/components/sessions/InsightForm";
+import type { InsightCard } from "@/lib/types";
 
 export default async function SessionDetailPage({
   params,
@@ -25,7 +25,6 @@ export default async function SessionDetailPage({
 
   const isTrainer = profile?.role === "trainer";
 
-  // Fetch session with goal info
   const { data: session } = await supabase
     .from("sessions")
     .select("*, goals(user_id)")
@@ -34,7 +33,6 @@ export default async function SessionDetailPage({
 
   if (!session) redirect("/dashboard");
 
-  // Fetch exercises with skills
   const { data: sessionExercises } = await supabase
     .from("session_exercises")
     .select("*, exercises(name), session_exercise_skills(skill_id, skills(name))")
@@ -59,15 +57,25 @@ export default async function SessionDetailPage({
     }
   );
 
-  // Get all unique skills for this session
   const allSkills = [
     ...new Map(
       exercises.flatMap((e) => e.skills).map((s) => [s.id, s])
     ).values(),
   ];
 
-  const hasStudentInsight = !!session.student_insight;
-  const hasTrainerNotes = !!session.trainer_notes;
+  const { data: cards } = await supabase
+    .from("insight_cards")
+    .select("*")
+    .eq("session_id", id)
+    .order("created_at");
+
+  const allCards = (cards ?? []) as InsightCard[];
+  const approvedCards = allCards.filter((c) => c.trainer_status === "approved");
+  const pendingForStudent = approvedCards.filter(
+    (c) => c.student_decision === null
+  );
+  const takenCards = approvedCards.filter((c) => c.student_decision === "taken");
+  const skippedCards = approvedCards.filter((c) => c.student_decision === "skipped");
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,22 +84,21 @@ export default async function SessionDetailPage({
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Занятие {session.session_number}
+          Session {session.session_number}
         </span>
         <div className="w-10" />
       </header>
 
       <main className="px-5 pt-6 pb-36 max-w-[430px] mx-auto space-y-6">
-        {/* Session info */}
         <div>
           <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em] mb-1">
-            {session.status === "completed" ? "Завершено" : "Запланировано"}
+            {session.status === "completed" ? "Completed" : "Planned"}
           </p>
           <h1 className="text-3xl font-black tracking-tighter">
-            Занятие {session.session_number}
+            Session {session.session_number}
           </h1>
           <p className="text-on-surface-variant text-sm mt-1">
-            {new Date(session.created_at).toLocaleDateString("ru-RU", {
+            {new Date(session.created_at).toLocaleDateString("en-US", {
               day: "numeric",
               month: "long",
               year: "numeric",
@@ -99,10 +106,9 @@ export default async function SessionDetailPage({
           </p>
         </div>
 
-        {/* Exercises */}
         <section className="bg-surface-card rounded-3xl p-5">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
-            Упражнения
+            Exercises
           </p>
           <div className="space-y-3">
             {exercises.map((exercise) => (
@@ -127,17 +133,16 @@ export default async function SessionDetailPage({
             ))}
             {exercises.length === 0 && (
               <p className="text-on-surface-variant text-sm">
-                Упражнения пока не добавлены
+                No exercises added yet
               </p>
             )}
           </div>
         </section>
 
-        {/* Skill gains summary */}
         {allSkills.length > 0 && (
           <section className="bg-surface-high rounded-3xl p-5">
             <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3">
-              Прокачка скилов
+              Skill gains
             </p>
             <div className="flex flex-wrap gap-2">
               {allSkills.map((skill) => (
@@ -152,67 +157,83 @@ export default async function SessionDetailPage({
           </section>
         )}
 
-        {/* Insights */}
         <section className="space-y-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-            Инсайты
+            Insights
           </p>
 
-          {/* Student insight */}
-          {!isTrainer && !hasStudentInsight && (
-            <InsightForm
-              sessionId={id}
-              type="student"
-              placeholder="Что ты вынес из этого занятия? Напиши свой инсайт..."
-            />
+          {isTrainer && (
+            <Link
+              href={`/trainer/sessions/${id}/insights`}
+              className="block rounded-2xl bg-surface-card p-4 border border-border-dim"
+            >
+              <p className="text-sm font-bold text-on-surface">
+                {allCards.length === 0
+                  ? "Add insight cards"
+                  : `Manage cards (${allCards.length})`}
+              </p>
+              <p className="text-xs text-on-surface-variant mt-1">
+                {session.trainer_review_completed
+                  ? "Review marked as finished"
+                  : "Review still in progress"}
+              </p>
+            </Link>
           )}
 
-          {hasStudentInsight && (
-            <div className="bg-surface-card rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-secondary mb-2">
-                Мой инсайт
-              </p>
-              <p className="text-sm text-on-surface leading-relaxed">
-                {session.student_insight}
-              </p>
-            </div>
+          {!isTrainer && approvedCards.length === 0 && (
+            <p className="text-sm text-on-surface-variant">
+              Your trainer hasn&apos;t shared any insights yet.
+            </p>
           )}
 
-          {/* Trainer notes */}
-          {isTrainer && !hasTrainerNotes && (
-            <InsightForm
-              sessionId={id}
-              type="trainer"
-              placeholder="Заметки тренера: что получилось, над чем работать..."
-            />
+          {!isTrainer && pendingForStudent.length > 0 && (
+            <Link
+              href={`/sessions/${id}/insights`}
+              className="block rounded-2xl kinetic-gradient text-on-primary p-4 glow-primary"
+            >
+              <p className="font-black text-base">
+                Trainer sent {pendingForStudent.length}{" "}
+                {pendingForStudent.length === 1 ? "insight" : "insights"}
+              </p>
+              <p className="text-xs mt-1 opacity-80">Tap to review →</p>
+            </Link>
           )}
 
-          {hasTrainerNotes && (hasStudentInsight || isTrainer) && (
-            <div className="bg-surface-card rounded-2xl p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">
-                Заметки тренера
-              </p>
-              <p className="text-sm text-on-surface leading-relaxed">
-                {session.trainer_notes}
-              </p>
-            </div>
+          {!isTrainer && approvedCards.length > 0 && pendingForStudent.length === 0 && (
+            <p className="text-xs text-on-surface-variant uppercase tracking-widest">
+              All cards reviewed
+            </p>
           )}
 
-          {hasTrainerNotes && !hasStudentInsight && !isTrainer && (
-            <div className="bg-surface-card rounded-2xl p-4 relative overflow-hidden">
-              <div className="absolute inset-0 backdrop-blur-md bg-surface-card/80 flex items-center justify-center z-10">
-                <div className="text-center">
-                  <span className="material-symbols-outlined text-primary text-3xl mb-2">
-                    lock
-                  </span>
-                  <p className="text-on-surface-variant text-xs">
-                    Напиши свой инсайт чтобы увидеть заметки тренера
+          {takenCards.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+                Taken ({takenCards.length})
+              </p>
+              {takenCards.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-2xl bg-surface-card p-3 border-l-2 border-primary"
+                >
+                  <p className="text-sm text-on-surface">
+                    {c.student_edited_text || c.front_text}
                   </p>
                 </div>
-              </div>
-              <p className="text-sm text-on-surface blur-sm">
-                Заметки тренера будут доступны после написания инсайта
+              ))}
+            </div>
+          )}
+
+          {skippedCards.length > 0 && !isTrainer && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                Skipped ({skippedCards.length}) — review again any time
               </p>
+              <Link
+                href={`/sessions/${id}/insights?include=skipped`}
+                className="block text-xs text-secondary font-bold uppercase tracking-wider"
+              >
+                Re-open skipped →
+              </Link>
             </div>
           )}
         </section>

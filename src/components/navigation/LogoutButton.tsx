@@ -17,7 +17,7 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       className="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant hover:text-error transition-colors"
-      title="Выйти"
+      title="Log out"
     >
       <span className="material-symbols-outlined">logout</span>
     </button>

@@ -63,8 +63,36 @@ export interface Session {
   trainer_notes: string | null;
   student_insight: string | null;
   status: "planned" | "completed";
+  trainer_review_completed: boolean;
   completed_at: string | null;
   created_at: string;
+}
+
+export type InsightCardSource = "manual" | "ai";
+export type InsightTrainerStatus = "draft" | "approved" | "rejected";
+export type InsightStudentDecision = "taken" | "skipped";
+
+export interface InsightCard {
+  id: string;
+  session_id: string;
+  student_id: string;
+  trainer_id: string;
+  problem_id: number | null;
+  category_id: number | null;
+  front_text: string;
+  context_text: string | null;
+  source: InsightCardSource;
+  trainer_status: InsightTrainerStatus;
+  student_decision: InsightStudentDecision | null;
+  student_edited_text: string | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface InsightCardWithRelations extends InsightCard {
+  problem: { id: number; name: string } | null;
+  category: { id: number; name: string } | null;
+  session: { id: string; session_number: number; created_at: string } | null;
 }
 
 export interface SessionExercise {
