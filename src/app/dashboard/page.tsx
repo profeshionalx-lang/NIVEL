@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { calculateSkillLevel } from "@/lib/types";
 import Link from "next/link";
-import ProgressBar from "@/components/ui/ProgressBar";
+import SkillWeb from "@/components/ui/SkillWeb";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -317,25 +317,35 @@ export default async function DashboardPage() {
             </div>
           </section>
 
-          {skillProgress.length > 0 && (
-            <section className="bg-surface-high rounded-3xl p-6">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-5">
-                Skill progression
-              </h3>
-              <div className="space-y-5">
-                {skillProgress.map((sp, i) => (
-                  <ProgressBar
-                    key={sp.skill_id}
-                    label={sp.skill_name}
-                    value={sp.points_in_level}
-                    max={10}
-                    variant={i % 2 === 0 ? "secondary" : "primary"}
-                    sublabel={`${sp.points_in_level}/10 · Lv.${sp.level}`}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+          {(() => {
+            const WEB_ORDER = [
+              "Overheads",
+              "Positioning",
+              "Footwork",
+              "Communication",
+              "Decision-making",
+              "Tactics",
+              "Glass play",
+              "Defence",
+            ];
+            const map = new Map(
+              skillProgress.map((sp) => [sp.skill_name, sp.points])
+            );
+            const slices = WEB_ORDER.map((label) => ({
+              label,
+              value: map.get(label) ?? 0,
+            }));
+            const hasAny = slices.some((s) => s.value > 0);
+            if (!hasAny) return null;
+            return (
+              <section className="bg-surface-high rounded-3xl p-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-2">
+                  Skill web
+                </h3>
+                <SkillWeb slices={slices} max={10} />
+              </section>
+            );
+          })()}
 
           {sessions.length > 0 && (
             <section>
