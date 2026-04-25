@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html class="dark" lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel Coaching</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface": "#0e0e0e",
+        "surface-container-lowest": "#000000",
+        "surface-container-low": "#131313",
+        "surface-container": "#1a1a1a",
+        "surface-container-high": "#20201f",
+        "surface-container-highest": "#262626",
+        "surface-variant": "#262626",
+        "outline": "#767575",
+        "outline-variant": "#484847",
+        "primary": "#f3ffca",
+        "primary-container": "#cafd00",
+        "primary-fixed": "#cafd00",
+        "primary-dim": "#beee00",
+        "on-primary": "#516700",
+        "on-primary-container": "#4a5e00",
+        "secondary": "#00f4fe",
+        "secondary-container": "#00696e",
+        "on-secondary": "#00575b",
+        "on-secondary-container": "#dffdff",
+        "tertiary": "#ffeea5",
+        "tertiary-container": "#fce047",
+        "on-tertiary": "#665800",
+        "on-surface": "#ffffff",
+        "on-surface-variant": "#adaaaa",
+        "background": "#0e0e0e",
+        "on-background": "#ffffff",
+        "error": "#ff7351",
+        "error-container": "#b92902",
+      },
+      fontFamily: { "headline": ["Inter"], "body": ["Inter"] },
+      borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px" },
+    }
+  }
+}
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .fill-icon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  ::-webkit-scrollbar { width: 0; background: transparent; }
+  body { font-family: 'Inter', sans-serif; min-height: 100dvh; overscroll-behavior: none; }
+
+  .kinetic-gradient { background: linear-gradient(135deg, #f3ffca 0%, #cafd00 100%); }
+  .kinetic-text { background: linear-gradient(135deg, #f3ffca 0%, #cafd00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .glass-nav { background: rgba(14,14,14,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+
+  /* Screen transitions */
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; transition: transform 0.38s cubic-bezier(0.2,1,0.3,1), opacity 0.28s ease; will-change: transform; }
+  .screen.hidden-right  { transform: translateX(100%); pointer-events: none; }
+  .screen.hidden-left   { transform: translateX(-28px); opacity: 0.4; pointer-events: none; }
+  .screen.visible       { transform: translateX(0); opacity: 1; pointer-events: auto; }
+
+  /* Glow effects */
+  .glow-primary { box-shadow: 0 0 15px rgba(202,253,0,0.35); }
+  .glow-secondary { box-shadow: 0 0 10px rgba(0,244,254,0.35); }
+  .btn-shadow { box-shadow: 0 10px 30px rgba(202,253,0,0.25), 0 4px 12px rgba(0,0,0,0.4); }
+
+  /* Chip toggle */
+  .chip-active { background: #cafd00; color: #3a4a00; box-shadow: 0 4px 14px rgba(202,253,0,0.3); }
+  .chip-inactive { background: #20201f; color: #adaaaa; border: 1px solid rgba(72,72,71,0.4); }
+  .chip-inactive:hover { border-color: #cafd00; color: #f3ffca; }
+
+  /* Radio cards */
+  .radio-card input:checked + div { border-color: #cafd00; background: rgba(202,253,0,0.06); }
+  .side-tab input:checked + div { background: #cafd00; color: #3a4a00; }
+
+  /* Intensity cards */
+  .intensity-card { transition: all 0.25s cubic-bezier(0.2,1,0.3,1); }
+  .intensity-card.selected-focus { box-shadow: 0 0 0 2px #cafd00, 0 0 24px rgba(202,253,0,0.15); background: rgba(202,253,0,0.05); }
+  .intensity-card.selected-balance { box-shadow: 0 0 0 2px #00f4fe, 0 0 24px rgba(0,244,254,0.12); background: rgba(0,244,254,0.04); }
+
+  /* Problem checkboxes */
+  .problem-row input:checked ~ .check-box { background: #cafd00; border-color: #cafd00; }
+  .problem-row input:checked ~ .check-box span { opacity: 1; }
+  .problem-row input:checked ~ .problem-name { color: #f3ffca; }
+  .problem-row input:checked ~ .problem-cat { color: #cafd00; }
+
+  /* Skill bar glow */
+  .bar-glow { box-shadow: 0 0 8px rgba(0,244,254,0.5); }
+  .bar-glow-primary { box-shadow: 0 0 10px rgba(202,253,0,0.45); }
+
+  /* Textarea */
+  textarea:focus { outline: none; border-color: #cafd00 !important; }
+
+  /* ─── Insight Cards ─── */
+  .insight-card-mini {
+    background: linear-gradient(145deg, #1a1a1a 0%, #131313 100%);
+    border: 1px solid rgba(72,72,71,0.4);
+    transition: all 0.2s ease;
+  }
+  .insight-card-mini:active { transform: scale(0.97); }
+  .insight-card-mini.taken {
+    background: linear-gradient(145deg, rgba(202,253,0,0.08) 0%, rgba(202,253,0,0.02) 100%);
+    border-color: rgba(202,253,0,0.4);
+  }
+  .insight-card-mini.taken .taken-badge { display: flex; }
+  .insight-card-mini .taken-badge { display: none; }
+
+  /* ─── Tinder Stack ─── */
+  .tinder-stack {
+    position: relative;
+    width: 100%;
+    height: 460px;
+    perspective: 1000px;
+  }
+  .tinder-card {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(155deg, #20201f 0%, #131313 100%);
+    border: 1px solid rgba(72,72,71,0.5);
+    border-radius: 1.5rem;
+    padding: 2rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    cursor: grab;
+    transition: transform 0.4s cubic-bezier(0.2,1,0.3,1), opacity 0.3s ease;
+    will-change: transform, opacity;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .tinder-card:active { cursor: grabbing; }
+  .tinder-card.behind-1 { transform: scale(0.94) translateY(12px); opacity: 0.55; pointer-events: none; }
+  .tinder-card.behind-2 { transform: scale(0.88) translateY(24px); opacity: 0.25; pointer-events: none; }
+  .tinder-card.swipe-right { transform: translateX(140%) rotate(20deg); opacity: 0; }
+  .tinder-card.swipe-left  { transform: translateX(-140%) rotate(-20deg); opacity: 0; }
+  .tinder-card.dragging { transition: none; }
+
+  /* Swipe glow indicators on card */
+  .tinder-card .glow-yes,
+  .tinder-card .glow-no {
+    position: absolute;
+    top: 1.25rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 900;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    border: 2px solid currentColor;
+  }
+  .tinder-card .glow-yes { right: 1.5rem; color: #cafd00; transform: rotate(12deg); }
+  .tinder-card .glow-no  { left:  1.5rem; color: #ff7351; transform: rotate(-12deg); }
+
+  /* Vault grid card flip */
+  .vault-card {
+    aspect-ratio: 3 / 4;
+    perspective: 1000px;
+    cursor: pointer;
+  }
+  .vault-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.2,1,0.3,1);
+    transform-style: preserve-3d;
+  }
+  .vault-card.flipped .vault-card-inner { transform: rotateY(180deg); }
+  .vault-card-front, .vault-card-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 1rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .vault-card-front {
+    background: linear-gradient(155deg, #20201f 0%, #131313 100%);
+    border: 1px solid rgba(72,72,71,0.45);
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+  .vault-card-back {
+    background: linear-gradient(155deg, rgba(202,253,0,0.08) 0%, #131313 80%);
+    border: 1px solid rgba(202,253,0,0.3);
+    transform: rotateY(180deg);
+    padding: 0.65rem 0.7rem;
+    gap: 0.35rem;
+  }
+  .vault-card-back-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -0.2rem;
+    padding: 0 0.2rem;
+  }
+  .vault-card-back-scroll::-webkit-scrollbar { display: none; }
+  /* Front title clamp */
+  .vault-front-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  /* Category color codes */
+  .cat-tech     { --cat: #00f4fe; }
+  .cat-decision { --cat: #cafd00; }
+  .cat-position { --cat: #ff9500; }
+  .cat-meta     { --cat: #c084fc; }
+  .cat-physical { --cat: #ff7351; }
+  .cat-partner  { --cat: #fce047; }
+  .cat-situation{ --cat: #4ade80; }
+
+  .cat-dot { background: var(--cat); box-shadow: 0 0 8px var(--cat); }
+  .cat-text { color: var(--cat); }
+  .cat-border-top { border-top: 2px solid var(--cat); }
+
+  /* Vault category filter chip */
+  .cat-chip { transition: all 0.2s ease; }
+  .cat-chip-active {
+    background: var(--cat, #cafd00);
+    color: #0e0e0e;
+    box-shadow: 0 0 12px var(--cat, rgba(202,253,0,0.4));
+  }
+
+  /* Tinder card edit mode */
+  .tinder-card.editing { cursor: default; }
+  .tinder-card.editing .glow-yes,
+  .tinder-card.editing .glow-no { display: none; }
+  .tinder-edit-textarea {
+    width: 100%;
+    background: rgba(202,253,0,0.04);
+    border: 2px solid rgba(202,253,0,0.5);
+    border-radius: 0.75rem;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-style: italic;
+    padding: 0.75rem;
+    resize: none;
+    outline: none;
+    min-height: 110px;
+  }
+  .tinder-edit-textarea:focus { border-color: #cafd00; box-shadow: 0 0 16px rgba(202,253,0,0.25); }
+  .edit-bar {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10;
+  }
+  .pulse-secondary { animation: pulseSec 2s ease-in-out infinite; }
+  @keyframes pulseSec {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,244,254,0.5); }
+    50%      { box-shadow: 0 0 0 10px rgba(0,244,254,0); }
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface overflow-hidden" style="height:100dvh;">
+
+<div style="position:relative;width:100%;height:100dvh;overflow:hidden;max-width:430px;margin:0 auto;background:#0e0e0e;">
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1 — DASHBOARD (HOME)
+════════════════════════════════════════════ -->
+<div class="screen visible" id="s-dashboard">
+  <!-- TopBar -->
+  <header class="sticky top-0 z-30 glass-nav flex justify-between items-center px-6 h-16">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full overflow-hidden border-2 border-primary-container">
+        <div class="w-full h-full bg-surface-container-highest flex items-center justify-center text-sm font-black text-primary-container">АЛ</div>
+      </div>
+      <span class="text-lg font-black text-primary-container uppercase italic tracking-tight">Nivel</span>
+    </div>
+    <button class="text-primary-container">
+      <span class="material-symbols-outlined">notifications</span>
+    </button>
+  </header>
+
+  <main class="px-5 pt-4 pb-36 space-y-6">
+    <!-- Greeting -->
+    <div>
+      <p class="text-on-surface-variant text-sm font-medium">Добро пожаловать,</p>
+      <h1 class="text-4xl font-black tracking-tighter leading-none mt-0.5">Алексей <span class="kinetic-text">👋</span></h1>
+    </div>
+
+    <!-- Plan Progress -->
+    <section class="bg-surface-container-low rounded-3xl p-6 relative overflow-hidden">
+      <div class="absolute -right-6 -bottom-8 opacity-[0.06]">
+        <span class="material-symbols-outlined" style="font-size:9rem;">speed</span>
+      </div>
+      <div class="relative z-10">
+        <div class="flex justify-between items-end mb-5">
+          <div>
+            <p class="text-secondary text-[10px] font-black uppercase tracking-[0.2em] mb-1">Текущий план</p>
+            <h2 class="text-3xl font-black tracking-tighter italic">Занятие 5 из 8</h2>
+          </div>
+          <span class="text-4xl font-black italic kinetic-text">62%</span>
+        </div>
+        <div class="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden p-0.5">
+          <div class="h-full kinetic-gradient rounded-full glow-primary" style="width:62.5%"></div>
+        </div>
+        <div class="flex gap-1.5 mt-3">
+          <div class="flex-1 h-1 rounded-full bg-primary-container"></div>
+          <div class="flex-1 h-1 rounded-full bg-primary-container"></div>
+          <div class="flex-1 h-1 rounded-full bg-primary-container"></div>
+          <div class="flex-1 h-1 rounded-full bg-primary-container"></div>
+          <div class="flex-1 h-1 rounded-full" style="background:#cafd00;box-shadow:0 0 8px rgba(202,253,0,0.7)"></div>
+          <div class="flex-1 h-1 rounded-full bg-surface-container-highest"></div>
+          <div class="flex-1 h-1 rounded-full bg-surface-container-highest"></div>
+          <div class="flex-1 h-1 rounded-full bg-surface-container-highest"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Goals -->
+    <section>
+      <div class="flex justify-between items-center mb-4 px-1">
+        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">Активные цели</h3>
+        <button onclick="goTo('s-wizard')" class="text-primary-container text-xs font-bold uppercase tracking-wider">+ Новая</button>
+      </div>
+      <div class="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5" style="scrollbar-width:none;">
+        <!-- Goal 1 -->
+        <div onclick="goTo('s-session')" class="flex-shrink-0 w-52 bg-surface-container rounded-2xl p-4 cursor-pointer active:scale-[0.97] transition-transform" style="border-top: 2px solid #cafd00;">
+          <div class="flex items-center gap-1.5 mb-3">
+            <span class="w-2 h-2 rounded-full bg-primary-container" style="box-shadow:0 0 6px #cafd00"></span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-primary-container">Фокус</span>
+          </div>
+          <p class="text-sm font-semibold leading-snug text-on-surface mb-3">Бандеха слишком высокая — даю противнику лёгкий мяч</p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Бандеха</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Позиция</span>
+          </div>
+        </div>
+        <!-- Goal 2 -->
+        <div class="flex-shrink-0 w-52 bg-surface-container rounded-2xl p-4 cursor-pointer active:scale-[0.97] transition-transform" style="border-top: 2px solid #00f4fe;">
+          <div class="flex items-center gap-1.5 mb-3">
+            <span class="w-2 h-2 rounded-full bg-secondary" style="box-shadow:0 0 6px #00f4fe"></span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-secondary">Баланс</span>
+          </div>
+          <p class="text-sm font-semibold leading-snug text-on-surface mb-3">Не выхожу к сетке / Теряюсь когда атаковать</p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Тактика</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Движение</span>
+          </div>
+        </div>
+        <!-- Goal 3 -->
+        <div class="flex-shrink-0 w-44 bg-surface-container rounded-2xl p-4 cursor-pointer active:scale-[0.97] transition-transform" style="border-top: 2px solid #ff9500;">
+          <div class="flex items-center gap-1.5 mb-3">
+            <span class="w-2 h-2 rounded-full" style="background:#ff9500;box-shadow:0 0 6px #ff9500"></span>
+            <span class="text-[10px] font-black uppercase tracking-widest" style="color:#ff9500">Фокус</span>
+          </div>
+          <p class="text-sm font-semibold leading-snug text-on-surface mb-3">Нервничаю в важные моменты</p>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Ментал</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Next Session -->
+    <section>
+      <h3 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4 px-1">Следующее занятие</h3>
+      <div onclick="goTo('s-session')" class="bg-surface-container-low rounded-3xl p-5 cursor-pointer active:scale-[0.98] transition-transform relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-40 h-40 opacity-[0.04]" style="background:radial-gradient(circle,#00f4fe,transparent);pointer-events:none;"></div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2 h-2 rounded-full bg-secondary animate-pulse" style="box-shadow:0 0 6px #00f4fe"></span>
+          <p class="text-secondary text-[10px] font-black uppercase tracking-[0.2em]">Завтра · 10:00</p>
+        </div>
+        <h4 class="text-xl font-black tracking-tight mb-4">Занятие 6 — Контроль бандехи</h4>
+        <div class="bg-surface-container rounded-2xl p-4 space-y-3">
+          <p class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3">Упражнения</p>
+          <div class="flex items-center gap-3 text-sm text-on-surface-variant">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary opacity-60"></span>Бандеха по диагонали из глубины
+          </div>
+          <div class="flex items-center gap-3 text-sm text-on-surface-variant">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary opacity-60"></span>Серия бандех у задней стены
+          </div>
+          <div class="flex items-center gap-3 text-sm text-on-surface-variant">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary opacity-60"></span>Выход к сетке после бандехи
+          </div>
+          <p class="text-xs text-on-surface-variant opacity-50 pl-4">+ ещё 2 упражнения</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Past Sessions -->
+    <section>
+      <div class="flex justify-between items-center mb-4 px-1">
+        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">Прошедшие занятия</h3>
+        <span class="text-xs font-bold text-on-surface-variant opacity-60">Все →</span>
+      </div>
+      <div class="space-y-3" id="recent-sessions-list"></div>
+    </section>
+
+    <!-- Skill Progress -->
+    <section class="bg-surface-container-high rounded-3xl p-6">
+      <h3 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-5">Развитие скиллов</h3>
+      <div class="space-y-5">
+        <div>
+          <div class="flex justify-between text-xs font-black uppercase tracking-wider mb-2">
+            <span>Бандеха</span>
+            <span class="text-secondary">7/10 <span class="kinetic-text ml-1">+2</span></span>
+          </div>
+          <div class="h-1.5 w-full bg-surface-container-highest rounded-full"><div class="h-full w-[70%] bg-secondary rounded-full bar-glow"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-xs font-black uppercase tracking-wider mb-2">
+            <span>Позиция у сетки</span>
+            <span class="text-secondary">5/10 <span class="kinetic-text ml-1">+1</span></span>
+          </div>
+          <div class="h-1.5 w-full bg-surface-container-highest rounded-full"><div class="h-full w-[50%] kinetic-gradient rounded-full bar-glow-primary"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-xs font-black uppercase tracking-wider mb-2">
+            <span>Тактика атаки</span>
+            <span class="text-on-surface-variant">3/10 <span style="color:#ff9500" class="ml-1">+1</span></span>
+          </div>
+          <div class="h-1.5 w-full bg-surface-container-highest rounded-full"><div class="h-full w-[30%] rounded-full" style="background:#ff9500;box-shadow:0 0 6px rgba(255,149,0,0.4)"></div></div>
+        </div>
+        <div>
+          <div class="flex justify-between text-xs font-black uppercase tracking-wider mb-2">
+            <span>Концентрация</span>
+            <span class="text-on-surface-variant">2/10 <span style="color:#ff9500" class="ml-1">+1</span></span>
+          </div>
+          <div class="h-1.5 w-full bg-surface-container-highest rounded-full"><div class="h-full w-[20%] rounded-full" style="background:#ff9500"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Session History -->
+    <section>
+      <div class="flex justify-between items-center mb-4 px-1">
+        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">История сессий</h3>
+        <span class="text-primary-container text-xs font-bold">все →</span>
+      </div>
+      <div class="space-y-2">
+        <div onclick="goTo('s-session')" class="flex items-center gap-4 bg-surface-container-low rounded-2xl px-4 py-3.5 cursor-pointer active:bg-surface-container transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center font-black text-primary-container text-sm flex-shrink-0">5</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm">Бандеха из угла</p>
+            <p class="text-[11px] text-on-surface-variant">18 марта · 4 упражнения</p>
+            <div class="flex gap-1.5 mt-1.5">
+              <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary-container/10 text-primary-container uppercase tracking-wide">+Бандеха</span>
+              <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary-container/10 text-primary-container uppercase tracking-wide">+Позиция</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
+        </div>
+        <div onclick="goTo('s-session')" class="flex items-center gap-4 bg-surface-container-low rounded-2xl px-4 py-3.5 cursor-pointer active:bg-surface-container transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center font-black text-primary-container text-sm flex-shrink-0">4</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm">Выход к сетке</p>
+            <p class="text-[11px] text-on-surface-variant">14 марта · 5 упражнений</p>
+            <div class="flex gap-1.5 mt-1.5">
+              <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary-container/10 text-primary-container uppercase tracking-wide">+Тактика</span>
+              <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary-container/10 text-primary-container uppercase tracking-wide">+Движение</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
+        </div>
+        <div onclick="goTo('s-session')" class="flex items-center gap-4 bg-surface-container-low rounded-2xl px-4 py-3.5 cursor-pointer active:bg-surface-container transition-colors opacity-60">
+          <div class="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center font-black text-on-surface-variant text-sm flex-shrink-0">3</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm">Ментальная устойчивость</p>
+            <p class="text-[11px] text-on-surface-variant">10 марта · 3 упражнения</p>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Closed Goals -->
+    <section class="pb-2">
+      <h3 class="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-3 px-1">Закрытые цели</h3>
+      <div class="flex items-center gap-3 bg-surface-container-low rounded-2xl px-4 py-3.5 opacity-40">
+        <div class="w-8 h-8 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant flex-shrink-0">
+          <span class="material-symbols-outlined fill-icon text-base" style="font-variation-settings:'FILL' 1">check_circle</span>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-on-surface-variant">Волей в сетку — нестабильный удар</p>
+          <p class="text-[10px] text-on-surface-variant mt-0.5">Закрыто 15 февраля · 3 сессии</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] flex justify-around items-center px-3 pb-7 pt-3 z-30 glass-nav rounded-t-3xl">
+    <button class="flex flex-col items-center gap-1 bg-primary-container/10 px-4 py-2 rounded-xl">
+      <span class="material-symbols-outlined text-primary-container fill-icon" style="font-variation-settings:'FILL' 1">home</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-primary-container">Главная</span>
+    </button>
+    <button onclick="goTo('s-session')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">event_note</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Занятия</span>
+    </button>
+    <button onclick="goTo('s-wizard')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">emoji_events</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Цели</span>
+    </button>
+    <button onclick="goTo('s-vault')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">lightbulb</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Инсайты</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2 — ONBOARDING QUESTIONNAIRE
+════════════════════════════════════════════ -->
+<div class="screen hidden-right bg-background" id="s-onboarding">
+  <header class="sticky top-0 z-30 glass-nav flex justify-between items-center px-6 h-16">
+    <span class="text-lg font-black text-primary-container uppercase italic tracking-tight">Nivel Coaching</span>
+    <button onclick="goBack()" class="text-on-surface-variant">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </header>
+
+  <main class="px-6 pt-6 pb-36">
+    <!-- Progress -->
+    <div class="mb-10">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="h-1.5 flex-1 rounded-full bg-primary-container glow-primary"></div>
+        <div class="h-1.5 flex-1 rounded-full bg-surface-container-highest"></div>
+      </div>
+      <p class="text-secondary font-black text-[10px] tracking-[0.2em] uppercase mb-2">Шаг 1 / 2</p>
+      <h1 class="text-4xl font-black italic uppercase leading-tight tracking-tighter">
+        Расскажи о <span class="kinetic-text">своей игре.</span>
+      </h1>
+    </div>
+
+    <div class="space-y-10">
+      <!-- Level -->
+      <section>
+        <label class="block text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-5">Уровень игры</label>
+        <div class="grid grid-cols-3 gap-3">
+          <label class="radio-card relative cursor-pointer">
+            <input class="peer sr-only" name="level" type="radio" value="novice"/>
+            <div class="bg-surface-container-high p-4 rounded-xl text-center border-2 border-transparent peer-checked:border-primary-container peer-checked:bg-primary-container/6 transition-all">
+              <span class="block font-black text-sm uppercase">Новичок</span>
+            </div>
+          </label>
+          <label class="radio-card relative cursor-pointer">
+            <input checked class="peer sr-only" name="level" type="radio" value="amateur"/>
+            <div class="bg-surface-container-high p-4 rounded-xl text-center border-2 border-transparent peer-checked:border-primary-container peer-checked:bg-primary-container/6 transition-all" style="border-color:#cafd00;background:rgba(202,253,0,0.06)">
+              <span class="block font-black text-sm uppercase">Любитель</span>
+            </div>
+          </label>
+          <label class="radio-card relative cursor-pointer">
+            <input class="peer sr-only" name="level" type="radio" value="pro"/>
+            <div class="bg-surface-container-high p-4 rounded-xl text-center border-2 border-transparent peer-checked:border-primary-container peer-checked:bg-primary-container/6 transition-all">
+              <span class="block font-black text-sm uppercase">Про</span>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <!-- Experience & Volume -->
+      <div class="grid grid-cols-2 gap-4">
+        <section class="bg-surface-container-low p-5 rounded-3xl">
+          <label class="block text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-3">Стаж игры</label>
+          <div class="relative">
+            <select class="w-full bg-surface-container-highest border-none rounded-xl p-3 text-on-surface font-bold text-sm appearance-none">
+              <option>Меньше года</option>
+              <option selected>1–3 года</option>
+              <option>3–5 лет</option>
+              <option>5+ лет</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-sm">expand_more</span>
+          </div>
+        </section>
+        <section class="bg-surface-container-low p-5 rounded-3xl">
+          <label class="block text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-3">Трен. в нед.</label>
+          <div class="flex items-center justify-between bg-surface-container-highest rounded-xl p-1.5">
+            <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant active:scale-90 transition-transform" type="button" onclick="changeCount(-1)">
+              <span class="material-symbols-outlined text-sm">remove</span>
+            </button>
+            <span class="text-2xl font-black italic" id="session-count">3</span>
+            <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant active:scale-90 transition-transform text-primary-container" type="button" onclick="changeCount(1)">
+              <span class="material-symbols-outlined text-sm">add</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Side -->
+      <section class="bg-surface-container-low p-5 rounded-3xl">
+        <label class="block text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-4">Позиция</label>
+        <div class="flex p-1.5 bg-surface-container-highest rounded-2xl gap-1">
+          <label class="flex-1 cursor-pointer side-tab">
+            <input checked class="peer sr-only" name="side" type="radio" value="left"/>
+            <div class="py-3 text-center rounded-xl font-black uppercase tracking-wider text-sm transition-all peer-checked:bg-primary-container peer-checked:text-on-primary" style="background:#cafd00;color:#3a4a00">Левая</div>
+          </label>
+          <label class="flex-1 cursor-pointer side-tab">
+            <input class="peer sr-only" name="side" type="radio" value="right"/>
+            <div class="py-3 text-center rounded-xl font-black uppercase tracking-wider text-sm transition-all peer-checked:bg-primary-container peer-checked:text-on-primary text-on-surface-variant">Правая</div>
+          </label>
+        </div>
+      </section>
+
+      <!-- Problem Bank -->
+      <section>
+        <div class="flex justify-between items-end mb-5">
+          <div>
+            <label class="block text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-1">Банк проблем</label>
+            <h3 class="text-lg font-black">Выбери 5–7 проблем</h3>
+          </div>
+          <span class="text-primary-container font-black text-sm bg-primary-container/10 px-3 py-1 rounded-full italic" id="chip-count">3 выбрано</span>
+        </div>
+        <div class="flex flex-wrap gap-2.5" id="chip-container">
+          <!-- chips rendered by JS -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- CTA -->
+  <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pb-10 pt-4" style="background:linear-gradient(to top,#0e0e0e 60%,transparent)">
+    <button onclick="goTo('s-wizard')" class="w-full kinetic-gradient h-16 rounded-2xl text-on-primary-container font-black uppercase italic tracking-wider btn-shadow active:scale-95 transition-transform flex items-center justify-center gap-3">
+      Далее: Создать цель
+      <span class="material-symbols-outlined">arrow_forward</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3 — GOAL WIZARD
+════════════════════════════════════════════ -->
+<div class="screen hidden-right bg-background" id="s-wizard">
+  <header class="sticky top-0 z-30 glass-nav flex justify-between items-center px-6 h-16">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="text-on-surface-variant active:scale-90 transition-transform">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="text-lg font-black text-primary-container uppercase italic tracking-tight">Nivel Coaching</span>
+    </div>
+    <span class="material-symbols-outlined text-primary-container">notifications</span>
+  </header>
+
+  <main class="px-6 pt-6 pb-36">
+    <div class="mb-10">
+      <h1 class="text-4xl font-black tracking-tight mb-3">Определи следующую цель.</h1>
+      <div class="flex gap-2">
+        <div class="h-1 flex-1 kinetic-gradient rounded-full"></div>
+        <div class="h-1 flex-1 bg-surface-container-highest rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- Step 1: Intensity -->
+    <section class="mb-12">
+      <div class="flex items-baseline justify-between mb-5">
+        <h2 class="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface-variant">Шаг 1: Интенсивность</h2>
+        <span class="text-[10px] font-mono text-primary-container">01 / 02</span>
+      </div>
+      <div class="space-y-3">
+        <!-- Focus Card -->
+        <div id="card-focus" onclick="selectMode('focus')" class="intensity-card selected-focus relative overflow-hidden rounded-2xl bg-surface-container cursor-pointer active:scale-[0.98] transition-all">
+          <div class="absolute inset-0 bg-gradient-to-br from-primary-container/10 to-transparent pointer-events-none rounded-2xl"></div>
+          <div class="p-5 flex gap-5 items-start">
+            <div class="w-14 h-14 rounded-xl bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-primary-container text-2xl">bolt</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-black mb-1">Фокус</h3>
+              <p class="text-on-surface-variant text-sm leading-relaxed">Все тренировки на одну проблему. Быстрее результат, меньше разнообразия.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Balance Card -->
+        <div id="card-balance" onclick="selectMode('balance')" class="intensity-card relative overflow-hidden rounded-2xl bg-surface-container cursor-pointer active:scale-[0.98] transition-all">
+          <div class="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent pointer-events-none rounded-2xl"></div>
+          <div class="p-5 flex gap-5 items-start">
+            <div class="w-14 h-14 rounded-xl bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-secondary text-2xl">balance</span>
+            </div>
+            <div>
+              <h3 class="text-lg font-black mb-1">Баланс</h3>
+              <p class="text-on-surface-variant text-sm leading-relaxed">Цель — часть общего плана. Рост медленнее, но целостнее.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: Problems -->
+    <section class="mb-8">
+      <div class="flex items-baseline justify-between mb-5">
+        <h2 class="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface-variant">Шаг 2: Выбери проблему</h2>
+        <span class="text-[10px] font-mono text-on-surface-variant">02 / 02</span>
+      </div>
+      <div class="space-y-2" id="wizard-problems">
+        <!-- rendered by JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- CTA -->
+  <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pb-10 pt-4" style="background:linear-gradient(to top,#0e0e0e 60%,transparent)">
+    <button onclick="goTo('s-dashboard')" class="w-full kinetic-gradient py-5 rounded-2xl text-on-primary-container font-black uppercase tracking-[0.15em] text-sm btn-shadow active:scale-95 transition-transform">
+      Сохранить цель
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4 — SESSION DETAILS & INSIGHT
+════════════════════════════════════════════ -->
+<div class="screen hidden-right bg-background" id="s-session">
+  <header class="sticky top-0 z-30 glass-nav flex justify-between items-center px-6 h-16">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="active:scale-90 transition-transform">
+        <span class="material-symbols-outlined text-on-surface">arrow_back</span>
+      </button>
+      <h1 class="font-black tracking-tight text-primary-container text-lg italic uppercase">Nivel Coaching</h1>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="material-symbols-outlined text-primary-container">notifications</span>
+      <div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center text-xs font-black text-primary-container">АЛ</div>
+    </div>
+  </header>
+
+  <main class="px-6 pt-5 pb-36 space-y-6">
+    <!-- Header -->
+    <section>
+      <div class="flex justify-between items-end mb-1">
+        <h2 class="text-4xl font-black tracking-tighter uppercase italic">Занятие — 18 марта</h2>
+      </div>
+      <div class="flex items-center gap-3 mt-2">
+        <span class="px-3 py-1.5 rounded-lg text-[10px] font-black tracking-[0.15em] uppercase" style="background:rgba(0,105,110,0.3);color:#00f4fe">Ожидает инсайта</span>
+        <span class="text-on-surface-variant text-sm font-medium">Контроль бандехи</span>
+      </div>
+    </section>
+
+    <!-- Coach Notes + Points -->
+    <section class="grid grid-cols-3 gap-3">
+      <div class="col-span-2 bg-surface-container-low p-5 rounded-2xl">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-secondary text-base">chat_bubble</span>
+          <h3 class="text-[10px] font-black uppercase tracking-[0.15em] text-on-surface-variant">Заметка тренера</h3>
+        </div>
+        <p class="text-on-surface text-sm leading-relaxed italic">"Хорошо прогрессируешь с подготовкой ракетки. Теперь работай над тем чтобы заканчивать движение и сразу двигаться к сетке."</p>
+      </div>
+      <div class="bg-primary-container/8 rounded-2xl flex flex-col justify-center items-center text-center p-4" style="background:rgba(202,253,0,0.08)">
+        <span class="text-3xl font-black italic kinetic-text">+2</span>
+        <span class="text-[9px] font-black uppercase tracking-tight text-primary-container mt-1">Очка</span>
+      </div>
+    </section>
+
+    <!-- Exercises -->
+    <section class="space-y-3">
+      <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant px-1">Упражнения</h3>
+
+      <div class="bg-surface-container rounded-2xl overflow-hidden">
+        <div class="flex items-center">
+          <div class="w-20 h-20 bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-3xl text-on-surface-variant">sports_tennis</span>
+          </div>
+          <div class="flex-1 px-4 py-3 flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-sm">Бандеха из угла по диагонали</h4>
+              <p class="text-xs text-on-surface-variant mt-0.5">×15 повторений</p>
+            </div>
+            <div class="flex items-center gap-1 px-2.5 py-1 rounded-full" style="background:rgba(0,105,110,0.2)">
+              <span class="material-symbols-outlined text-secondary text-xs fill-icon" style="font-variation-settings:'FILL' 1;font-size:14px;">bolt</span>
+              <span class="text-[10px] font-black text-secondary">+1 Бандеха</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container rounded-2xl overflow-hidden">
+        <div class="flex items-center">
+          <div class="w-20 h-20 bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-3xl text-on-surface-variant">cached</span>
+          </div>
+          <div class="flex-1 px-4 py-3 flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-sm">Серия бандех у задней стены</h4>
+              <p class="text-xs text-on-surface-variant mt-0.5">×10 серий</p>
+            </div>
+            <div class="flex items-center gap-1 px-2.5 py-1 rounded-full" style="background:rgba(0,105,110,0.2)">
+              <span class="material-symbols-outlined text-secondary text-xs fill-icon" style="font-variation-settings:'FILL' 1;font-size:14px;">bolt</span>
+              <span class="text-[10px] font-black text-secondary">+1 Бандеха</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container rounded-2xl overflow-hidden">
+        <div class="flex items-center">
+          <div class="w-20 h-20 bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-3xl text-on-surface-variant">moving</span>
+          </div>
+          <div class="flex-1 px-4 py-3 flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-sm">Выход к сетке после бандехи</h4>
+              <p class="text-xs text-on-surface-variant mt-0.5">×12 повторений</p>
+            </div>
+            <div class="flex items-center gap-1 px-2.5 py-1 rounded-full" style="background:rgba(202,253,0,0.1)">
+              <span class="material-symbols-outlined text-xs fill-icon" style="font-variation-settings:'FILL' 1;font-size:14px;color:#cafd00">arrow_upward</span>
+              <span class="text-[10px] font-black text-primary-container">+1 Позиция</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Insight Cards from Coach -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Инсайты от тренера</h3>
+        <span class="text-[9px] text-secondary bg-secondary/10 px-2 py-0.5 rounded uppercase font-black tracking-widest" style="background:rgba(0,244,254,0.1);color:#00f4fe">7 новых</span>
+      </div>
+
+      <!-- Card list (preview, not interactive yet) -->
+      <div id="session-cards-list" class="space-y-2"></div>
+
+      <!-- CTA to Tinder -->
+      <button id="open-tinder-btn" onclick="openTinder()" class="w-full mt-3 py-5 rounded-2xl kinetic-gradient btn-shadow text-on-primary-container font-black uppercase tracking-[0.15em] text-sm flex items-center justify-center gap-3 active:scale-95 transition-transform pulse-secondary">
+        <span class="material-symbols-outlined fill-icon" style="font-variation-settings:'FILL' 1">style</span>
+        <span>Разобрать инсайты</span>
+      </button>
+
+      <!-- Hint after first viewing -->
+      <p class="text-center text-[11px] text-on-surface-variant px-4 leading-relaxed">
+        Свайпни вправо, чтобы забрать карточку в свои <span class="text-primary-container font-bold">инсайты</span>. Влево — пропустить, она останется здесь.
+      </p>
+    </section>
+
+    <!-- CTA -->
+    <button id="complete-btn" onclick="completeSession()" class="w-full py-4 rounded-2xl bg-surface-container border border-outline-variant text-on-surface-variant font-black uppercase tracking-[0.15em] text-xs flex items-center justify-center gap-3 active:scale-95 transition-transform">
+      <span>Завершить занятие</span>
+      <span class="material-symbols-outlined">military_tech</span>
+    </button>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] flex justify-around items-center px-3 pb-7 pt-3 z-30 glass-nav rounded-t-3xl">
+    <button onclick="goTo('s-dashboard')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">home</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Главная</span>
+    </button>
+    <button onclick="goTo('s-wizard')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">emoji_events</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Цели</span>
+    </button>
+    <button class="flex flex-col items-center gap-1 bg-primary-container/10 px-4 py-2 rounded-xl">
+      <span class="material-symbols-outlined text-primary-container fill-icon" style="font-variation-settings:'FILL' 1">event_note</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-primary-container">Занятия</span>
+    </button>
+    <button onclick="goTo('s-vault')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">lightbulb</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Инсайты</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 5 — TINDER (insight swiper)
+════════════════════════════════════════════ -->
+<div class="screen hidden-right bg-background" id="s-tinder">
+  <header class="sticky top-0 z-30 glass-nav flex justify-between items-center px-6 h-16">
+    <button onclick="goBack()" class="active:scale-90 transition-transform">
+      <span class="material-symbols-outlined text-on-surface">close</span>
+    </button>
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant" id="tinder-progress">1 из 7</span>
+    </div>
+    <div class="w-6"></div>
+  </header>
+
+  <main class="px-6 pt-2 pb-8 flex flex-col h-[calc(100dvh-4rem)]">
+    <!-- Title -->
+    <div class="text-center mb-5">
+      <h2 class="text-2xl font-black tracking-tighter italic uppercase">Разбор инсайтов</h2>
+      <p class="text-on-surface-variant text-xs mt-1" id="tinder-subtitle">Занятие — 18 марта · Защита и принятие решений</p>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="h-1 bg-surface-container-highest rounded-full overflow-hidden mb-6">
+      <div id="tinder-bar" class="h-full kinetic-gradient transition-all duration-300" style="width:0%"></div>
+    </div>
+
+    <!-- Card stack -->
+    <div class="tinder-stack flex-shrink-0" id="tinder-stack"></div>
+
+    <!-- Action buttons -->
+    <div class="flex items-center justify-center gap-8 mt-6">
+      <button onclick="swipeAction('left')" class="w-16 h-16 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center active:scale-90 transition-transform" id="btn-skip">
+        <span class="material-symbols-outlined" style="color:#ff7351;font-size:32px">close</span>
+      </button>
+      <button onclick="swipeAction('right')" class="w-16 h-16 rounded-full kinetic-gradient flex items-center justify-center active:scale-90 transition-transform glow-primary" id="btn-take">
+        <span class="material-symbols-outlined text-on-primary fill-icon" style="font-variation-settings:'FILL' 1;font-size:32px">check</span>
+      </button>
+    </div>
+
+    <p class="text-center text-[10px] text-on-surface-variant mt-4 uppercase tracking-widest leading-relaxed">
+      <span style="color:#ff7351">Свайп влево</span> — пропустить · <span class="text-primary-container">свайп вправо</span> — в инсайты<br>
+      <span class="opacity-70 normal-case tracking-normal" style="font-size:10px">Тапни по карточке, чтобы переписать своими словами</span>
+    </p>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 6 — VAULT (insight collection)
+════════════════════════════════════════════ -->
+<div class="screen hidden-right bg-background" id="s-vault">
+  <header class="sticky top-0 z-30 glass-nav flex justify-between items-center px-6 h-16">
+    <div class="flex items-center gap-3">
+      <button onclick="goBack()" class="active:scale-90 transition-transform">
+        <span class="material-symbols-outlined text-on-surface">arrow_back</span>
+      </button>
+      <h1 class="font-black tracking-tight text-primary-container text-lg italic uppercase">Инсайты</h1>
+    </div>
+    <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container">
+      <span class="material-symbols-outlined text-primary-container fill-icon" style="font-variation-settings:'FILL' 1;font-size:16px">style</span>
+      <span class="text-xs font-black text-primary-container" id="vault-count">0</span>
+    </div>
+  </header>
+
+  <main class="px-5 pt-4 pb-36">
+    <!-- Hero -->
+    <section class="mb-6">
+      <p class="text-on-surface-variant text-xs font-medium uppercase tracking-[0.2em] mb-1">Твоя коллекция</p>
+      <h2 class="text-4xl font-black tracking-tighter leading-none italic"><span class="kinetic-text" id="vault-hero-count">0</span> <span class="text-on-surface">принципов</span></h2>
+      <p class="text-on-surface-variant text-sm mt-2 leading-relaxed">Каждая карточка — мысль, которую ты забрал с конкретной тренировки.</p>
+    </section>
+
+    <!-- Category filters -->
+    <section class="mb-5">
+      <div class="flex gap-2 overflow-x-auto -mx-5 px-5 pb-2" style="scrollbar-width:none;" id="cat-chips">
+        <!-- chips injected by JS -->
+      </div>
+    </section>
+
+    <!-- Card grid -->
+    <section>
+      <div class="grid grid-cols-2 gap-3" id="vault-grid">
+        <!-- cards injected by JS -->
+      </div>
+
+      <!-- Empty state -->
+      <div id="vault-empty" class="hidden text-center py-16">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-surface-container-low flex items-center justify-center">
+          <span class="material-symbols-outlined text-4xl text-on-surface-variant">lightbulb</span>
+        </div>
+        <p class="text-on-surface-variant text-sm">Ничего нет в этой категории</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] flex justify-around items-center px-3 pb-7 pt-3 z-30 glass-nav rounded-t-3xl">
+    <button onclick="goTo('s-dashboard')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">home</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Главная</span>
+    </button>
+    <button onclick="goTo('s-wizard')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">emoji_events</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Цели</span>
+    </button>
+    <button onclick="goTo('s-session')" class="flex flex-col items-center gap-1 opacity-50">
+      <span class="material-symbols-outlined text-on-surface-variant">event_note</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Занятия</span>
+    </button>
+    <button class="flex flex-col items-center gap-1 bg-primary-container/10 px-4 py-2 rounded-xl">
+      <span class="material-symbols-outlined text-primary-container fill-icon" style="font-variation-settings:'FILL' 1">lightbulb</span>
+      <span class="text-[10px] font-black uppercase tracking-widest text-primary-container">Инсайты</span>
+    </button>
+  </nav>
+</div>
+
+<style>
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+</style>
+
+</div><!-- /phone wrapper -->
+
+<script>
+// ─── Navigation ───
+const history = [];
+function goTo(id) {
+  const cur = document.querySelector('.screen.visible');
+  if (cur.id === id) return;
+  cur.classList.replace('visible','hidden-left');
+  const next = document.getElementById(id);
+  next.classList.replace('hidden-right','visible');
+  next.scrollTop = 0;
+  history.push(cur.id);
+}
+function goBack() {
+  if (!history.length) return;
+  const prev = history.pop();
+  const cur = document.querySelector('.screen.visible');
+  cur.classList.replace('visible','hidden-right');
+  const p = document.getElementById(prev);
+  p.classList.replace('hidden-left','visible');
+}
+
+// ─── Session counter ───
+let sessionCount = 3;
+function changeCount(d) {
+  sessionCount = Math.max(1, Math.min(7, sessionCount + d));
+  document.getElementById('session-count').textContent = sessionCount;
+}
+
+// ─── Chips ───
+const allProblems = [
+  { label: 'Неуверенный смэш', active: false },
+  { label: 'Нестабильный бэкхенд', active: true },
+  { label: 'Быстро устаю', active: true },
+  { label: 'Ошибки у сетки', active: false },
+  { label: 'Плохие ноги', active: false },
+  { label: 'Нестабильная подача', active: true },
+  { label: 'Защитная позиция', active: false },
+  { label: 'Низкая выносливость', active: false },
+  { label: 'Коммуникация с парт.', active: false },
+  { label: 'Бандеха высокая', active: false },
+  { label: 'Нервничаю в матчах', active: false },
+];
+
+function renderChips() {
+  const c = document.getElementById('chip-container');
+  c.innerHTML = allProblems.map((p,i) => `
+    <button onclick="toggleChip(${i})" class="px-4 py-2.5 rounded-full font-bold text-sm transition-all ${p.active ? 'chip-active' : 'chip-inactive'}">
+      ${p.label}
+    </button>
+  `).join('');
+  const sel = allProblems.filter(p=>p.active).length;
+  document.getElementById('chip-count').textContent = `${sel} выбрано`;
+}
+function toggleChip(i) {
+  const sel = allProblems.filter(p=>p.active).length;
+  if (!allProblems[i].active && sel >= 7) return;
+  allProblems[i].active = !allProblems[i].active;
+  renderChips();
+}
+
+// ─── Wizard Problems ───
+const wizardProblems = [
+  { label: 'Бандеха высокая — даю лёгкий мяч', cat: 'Техника', checked: true },
+  { label: 'Нестабильная подача', cat: 'Техника', checked: false },
+  { label: 'Нестабильный бэкхенд', cat: 'Техника', checked: false },
+  { label: 'Не выхожу к сетке вовремя', cat: 'Позиция', checked: false },
+  { label: 'Теряюсь — атаковать или ждать', cat: 'Решения', checked: false },
+];
+let wizardMode = 'focus';
+
+function renderWizardProblems() {
+  const max = wizardMode === 'focus' ? 1 : 3;
+  document.getElementById('wizard-problems').innerHTML = wizardProblems.map((p,i) => `
+    <label class="problem-row flex items-center justify-between p-4 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer ${p.checked ? 'border border-primary-container/20 bg-surface-container' : ''}">
+      <input type="checkbox" class="sr-only" ${p.checked ? 'checked' : ''} onchange="toggleWizardProblem(${i},${max})"/>
+      <div class="flex items-center gap-4">
+        <div class="check-box w-5 h-5 rounded border-2 ${p.checked ? 'bg-primary-container border-primary-container' : 'border-outline-variant'} flex items-center justify-center transition-all flex-shrink-0">
+          <span class="material-symbols-outlined text-on-primary text-[13px] ${p.checked ? '' : 'hidden'}" style="font-variation-settings:'FILL' 1">check</span>
+        </div>
+        <span class="problem-name font-semibold text-sm ${p.checked ? 'text-primary' : ''}">${p.label}</span>
+      </div>
+      <span class="problem-cat text-[10px] font-mono ${p.checked ? 'text-primary-container' : 'text-on-surface-variant'}">${p.cat}</span>
+    </label>
+  `).join('');
+}
+
+function toggleWizardProblem(i, max) {
+  const checked = wizardProblems.filter(p=>p.checked).length;
+  if (!wizardProblems[i].checked && checked >= max) return;
+  wizardProblems[i].checked = !wizardProblems[i].checked;
+  renderWizardProblems();
+}
+
+function selectMode(mode) {
+  wizardMode = mode;
+  const fc = document.getElementById('card-focus');
+  const bc = document.getElementById('card-balance');
+  fc.className = `intensity-card relative overflow-hidden rounded-2xl bg-surface-container cursor-pointer active:scale-[0.98] transition-all ${mode==='focus'?'selected-focus':''}`;
+  bc.className = `intensity-card relative overflow-hidden rounded-2xl bg-surface-container cursor-pointer active:scale-[0.98] transition-all ${mode==='balance'?'selected-balance':''}`;
+  // reset wizard problems
+  wizardProblems.forEach(p => p.checked = false);
+  renderWizardProblems();
+}
+
+// ─── Sessions Data ───
+// Каждое занятие имеет свой набор карточек-кандидатов от тренера.
+// Вторая сессия (18 марта) — карточки из реальной аудио-расшифровки.
+const sessions = [
+  {
+    id: 'sess-mar18',
+    date: '18 марта',
+    title: 'Стёкла, ноги, тактика углов',
+    cards: [
+      {
+        id: 1,
+        text: 'Не иди на мяч после удара во 2-е стекло — отходи в середину',
+        context: 'Мяч во 2-е стекло отскакивает в 3-е. Если идёшь к нему — он уходит от тебя. Мяч в 3-е стекло — наоборот, беги вперёд: отскочит во 2-е.',
+        cat: 'position', catName: 'Позиция',
+        problem: 'Неверное чтение отскока от стекла',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 2,
+        text: 'Дал лёгкий мяч — сместись к углу',
+        context: 'Соперник чаще играет в угол с лёгкого мяча (стёкла дают ему страховку) и в середину со сложного. Прогнозируй направление по тому, что отдал.',
+        cat: 'meta', catName: 'Метаскиллы',
+        problem: 'Стою на базе вместо чтения соперника',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 3,
+        text: 'Спеши ногами, не рукой',
+        context: 'Рука всегда в одном месте — она уже дотягивается максимум. До мяча достают ноги. Бьём у передней ноги: если рука впереди ноги — надо было двигать ногу.',
+        cat: 'tech', catName: 'Техника',
+        problem: 'Тянусь рукой вместо подхода ногами',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 4,
+        text: 'Не жди отскока — беги к мячу, как только он тебя пересёк',
+        context: 'Мяч летит под углом, отскок уходит далеко в сторону. Задержался на полшага — уже не успел. Шаг вперёд начинается до отскока.',
+        cat: 'position', catName: 'Позиция',
+        problem: 'Жду отскока вместо превентивного движения',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 5,
+        text: 'Глубина касания подсказывает направление',
+        context: 'Касание в 3-й зоне (близко к тебе) — отскочит быстро вперёд, двигайся к нему. Касание у стекла — мяч умрёт там, иди в угол. В углу без отскока — черпай снизу.',
+        cat: 'decision', catName: 'Принятие решений',
+        problem: 'Не считываю место приземления мяча',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 6,
+        text: 'Воле и бандеха — один удар. Локоть внизу, корпус впереди',
+        context: 'Не поднимать локоть на воле — потом придётся выправлять. Движение вперёд, не назад. Открываемся плечами, бьём корпусом, а не кистью — тогда сила.',
+        cat: 'tech', catName: 'Техника',
+        problem: 'Бью кистью, поднимаю локоть',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 7,
+        text: 'Бандеха: левая рука — прицел, правая — за голову',
+        context: 'Согнутая правая за головой даёт замах и силу из плеча, а не из кисти. Мяч сбоку, не над головой. Движение по кругу, ракетка идёт прямо, лицо не накрывать.',
+        cat: 'tech', catName: 'Техника',
+        problem: 'Бандеха без замаха, бью кистью',
+        taken: false, edited: false, customText: null, skipped: false,
+      },
+    ],
+  },
+  {
+    id: 'sess-mar11',
+    date: '11 марта',
+    title: 'Защита и принятие решений',
+    cards: [
+      {
+        id: 21,
+        text: 'Быстрый замах, медленный удар',
+        context: 'Вдох → пауза → удар. Замедленный удар не облегчает жизнь противнику, а даёт тебе контроль.',
+        cat: 'tech', catName: 'Техника',
+        problem: 'Спешка в подготовке к удару',
+        taken: true, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 22,
+        text: 'Блок — это оружие, а не защита',
+        context: 'Не двигай рукой, подставь ракетку. Принимай ближе к телу. Используешь силу противника против него же.',
+        cat: 'decision', catName: 'Принятие решений',
+        problem: 'Пассивная игра у сетки',
+        taken: true, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 23,
+        text: 'Меняй темп, а не сложность ударов',
+        context: 'Будь непредсказуемым через ритм, а не через рискованные удары. Когда соперник не замечает смену тактики — он начинает ошибаться.',
+        cat: 'meta', catName: 'Метаскиллы',
+        problem: 'Предсказуемость игры',
+        taken: true, edited: false, customText: null, skipped: false,
+      },
+      {
+        id: 24,
+        text: 'Выше плеча — атакуй. Ниже плеча — дай упасть до колена',
+        context: 'Полсекунды контроля важнее, чем мнимое преимущество удара на взлёте.',
+        cat: 'decision', catName: 'Принятие решений',
+        problem: 'Удар на взлёте вместо падения',
+        taken: false, edited: false, customText: null, skipped: true,
+      },
+    ],
+  },
+];
+
+// Активная сессия для разбора (определяется при тапе)
+let activeSessionId = 'sess-mar18';
+function getActiveSession() {
+  return sessions.find(s => s.id === activeSessionId);
+}
+function getActiveCards() {
+  return getActiveSession().cards;
+}
+
+const categories = [
+  { key: 'all', name: 'Все', cls: '' },
+  { key: 'tech', name: 'Техника', cls: 'cat-tech' },
+  { key: 'decision', name: 'Решения', cls: 'cat-decision' },
+  { key: 'position', name: 'Позиция', cls: 'cat-position' },
+  { key: 'meta', name: 'Меташ.', cls: 'cat-meta' },
+  { key: 'partner', name: 'Партнёр', cls: 'cat-partner' },
+  { key: 'physical', name: 'Физика', cls: 'cat-physical' },
+  { key: 'situation', name: 'Ситуации', cls: 'cat-situation' },
+];
+
+// ─── Render session card list (preview before tinder) ───
+function renderSessionCards() {
+  const list = document.getElementById('session-cards-list');
+  if (!list) return;
+  const activeCards = getActiveCards();
+  list.innerHTML = activeCards.map(c => `
+    <div class="insight-card-mini ${c.taken ? 'taken' : ''} rounded-xl p-4 flex items-start gap-3 cat-${c.cat}">
+      <div class="w-1 self-stretch rounded-full cat-dot flex-shrink-0" style="min-height:36px"></div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold leading-snug text-on-surface">${c.edited && c.customText ? c.customText : c.text}</p>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="text-[9px] font-black uppercase tracking-widest cat-text">${c.catName}</span>
+          ${c.edited ? '<span class="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">· отредактировано</span>' : ''}
+        </div>
+      </div>
+      <div class="taken-badge items-center gap-1 px-2 py-1 rounded-full bg-primary-container/10" style="background:rgba(202,253,0,0.12)">
+        <span class="material-symbols-outlined text-primary-container fill-icon" style="font-variation-settings:'FILL' 1;font-size:14px">check</span>
+        <span class="text-[9px] font-black text-primary-container uppercase tracking-wider">В инсайтах</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Update count badge
+  const remaining = activeCards.filter(c => !c.taken && !c.skipped).length;
+  // Update CTA depending on state
+  const cta = document.getElementById('open-tinder-btn');
+  if (cta) {
+    if (remaining === 0) {
+      cta.classList.remove('pulse-secondary');
+      cta.innerHTML = `<span class="material-symbols-outlined">replay</span><span>Все карточки разобраны</span>`;
+      cta.disabled = true;
+      cta.style.opacity = '0.5';
+    } else {
+      cta.classList.add('pulse-secondary');
+      cta.innerHTML = `<span class="material-symbols-outlined fill-icon" style="font-variation-settings:'FILL' 1">style</span><span>Разобрать инсайты</span>`;
+      cta.disabled = false;
+      cta.style.opacity = '';
+    }
+  }
+}
+
+// ─── Tinder Logic ───
+let tinderQueue = [];   // ids остающихся карточек
+let tinderIndex = 0;
+let currentDrag = null;
+
+function openTinder(sessionId) {
+  if (sessionId) activeSessionId = sessionId;
+  const cards = getActiveCards();
+  // Берём все карточки которые ещё не разобраны
+  tinderQueue = cards.filter(c => !c.taken && !c.skipped).map(c => c.id);
+  tinderIndex = 0;
+  if (tinderQueue.length === 0) {
+    // Все разобраны — открываем сессию вместо тиндера
+    goTo('s-session');
+    return;
+  }
+  goTo('s-tinder');
+  setTimeout(renderTinderStack, 50);
+}
+
+function renderTinderStack() {
+  const stack = document.getElementById('tinder-stack');
+  if (!stack) return;
+  const session = getActiveSession();
+  const cards = session.cards;
+  const remaining = tinderQueue.slice(tinderIndex);
+
+  // Update header subtitle
+  const subtitle = document.getElementById('tinder-subtitle');
+  if (subtitle) subtitle.textContent = `Занятие — ${session.date} · ${session.title}`;
+
+  if (remaining.length === 0) {
+    // Финальный экран
+    const totalTaken = cards.filter(c => c.taken).length;
+    stack.innerHTML = `
+      <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+        <div class="w-24 h-24 rounded-full kinetic-gradient flex items-center justify-center mb-6 glow-primary">
+          <span class="material-symbols-outlined text-on-primary fill-icon" style="font-variation-settings:'FILL' 1;font-size:56px">lightbulb</span>
+        </div>
+        <h3 class="text-3xl font-black tracking-tighter italic uppercase mb-2">Готово</h3>
+        <p class="text-on-surface-variant text-sm leading-relaxed mb-6">Ты забрал <span class="text-primary-container font-black">${totalTaken}</span> карточек в инсайты с этой тренировки.</p>
+        <div class="flex flex-col gap-3 w-full max-w-xs">
+          <button onclick="goTo('s-vault')" class="py-4 rounded-2xl kinetic-gradient text-on-primary font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform">
+            <span class="material-symbols-outlined fill-icon" style="font-variation-settings:'FILL' 1;font-size:18px">lightbulb</span>
+            Открыть инсайты
+          </button>
+          <button onclick="goTo('s-session')" class="py-3 text-on-surface-variant font-bold uppercase tracking-widest text-xs">Подробности занятия</button>
+          <button onclick="goTo('s-dashboard')" class="py-2 text-on-surface-variant font-bold uppercase tracking-widest text-[10px] opacity-70">На главную</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('tinder-progress').textContent = 'Завершено';
+    document.getElementById('tinder-bar').style.width = '100%';
+    document.getElementById('btn-skip').style.display = 'none';
+    document.getElementById('btn-take').style.display = 'none';
+    return;
+  }
+
+  // Show buttons
+  document.getElementById('btn-skip').style.display = '';
+  document.getElementById('btn-take').style.display = '';
+
+  // Render up to 3 cards in stack (current + 2 behind)
+  const visibleIds = remaining.slice(0, 3);
+  stack.innerHTML = visibleIds.map((id, i) => {
+    const card = cards.find(c => c.id === id);
+    const text = card.edited && card.customText ? card.customText : card.text;
+    const layerClass = i === 0 ? '' : (i === 1 ? 'behind-1' : 'behind-2');
+    return `
+      <div class="tinder-card cat-${card.cat} ${layerClass}" data-card-id="${card.id}" data-stack-pos="${i}" onclick="handleCardTap(event)">
+        <div class="glow-yes">В инсайты</div>
+        <div class="glow-no">Пропустить</div>
+
+        <!-- Top: category + counter -->
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full cat-dot"></span>
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] cat-text">${card.catName}</span>
+          </div>
+          <div class="flex items-center gap-2" data-edit-hint>
+            <span class="text-[10px] font-mono text-on-surface-variant">#${String(card.id).padStart(3,'0')}</span>
+            <span class="text-[9px] font-black uppercase tracking-wider text-on-surface-variant flex items-center gap-1 opacity-60">
+              <span class="material-symbols-outlined" style="font-size:12px">edit</span>tap
+            </span>
+          </div>
+        </div>
+
+        <!-- Main text (editable on tap) -->
+        <div class="flex-1 flex items-center" data-card-title>
+          <h3 class="text-2xl font-black tracking-tight leading-tight italic">${text}</h3>
+        </div>
+
+        <!-- Context -->
+        <div class="mt-4 pt-4 border-t border-outline-variant/40 transition-opacity" data-card-context>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-2">Контекст</p>
+          <p class="text-sm text-on-surface-variant leading-relaxed">${card.context}</p>
+        </div>
+
+        <!-- Bottom: linked problem -->
+        <div class="mt-4 flex items-center gap-2 transition-opacity" data-card-problem>
+          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:14px">link</span>
+          <span class="text-[11px] text-on-surface-variant truncate">${card.problem}</span>
+        </div>
+      </div>
+    `;
+  }).reverse().join(''); // reverse so top card is last in DOM (renders on top)
+
+  // Re-attach drag to topmost
+  attachDragHandlers();
+
+  // Update progress
+  const total = tinderQueue.length;
+  const done = tinderIndex;
+  document.getElementById('tinder-progress').textContent = `${done + 1} из ${total}`;
+  document.getElementById('tinder-bar').style.width = `${(done / total) * 100}%`;
+}
+
+function attachDragHandlers() {
+  const top = document.querySelector('.tinder-card[data-stack-pos="0"]');
+  if (!top) return;
+
+  let startX = 0, startY = 0, currentX = 0, dragging = false, totalMoved = 0;
+
+  const onStart = (e) => {
+    // Не запускаем drag, если карточка в режиме редактирования
+    if (top.classList.contains('editing')) return;
+    // Не запускаем drag, если тап в textarea/button
+    const target = e.target;
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('button') || target.closest('textarea')) return;
+    dragging = true;
+    totalMoved = 0;
+    tapMoved = false;
+    const point = e.touches ? e.touches[0] : e;
+    startX = point.clientX;
+    startY = point.clientY;
+    top.classList.add('dragging');
+  };
+  const onMove = (e) => {
+    if (!dragging) return;
+    const point = e.touches ? e.touches[0] : e;
+    currentX = point.clientX - startX;
+    const dy = point.clientY - startY;
+    totalMoved = Math.abs(currentX) + Math.abs(dy);
+    if (totalMoved > 8) tapMoved = true;
+    const rot = currentX * 0.06;
+    top.style.transform = `translate(${currentX}px, ${dy * 0.4}px) rotate(${rot}deg)`;
+
+    // Show indicators
+    const yes = top.querySelector('.glow-yes');
+    const no = top.querySelector('.glow-no');
+    if (currentX > 30) { yes.style.opacity = Math.min(1, currentX / 100); no.style.opacity = 0; }
+    else if (currentX < -30) { no.style.opacity = Math.min(1, -currentX / 100); yes.style.opacity = 0; }
+    else { yes.style.opacity = 0; no.style.opacity = 0; }
+  };
+  const onEnd = () => {
+    if (!dragging) return;
+    dragging = false;
+    top.classList.remove('dragging');
+    if (currentX > 100) { swipeAction('right'); }
+    else if (currentX < -100) { swipeAction('left'); }
+    else {
+      top.style.transform = '';
+      top.querySelector('.glow-yes').style.opacity = 0;
+      top.querySelector('.glow-no').style.opacity = 0;
+    }
+    currentX = 0;
+  };
+
+  top.addEventListener('mousedown', onStart);
+  top.addEventListener('touchstart', onStart, { passive: true });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: true });
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+
+  currentDrag = { onMove, onEnd };
+}
+
+function swipeAction(dir) {
+  const top = document.querySelector('.tinder-card[data-stack-pos="0"]');
+  if (!top) return;
+  const id = parseInt(top.dataset.cardId, 10);
+  const cards = getActiveCards();
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+
+  if (dir === 'right') { card.taken = true; }
+  else { card.skipped = true; }
+
+  top.classList.add(dir === 'right' ? 'swipe-right' : 'swipe-left');
+
+  setTimeout(() => {
+    tinderIndex++;
+    renderTinderStack();
+    renderSessionCards(); // refresh session view in background
+    renderVault();
+    updateVaultCounters();
+    renderRecentSessions(); // refresh dashboard badge
+  }, 350);
+}
+
+// Detect tap (vs drag) on card → open edit
+let tapStartX = 0, tapStartY = 0, tapStartTime = 0, tapMoved = false;
+function handleCardTap(event) {
+  // This onclick fires after drag too, so we need to filter
+  if (tapMoved) { tapMoved = false; return; }
+  const top = event.currentTarget;
+  if (!top.classList.contains('tinder-card') || top.dataset.stackPos !== '0') return;
+  if (top.classList.contains('editing')) return; // уже редактируем
+  // Не реагируем на тапы по кнопкам внутри карточки
+  if (event.target.closest('button')) return;
+  editCurrent();
+}
+
+// ─── Inline card editing ───
+let editingCardId = null;
+
+function editCurrent() {
+  const top = document.querySelector('.tinder-card[data-stack-pos="0"]');
+  if (!top) return;
+  if (top.classList.contains('editing')) return; // уже в редактировании
+
+  editingCardId = parseInt(top.dataset.cardId, 10);
+  const cards = getActiveCards();
+  const card = cards.find(c => c.id === editingCardId);
+  if (!card) return;
+
+  const currentText = card.edited && card.customText ? card.customText : card.text;
+
+  // Скрываем основные кнопки внизу экрана
+  document.getElementById('btn-skip').style.opacity = '0.3';
+  document.getElementById('btn-skip').style.pointerEvents = 'none';
+  document.getElementById('btn-take').style.opacity = '0.3';
+  document.getElementById('btn-take').style.pointerEvents = 'none';
+
+  // Превращаем содержимое карточки в форму редактирования
+  top.classList.add('editing');
+  const titleSlot = top.querySelector('[data-card-title]');
+  const contextSlot = top.querySelector('[data-card-context]');
+  const editHint = top.querySelector('[data-edit-hint]');
+  if (editHint) editHint.style.display = 'none';
+
+  if (titleSlot) {
+    titleSlot.innerHTML = `
+      <textarea
+        class="tinder-edit-textarea"
+        id="inline-edit-input"
+        oninput="this.style.height='auto'; this.style.height=Math.max(110, this.scrollHeight)+'px';">${currentText}</textarea>
+      <p class="text-[10px] text-on-surface-variant mt-3 leading-relaxed italic">
+        Перепиши своими словами или добавь свой контекст
+      </p>
+    `;
+  }
+
+  // Добавляем edit-bar с кнопками поверх карточки
+  let editBar = top.querySelector('.edit-bar');
+  if (!editBar) {
+    editBar = document.createElement('div');
+    editBar.className = 'edit-bar';
+    editBar.innerHTML = `
+      <button onclick="cancelEdit(event)" class="flex-1 py-3 rounded-xl bg-surface-container-high text-on-surface-variant font-black uppercase tracking-widest text-xs active:scale-95 transition-transform">
+        Отмена
+      </button>
+      <button onclick="saveEdit(event)" class="flex-1 py-3 rounded-xl kinetic-gradient text-on-primary font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform">
+        <span class="material-symbols-outlined" style="font-size:14px">check</span>
+        Сохранить
+      </button>
+    `;
+    top.appendChild(editBar);
+  }
+
+  // Скрываем нижний контекст (под линией) и проблему — они мешают редактированию
+  if (contextSlot) contextSlot.style.opacity = '0.3';
+  const problemSlot = top.querySelector('[data-card-problem]');
+  if (problemSlot) problemSlot.style.opacity = '0.3';
+
+  // Фокус с задержкой чтобы анимация перехода не съела
+  setTimeout(() => {
+    const input = document.getElementById('inline-edit-input');
+    if (input) {
+      input.focus();
+      input.style.height = Math.max(110, input.scrollHeight) + 'px';
+    }
+  }, 50);
+}
+
+function cancelEdit(event) {
+  if (event) { event.stopPropagation(); }
+  // Просто перерисовываем стек — карточка вернётся к исходному виду
+  editingCardId = null;
+  document.getElementById('btn-skip').style.opacity = '';
+  document.getElementById('btn-skip').style.pointerEvents = '';
+  document.getElementById('btn-take').style.opacity = '';
+  document.getElementById('btn-take').style.pointerEvents = '';
+  renderTinderStack();
+}
+
+function saveEdit(event) {
+  if (event) { event.stopPropagation(); }
+  const input = document.getElementById('inline-edit-input');
+  if (!input || editingCardId === null) return;
+
+  const cards = getActiveCards();
+  const card = cards.find(c => c.id === editingCardId);
+  if (card) {
+    const newText = input.value.trim();
+    if (newText && newText !== card.text) {
+      card.customText = newText;
+      card.edited = true;
+    }
+    card.taken = true; // Сохранение = автоматически забираем в инсайты
+  }
+
+  // Восстанавливаем кнопки
+  document.getElementById('btn-skip').style.opacity = '';
+  document.getElementById('btn-skip').style.pointerEvents = '';
+  document.getElementById('btn-take').style.opacity = '';
+  document.getElementById('btn-take').style.pointerEvents = '';
+
+  // Анимация свайпа вправо
+  const top = document.querySelector('.tinder-card[data-stack-pos="0"]');
+  if (top) {
+    top.classList.remove('editing');
+    top.classList.add('swipe-right');
+  }
+  editingCardId = null;
+  setTimeout(() => {
+    tinderIndex++;
+    renderTinderStack();
+    renderSessionCards();
+    renderVault();
+    updateVaultCounters();
+    renderRecentSessions();
+  }, 350);
+}
+
+function closeEdit() { cancelEdit(); } // legacy alias
+
+// ─── Vault rendering ───
+let activeCatFilter = 'all';
+
+function renderCatChips() {
+  const c = document.getElementById('cat-chips');
+  if (!c) return;
+  c.innerHTML = categories.map(cat => `
+    <button onclick="setCatFilter('${cat.key}')"
+      class="cat-chip ${cat.cls} flex-shrink-0 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap ${activeCatFilter === cat.key ? 'cat-chip-active' : 'bg-surface-container text-on-surface-variant border border-outline-variant/40'}">
+      ${cat.name}
+    </button>
+  `).join('');
+}
+
+function setCatFilter(key) {
+  activeCatFilter = key;
+  renderCatChips();
+  renderVault();
+}
+
+function getAllVaultCards() {
+  // Собираем все taken-карточки со всех сессий
+  const all = [];
+  sessions.forEach(sess => {
+    sess.cards.forEach(c => {
+      if (c.taken) {
+        all.push({
+          id: `${sess.id}-${c.id}`,
+          text: c.edited && c.customText ? c.customText : c.text,
+          cat: c.cat,
+          catName: c.catName,
+          context: c.context,
+          problem: c.problem,
+          date: sess.date,
+          isNew: sess.id === activeSessionId,
+        });
+      }
+    });
+  });
+  return all;
+}
+
+function renderVault() {
+  const grid = document.getElementById('vault-grid');
+  const empty = document.getElementById('vault-empty');
+  if (!grid) return;
+
+  const all = getAllVaultCards();
+  const filtered = activeCatFilter === 'all' ? all : all.filter(c => c.cat === activeCatFilter);
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  grid.innerHTML = filtered.map(c => `
+    <div class="vault-card cat-${c.cat}" onclick="this.classList.toggle('flipped')">
+      <div class="vault-card-inner">
+        <!-- FRONT -->
+        <div class="vault-card-front cat-border-top">
+          <div class="flex items-start justify-between gap-1">
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full cat-dot flex-shrink-0"></span>
+              <span class="text-[8px] font-black uppercase tracking-[0.12em] cat-text truncate">${c.catName}</span>
+            </div>
+            ${c.isNew ? '<span class="text-[7px] font-black px-1 py-0.5 rounded bg-primary-container/10 text-primary-container uppercase tracking-wider flex-shrink-0" style="background:rgba(202,253,0,0.12)">New</span>' : ''}
+          </div>
+          <p class="vault-front-title text-[13px] font-black leading-tight italic">${c.text}</p>
+          <div class="flex items-center justify-between text-[9px] text-on-surface-variant">
+            <span>${c.date}</span>
+            <span class="material-symbols-outlined" style="font-size:13px">touch_app</span>
+          </div>
+        </div>
+        <!-- BACK -->
+        <div class="vault-card-back">
+          <div class="flex items-center justify-between gap-1 flex-shrink-0">
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full cat-dot flex-shrink-0"></span>
+              <span class="text-[8px] font-black uppercase tracking-[0.12em] cat-text truncate">${c.catName}</span>
+            </div>
+            <span class="material-symbols-outlined text-on-surface-variant flex-shrink-0" style="font-size:12px;opacity:0.5">flip</span>
+          </div>
+          <div class="vault-card-back-scroll">
+            <p class="text-[8px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Контекст</p>
+            <p class="text-[10.5px] text-on-surface leading-snug mb-2">${c.context}</p>
+            <p class="text-[8px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Проблема</p>
+            <p class="text-[10px] text-on-surface-variant leading-snug">${c.problem}</p>
+          </div>
+          <div class="text-[8px] text-on-surface-variant pt-1 border-t border-outline-variant/30 flex-shrink-0 flex items-center gap-1">
+            <span class="material-symbols-outlined" style="font-size:10px">event</span>
+            ${c.date}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateVaultCounters() {
+  const all = getAllVaultCards();
+  const c = document.getElementById('vault-count');
+  const h = document.getElementById('vault-hero-count');
+  if (c) c.textContent = all.length;
+  if (h) h.textContent = all.length;
+}
+
+// ─── Recent Sessions on dashboard ───
+function renderRecentSessions() {
+  const list = document.getElementById('recent-sessions-list');
+  if (!list) return;
+
+  // Сортируем: сначала те, что ждут разбор; внутри каждой группы — новые первыми
+  const sortedSessions = [...sessions].sort((a, b) => {
+    const aPending = a.cards.filter(c => !c.taken && !c.skipped).length > 0 ? 1 : 0;
+    const bPending = b.cards.filter(c => !c.taken && !c.skipped).length > 0 ? 1 : 0;
+    if (aPending !== bPending) return bPending - aPending; // pending first
+    // Можно было бы сортировать по дате, но в нашем демо порядок в массиве уже правильный
+    return 0;
+  });
+
+  list.innerHTML = sortedSessions.map(sess => {
+    const total = sess.cards.length;
+    const taken = sess.cards.filter(c => c.taken).length;
+    const skipped = sess.cards.filter(c => c.skipped).length;
+    const pending = sess.cards.filter(c => !c.taken && !c.skipped).length;
+    const isPending = pending > 0;
+
+    return `
+      <div onclick="openSessionFromDashboard('${sess.id}')"
+           class="relative bg-surface-container-low rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-all overflow-hidden ${isPending ? 'border border-secondary/40' : ''}"
+           ${isPending ? 'style="background:linear-gradient(135deg, rgba(0,244,254,0.06) 0%, rgba(26,26,26,1) 60%);"' : ''}>
+
+        ${isPending ? `
+          <div class="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+               style="background:rgba(0,244,254,0.15);border:1px solid rgba(0,244,254,0.4);">
+            <span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" style="box-shadow:0 0 6px #00f4fe"></span>
+            <span class="text-[9px] font-black uppercase tracking-widest text-secondary">Ожидает разбор</span>
+          </div>
+        ` : `
+          <div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full" style="background:rgba(202,253,0,0.1)">
+            <span class="material-symbols-outlined text-primary-container fill-icon" style="font-variation-settings:'FILL' 1;font-size:12px">check_circle</span>
+            <span class="text-[9px] font-black uppercase tracking-widest text-primary-container">Разобрано</span>
+          </div>
+        `}
+
+        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-1">${sess.date}</p>
+        <h4 class="text-base font-black tracking-tight pr-24 leading-snug">${sess.title}</h4>
+
+        <!-- Progress dots showing card resolution -->
+        <div class="flex items-center gap-2 mt-3">
+          <div class="flex gap-1 flex-1">
+            ${sess.cards.map(c => {
+              if (c.taken) return '<div class="flex-1 h-1 rounded-full bg-primary-container" style="box-shadow:0 0 4px rgba(202,253,0,0.6)"></div>';
+              if (c.skipped) return '<div class="flex-1 h-1 rounded-full" style="background:#484847"></div>';
+              return '<div class="flex-1 h-1 rounded-full" style="background:rgba(0,244,254,0.35)"></div>';
+            }).join('')}
+          </div>
+          <span class="text-[10px] font-mono text-on-surface-variant whitespace-nowrap">
+            ${isPending ? `${pending} новых` : `${taken}/${total}`}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Тап на занятие из дашборда: если есть неразобранные карточки → тиндер; иначе → страница занятия
+function openSessionFromDashboard(sessionId) {
+  activeSessionId = sessionId;
+  const sess = getActiveSession();
+  const pending = sess.cards.filter(c => !c.taken && !c.skipped).length;
+  if (pending > 0) {
+    openTinder(sessionId);
+  } else {
+    goTo('s-session');
+    setTimeout(() => { renderSessionCards(); }, 50);
+  }
+}
+
+// ─── Insight validation (legacy — оставляем функцию пустой для совместимости) ───
+function checkInsight() { /* deprecated */ }
+function completeSession() {
+  // Завершаем сессию — переходим на дашборд
+  goTo('s-dashboard');
+}
+
+// ─── Init ───
+renderChips();
+renderWizardProblems();
+renderSessionCards();
+renderCatChips();
+renderVault();
+updateVaultCounters();
+renderRecentSessions();
+</script>
+</body>
+</html>
