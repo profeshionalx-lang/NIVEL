@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createSession(
@@ -12,16 +13,8 @@ export async function createSession(
     const supabase = await createClient();
 
     // 1. Verify current user is a trainer
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    const { data: profile, error: profileError } = await supabase
+    const user = DEMO_USER;
+const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
@@ -238,13 +231,8 @@ export async function setTrainerReviewCompleted(
 ): Promise<{ success: true } | { success: false; error: string }> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { success: false, error: "Not authenticated" };
-
-  const { data: profile } = await supabase
+  const user = DEMO_USER;
+const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)

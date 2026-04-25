@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { createClient } from "@/lib/supabase/server";
 import { maybeCompleteSession } from "@/lib/actions/sessions";
 import type {
@@ -14,26 +15,14 @@ type Result<T = void> =
 
 async function requireTrainer() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = DEMO_USER;
   if (!user) return { ok: false as const, error: "Not authenticated" };
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "trainer") {
-    return { ok: false as const, error: "Trainer role required" };
-  }
   return { ok: true as const, supabase, userId: user.id };
 }
 
 async function requireUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = DEMO_USER;
   if (!user) return { ok: false as const, error: "Not authenticated" };
   return { ok: true as const, supabase, userId: user.id };
 }
@@ -234,12 +223,8 @@ export async function getVaultCards(
   filters: VaultFilters = {}
 ): Promise<InsightCardWithRelations[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  let query = supabase
+  const user = DEMO_USER;
+let query = supabase
     .from("insight_cards")
     .select(
       `*,

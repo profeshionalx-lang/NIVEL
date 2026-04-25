@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_USER } from "@/lib/supabase/demoUser";
 import type { Skill, Exercise } from "@/lib/types";
 
 export async function searchSkills(
@@ -62,16 +63,8 @@ export async function createSkill(
     const supabase = await createClient();
 
     // Verify trainer role
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    const { data: profile, error: profileError } = await supabase
+    const user = DEMO_USER;
+const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
@@ -121,16 +114,8 @@ export async function createExercise(
     const supabase = await createClient();
 
     // Verify trainer role
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, error: "Not authenticated" };
-    }
-
-    const { data: profile, error: profileError } = await supabase
+    const user = DEMO_USER;
+const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)

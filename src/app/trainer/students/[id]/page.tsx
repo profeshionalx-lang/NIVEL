@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { calculateSkillLevel } from "@/lib/types";
@@ -12,20 +13,13 @@ export default async function TrainerStudentDetailPage({
   const { id: studentId } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  // Verify trainer
+  const user = DEMO_USER;
+// Verify trainer
   const { data: myProfile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
-
-  if (myProfile?.role !== "trainer") redirect("/dashboard");
 
   // Get student profile
   const { data: student } = await supabase

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import TrainerCardEditor from "@/components/insights/TrainerCardEditor";
@@ -12,18 +13,12 @@ export default async function TrainerSessionInsightsPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
+  const user = DEMO_USER;
+const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
-
-  if (profile?.role !== "trainer") redirect("/dashboard");
 
   const { data: session } = await supabase
     .from("sessions")
