@@ -28,8 +28,10 @@ function LoginForm() {
       router.refresh();
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
+      const message = (err as { message?: string }).message ?? String(err);
+      console.error("[google-login]", code, message);
       if (code !== "auth/popup-closed-by-user") {
-        setError("Something went wrong. Please try again.");
+        setError(message || "Something went wrong. Please try again.");
       }
     } finally {
       setLoading(null);
