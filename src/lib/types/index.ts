@@ -146,3 +146,32 @@ export function calculateSkillLevel(points: number): {
   const points_in_level = points >= 50 ? 10 : points % 10;
   return { level, points_in_level };
 }
+
+export type MasterPlanCategory = "strength" | "technique" | "tactics" | "custom";
+
+export interface MasterPlanItem {
+  id: string;
+  section_id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number;
+}
+
+export interface MasterPlanSection {
+  id: string;
+  plan_id: string;
+  title: string;
+  category: MasterPlanCategory;
+  sort_order: number;
+  items: MasterPlanItem[];
+}
+
+export interface MasterPlan {
+  id: string;
+  student_id: string;
+  trainer_id: string;
+  created_at: string;
+  updated_at: string;
+  sections: MasterPlanSection[];
+}
