@@ -11,11 +11,18 @@ const CATEGORY_LABELS: Record<MasterPlanCategory, string> = {
   custom: "Other",
 };
 
-const CATEGORY_COLORS: Record<MasterPlanCategory, string> = {
-  strength: "#cafd00",
-  technique: "#00f4fe",
-  tactics: "#ff7351",
-  custom: "#888",
+const CATEGORY_BORDER_CLASSES: Record<MasterPlanCategory, string> = {
+  strength: "border-t-primary",
+  technique: "border-t-secondary",
+  tactics: "border-t-error",
+  custom: "border-t-on-surface-variant",
+};
+
+const CATEGORY_TEXT_CLASSES: Record<MasterPlanCategory, string> = {
+  strength: "text-primary",
+  technique: "text-secondary",
+  tactics: "text-error",
+  custom: "text-on-surface-variant",
 };
 
 interface Props {
@@ -45,11 +52,12 @@ export default function MasterPlanEditor({ studentId, plan: initialPlan }: Props
 
   function handleAddSection(planId: string) {
     if (!newSectionTitle.trim()) return;
+    const currentSortOrder = plan?.sections.length ?? 0;
     startTransition(async () => {
       const res = await addSection(planId, studentId, {
         title: newSectionTitle,
         category: newSectionCategory,
-        sortOrder: plan?.sections.length ?? 0,
+        sortOrder: currentSortOrder,
       });
       if (res.success) {
         setPlan((prev) => prev ? {
@@ -73,12 +81,13 @@ export default function MasterPlanEditor({ studentId, plan: initialPlan }: Props
 
   function handleAddItem(sectionId: string) {
     if (!newItemTitle.trim()) return;
+    const currentSortOrder = plan?.sections.find((s) => s.id === sectionId)?.items.length ?? 0;
     startTransition(async () => {
       const res = await addItem(sectionId, studentId, {
         title: newItemTitle,
         description: newItemDesc || null,
         imageUrl: newItemImage || null,
-        sortOrder: plan?.sections.find((s) => s.id === sectionId)?.items.length ?? 0,
+        sortOrder: currentSortOrder,
       });
       if (res.success) {
         setPlan((prev) => {
@@ -156,12 +165,11 @@ export default function MasterPlanEditor({ studentId, plan: initialPlan }: Props
         {plan.sections.map((section) => (
           <div
             key={section.id}
-            className="bg-surface-card rounded-2xl p-4"
-            style={{ borderTop: `2px solid ${CATEGORY_COLORS[section.category]}` }}
+            className={`bg-surface-card rounded-2xl p-4 border-t-[2px] ${CATEGORY_BORDER_CLASSES[section.category]}`}
           >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: CATEGORY_COLORS[section.category] }}>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${CATEGORY_TEXT_CLASSES[section.category]}`}>
                   {CATEGORY_LABELS[section.category]}
                 </span>
                 <p className="font-bold text-sm mt-0.5">{section.title}</p>
@@ -185,6 +193,7 @@ export default function MasterPlanEditor({ studentId, plan: initialPlan }: Props
                         <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">{item.description}</p>
                       )}
                       {item.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={item.image_url}
                           alt=""

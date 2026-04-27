@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth/session";
 import { getMasterPlan } from "@/lib/actions/masterPlan";
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import type { MasterPlanCategory } from "@/lib/types";
 
 const CATEGORY_LABELS: Record<MasterPlanCategory, string> = {
@@ -10,11 +11,25 @@ const CATEGORY_LABELS: Record<MasterPlanCategory, string> = {
   custom: "Other",
 };
 
-const CATEGORY_COLORS: Record<MasterPlanCategory, string> = {
-  strength: "#cafd00",
-  technique: "#00f4fe",
-  tactics: "#ff7351",
-  custom: "#888",
+const CATEGORY_BORDER_CLASSES: Record<MasterPlanCategory, string> = {
+  strength: "border-l-primary",
+  technique: "border-l-secondary",
+  tactics: "border-l-error",
+  custom: "border-l-on-surface-variant",
+};
+
+const CATEGORY_TEXT_CLASSES: Record<MasterPlanCategory, string> = {
+  strength: "text-primary",
+  technique: "text-secondary",
+  tactics: "text-error",
+  custom: "text-on-surface-variant",
+};
+
+const CATEGORY_BG_CLASSES: Record<MasterPlanCategory, string> = {
+  strength: "bg-primary",
+  technique: "bg-secondary",
+  tactics: "bg-error",
+  custom: "bg-on-surface-variant",
 };
 
 export default async function MasterPlanPage() {
@@ -31,7 +46,7 @@ export default async function MasterPlanPage() {
         </span>
       </header>
 
-      <main className="px-5 pt-6 pb-36 max-w-4xl mx-auto">
+      <main className="px-5 pt-6 pb-36 mx-auto">
         {!plan ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
             <span className="material-symbols-outlined text-5xl text-on-surface-variant opacity-30">
@@ -46,14 +61,8 @@ export default async function MasterPlanPage() {
             {plan.sections.map((section) => (
               <section key={section.id}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div
-                    className="w-1 h-5 rounded-full"
-                    style={{ background: CATEGORY_COLORS[section.category] }}
-                  />
-                  <span
-                    className="text-[10px] font-black uppercase tracking-[0.2em]"
-                    style={{ color: CATEGORY_COLORS[section.category] }}
-                  >
+                  <div className={`w-1 h-5 rounded-full ${CATEGORY_BG_CLASSES[section.category]}`} />
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${CATEGORY_TEXT_CLASSES[section.category]}`}>
                     {CATEGORY_LABELS[section.category]}
                   </span>
                 </div>
@@ -63,16 +72,19 @@ export default async function MasterPlanPage() {
                   {section.items.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-surface-card rounded-2xl overflow-hidden"
-                      style={{ borderLeft: `3px solid ${CATEGORY_COLORS[section.category]}` }}
+                      className={`bg-surface-card rounded-2xl overflow-hidden border-l-[3px] ${CATEGORY_BORDER_CLASSES[section.category]}`}
                     >
                       {item.image_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.image_url}
-                          alt=""
-                          className="w-full object-cover max-h-64"
-                        />
+                        <div className="relative w-full max-h-64 overflow-hidden">
+                          <Image
+                            src={item.image_url}
+                            alt=""
+                            width={800}
+                            height={450}
+                            className="w-full object-cover"
+                            unoptimized
+                          />
+                        </div>
                       )}
                       <div className="p-4">
                         <p className="font-bold text-sm">{item.title}</p>

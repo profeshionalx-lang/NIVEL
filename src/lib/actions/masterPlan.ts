@@ -18,6 +18,9 @@ async function requireTrainer() {
 }
 
 export async function getMasterPlan(studentId: string): Promise<MasterPlan | null> {
+  const user = await getSession();
+  if (!user) return null;
+  if (user.role !== "trainer" && user.id !== studentId) return null;
   const supabase = await createClient();
   const { data: plan } = await supabase
     .from("master_plans")
