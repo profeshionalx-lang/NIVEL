@@ -1,25 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import { calculateSkillLevel } from "@/lib/types";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { getMasterPlan } from "@/lib/actions/masterPlan";
+import MasterPlanEditor from "@/components/masterPlan/MasterPlanEditor";
 
 export default async function TrainerStudentDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") redirect("/dashboard");
+
   const { id: studentId } = await params;
   const supabase = await createClient();
-
-  const user = DEMO_USER;
-// Verify trainer
-  const { data: myProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
 
   // Get student profile
   const { data: student } = await supabase
@@ -101,6 +98,8 @@ export default async function TrainerStudentDetailPage({
     .limit(20);
 
   const sessions = sessionsRaw || [];
+
+  const masterPlan = await getMasterPlan(studentId);
 
   const studentName = student.full_name || student.email;
 
@@ -252,6 +251,8 @@ export default async function TrainerStudentDetailPage({
             </div>
           </section>
         )}
+
+        <MasterPlanEditor studentId={studentId} plan={masterPlan} />
       </main>
     </div>
   );

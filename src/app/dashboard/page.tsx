@@ -1,21 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
+import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { calculateSkillLevel } from "@/lib/types";
 import Link from "next/link";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { getMasterPlan } from "@/lib/actions/masterPlan";
 
 export default async function DashboardPage() {
+  const user = await getSession();
+  if (!user) redirect("/login");
+
+  const profile = user;
   const supabase = await createClient();
-
-  const user = DEMO_USER;
-const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) redirect("/login");
 
   const { data: goalsRaw } = await supabase
     .from("goals")
@@ -124,6 +120,9 @@ const { data: profile } = await supabase
     pendingCounts.set(sid, (pendingCounts.get(sid) ?? 0) + 1);
   });
 
+  const masterPlan = await getMasterPlan(user.id);
+  const masterPlanPreview = masterPlan?.sections.slice(0, 2) ?? [];
+
   const firstName = profile.full_name?.split(" ")[0] || "Player";
   const isEmpty = goals.length === 0 && skillProgress.length === 0;
 
@@ -205,6 +204,38 @@ const { data: profile } = await supabase
                 <span className="material-symbols-outlined text-2xl">
                   arrow_forward
                 </span>
+              </div>
+            </Link>
+          )}
+
+          {masterPlan && (
+            <Link
+              href="/masterplan"
+              className="block bg-surface-low rounded-2xl p-4 active:bg-surface-card transition-colors"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em]">
+                  Master Plan
+                </p>
+                <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">
+                  chevron_right
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {masterPlanPreview.map((section) => (
+                  <div key={section.id} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60 flex-shrink-0" />
+                    <p className="text-sm text-on-surface-variant truncate">{section.title}</p>
+                    <span className="text-[10px] text-on-surface-variant opacity-40 flex-shrink-0">
+                      {section.items.length} items
+                    </span>
+                  </div>
+                ))}
+                {masterPlan.sections.length > 2 && (
+                  <p className="text-xs text-on-surface-variant opacity-40 pl-3.5">
+                    + {masterPlan.sections.length - 2} more sections
+                  </p>
+                )}
               </div>
             </Link>
           )}
