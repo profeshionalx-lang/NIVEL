@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import type { Profile } from "@/lib/types";
 import BottomNav from "@/components/navigation/BottomNav";
 
@@ -9,14 +8,9 @@ export default async function InsightsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const user = DEMO_USER;
-const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (!profile) redirect("/login");
+  const user = await getSession();
+  if (!user) redirect("/login");
+  const profile = { role: user.role };
 
   return (
     <div className="relative mx-auto min-h-screen max-w-[430px] bg-background">

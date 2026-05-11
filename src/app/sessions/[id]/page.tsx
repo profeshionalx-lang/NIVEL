@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
 
@@ -10,16 +10,11 @@ export default async function SessionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const user = await getSession();
+  if (!user) redirect("/login");
+
   const supabase = await createClient();
-
-  const user = DEMO_USER;
-const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const isTrainer = profile?.role === "trainer";
+  const isTrainer = user.role === "trainer";
 
   const { data: session } = await supabase
     .from("sessions")

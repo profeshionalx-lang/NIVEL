@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import type { Profile } from "@/lib/types";
 import TopBar from "@/components/navigation/TopBar";
 import BottomNav from "@/components/navigation/BottomNav";
@@ -10,16 +9,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const user = DEMO_USER;
+  const user = await getSession();
+  if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  const typedProfile = (profile ?? DEMO_USER) as Profile;
+  const typedProfile = user as unknown as Profile;
   const isTrainer = typedProfile.role === "trainer";
 
   return (

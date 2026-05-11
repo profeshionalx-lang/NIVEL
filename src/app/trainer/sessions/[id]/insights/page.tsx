@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import TrainerCardEditor from "@/components/insights/TrainerCardEditor";
 import type { InsightCard, ProblemCategory, Problem } from "@/lib/types";
@@ -10,15 +10,11 @@ export default async function TrainerSessionInsightsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") redirect("/dashboard");
+
   const { id } = await params;
   const supabase = await createClient();
-
-  const user = DEMO_USER;
-const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
 
   const { data: session } = await supabase
     .from("sessions")

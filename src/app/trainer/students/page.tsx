@@ -1,17 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 
 export default async function TrainerStudentsPage() {
-  const supabase = await createClient();
+  const user = await getSession();
+  if (!user || user.role !== "trainer") redirect("/dashboard");
 
-  const user = DEMO_USER;
-const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const supabase = await createClient();
 
   // Fetch all students
   const { data: students } = await supabase

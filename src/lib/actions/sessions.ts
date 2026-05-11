@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
+import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createSession(
@@ -13,20 +13,9 @@ export async function createSession(
     const supabase = await createClient();
 
     // 1. Verify current user is a trainer
-    const user = DEMO_USER;
-const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return { success: false, error: "Profile not found" };
-    }
-
-    if (profile.role !== "trainer") {
-      return { success: false, error: "Only trainers can create sessions" };
-    }
+    const user = await getSession();
+    if (!user) return { success: false, error: "Not authenticated" };
+    if (user.role !== "trainer") return { success: false, error: "Only trainers can create sessions" };
 
     // 2. Get the next session number for this goal
     const { count, error: countError } = await supabase
@@ -231,14 +220,8 @@ export async function setTrainerReviewCompleted(
 ): Promise<{ success: true } | { success: false; error: string }> {
   const supabase = await createClient();
 
-  const user = DEMO_USER;
-const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "trainer") {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") {
     return { success: false, error: "Only trainers can finish review" };
   }
 

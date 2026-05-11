@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
+import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createGoal(
@@ -9,10 +9,12 @@ export async function createGoal(
   customProblem: string | null
 ): Promise<{ success: true; goalId: string } | { success: false; error: string }> {
   try {
+    const user = await getSession();
+    if (!user) return { success: false, error: "Not authenticated" };
+
     const supabase = await createClient();
 
-    const user = DEMO_USER;
-const { data: goal, error: goalError } = await supabase
+    const { data: goal, error: goalError } = await supabase
       .from("goals")
       .insert({ user_id: user.id, custom_problem: customProblem })
       .select("id")
@@ -47,10 +49,12 @@ export async function cancelGoal(
   goalId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    const user = await getSession();
+    if (!user) return { success: false, error: "Not authenticated" };
+
     const supabase = await createClient();
 
-    const user = DEMO_USER;
-const { error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from("goals")
       .update({ status: "cancelled" })
       .eq("id", goalId);

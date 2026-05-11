@@ -1,14 +1,15 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
 
 export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut(getFirebaseAuth());
+    await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   };

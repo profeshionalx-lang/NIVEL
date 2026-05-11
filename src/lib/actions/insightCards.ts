@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
+import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { maybeCompleteSession } from "@/lib/actions/sessions";
 import type {
@@ -14,16 +14,16 @@ type Result<T = void> =
   | { success: false; error: string };
 
 async function requireTrainer() {
-  const supabase = await createClient();
-  const user = DEMO_USER;
+  const user = await getSession();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+  const supabase = await createClient();
   return { ok: true as const, supabase, userId: user.id };
 }
 
 async function requireUser() {
-  const supabase = await createClient();
-  const user = DEMO_USER;
+  const user = await getSession();
   if (!user) return { ok: false as const, error: "Not authenticated" };
+  const supabase = await createClient();
   return { ok: true as const, supabase, userId: user.id };
 }
 
@@ -222,9 +222,11 @@ export interface VaultFilters {
 export async function getVaultCards(
   filters: VaultFilters = {}
 ): Promise<InsightCardWithRelations[]> {
+  const user = await getSession();
+  if (!user) return [];
+
   const supabase = await createClient();
-  const user = DEMO_USER;
-let query = supabase
+  let query = supabase
     .from("insight_cards")
     .select(
       `*,

@@ -1,5 +1,7 @@
 @AGENTS.md
 
+> **Рабочий процесс:** исследование → план в issue → код → code review субагентом → PR. Подробно: [WORKFLOW.md](./WORKFLOW.md)
+
 # Nivel — Padel Coaching Platform
 
 ## Что за проект

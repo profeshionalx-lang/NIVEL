@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import InsightTinder from "@/components/insights/InsightTinder";
 import type { InsightCardWithRelations } from "@/lib/types";
@@ -12,12 +12,14 @@ export default async function SessionInsightsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ include?: string }>;
 }) {
+  const user = await getSession();
+  if (!user) redirect("/login");
+
   const { id } = await params;
   const { include } = await searchParams;
   const supabase = await createClient();
 
-  const user = DEMO_USER;
-let query = supabase
+  let query = supabase
     .from("insight_cards")
     .select(
       `*,

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import VaultGrid from "@/components/insights/VaultGrid";
 import VaultFilters from "@/components/insights/VaultFilters";
 import { getVaultCards } from "@/lib/actions/insightCards";
@@ -11,11 +11,13 @@ export default async function InsightsPage({
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
+  const user = await getSession();
+  if (!user) redirect("/login");
+
   const { category } = await searchParams;
   const supabase = await createClient();
 
-  const user = DEMO_USER;
-const categoryId = category ? Number(category) : undefined;
+  const categoryId = category ? Number(category) : undefined;
 
   const [cards, { data: categories }] = await Promise.all([
     getVaultCards({ categoryId }),

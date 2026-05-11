@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { DEMO_USER } from "@/lib/supabase/demoUser";
+import { getSession } from "@/lib/auth/session";
 import type { Skill, Exercise } from "@/lib/types";
 
 export async function searchSkills(
@@ -62,15 +62,8 @@ export async function createSkill(
   try {
     const supabase = await createClient();
 
-    // Verify trainer role
-    const user = DEMO_USER;
-const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile || profile.role !== "trainer") {
+    const user = await getSession();
+    if (!user || user.role !== "trainer") {
       return { success: false, error: "Only trainers can create skills" };
     }
 
@@ -113,15 +106,8 @@ export async function createExercise(
   try {
     const supabase = await createClient();
 
-    // Verify trainer role
-    const user = DEMO_USER;
-const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile || profile.role !== "trainer") {
+    const user = await getSession();
+    if (!user || user.role !== "trainer") {
       return { success: false, error: "Only trainers can create exercises" };
     }
 
