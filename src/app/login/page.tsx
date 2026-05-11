@@ -47,12 +47,14 @@ export default function LoginPage() {
 
         <div className="space-y-4">
           {/* Grechka Sign In */}
-          <a
-            href="/api/auth/grechka"
-            className="w-full flex items-center justify-center gap-3 bg-primary text-black font-semibold py-4 px-6 rounded-2xl hover:opacity-90 transition-opacity active:scale-[0.98]"
-          >
-            Войти через Гречку
-          </a>
+          <form action="/api/auth/grechka" method="GET">
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-3 bg-primary text-black font-semibold py-4 px-6 rounded-2xl hover:opacity-90 transition-opacity active:scale-[0.98]"
+            >
+              Войти через Гречку
+            </button>
+          </form>
 
           {/* Google Sign In */}
           <button
