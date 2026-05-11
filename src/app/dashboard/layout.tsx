@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getLocale } from "@/lib/i18n";
 import type { Profile } from "@/lib/types";
 import TopBar from "@/components/navigation/TopBar";
 import BottomNav from "@/components/navigation/BottomNav";
@@ -12,6 +13,7 @@ export default async function DashboardLayout({
   const user = await getSession();
   if (!user) redirect("/login");
 
+  const locale = await getLocale();
   const typedProfile = user as unknown as Profile;
   const isTrainer = typedProfile.role === "trainer";
 
@@ -27,11 +29,12 @@ export default async function DashboardLayout({
           avatar_url: typedProfile.avatar_url,
           role: typedProfile.role,
         }}
+        locale={locale}
       />
 
       <main className="px-5 pt-4 pb-36">{children}</main>
 
-      <BottomNav role={typedProfile.role} />
+      <BottomNav role={typedProfile.role} locale={locale} />
     </div>
   );
 }

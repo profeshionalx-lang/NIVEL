@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getLocale } from "@/lib/i18n";
 import BottomNav from "@/components/navigation/BottomNav";
 
 export default async function MasterPlanLayout({
@@ -9,11 +10,12 @@ export default async function MasterPlanLayout({
 }) {
   const user = await getSession();
   if (!user) redirect("/login");
+  const locale = await getLocale();
 
   return (
     <div className="relative mx-auto min-h-screen max-w-[430px] bg-background">
       {children}
-      <BottomNav role={user.role} />
+      <BottomNav role={user.role} locale={locale} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getLocale } from "@/lib/i18n";
 import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
 
@@ -15,6 +16,10 @@ export default async function SessionDetailPage({
 
   const supabase = await createClient();
   const isTrainer = user.role === "trainer";
+  const locale = await getLocale();
+  const isRu = locale === "ru";
+  const nameCol = isRu ? "name_ru" : "name_en";
+  const dateLocale = isRu ? "ru-RU" : "en-US";
 
   const { data: session } = await supabase
     .from("sessions")
@@ -26,7 +31,7 @@ export default async function SessionDetailPage({
 
   const { data: sessionExercises } = await supabase
     .from("session_exercises")
-    .select("*, exercises(name), session_exercise_skills(skill_id, skills(name))")
+    .select("*, exercises(name_ru, name_en), session_exercise_skills(skill_id, skills(name_ru, name_en))")
     .eq("session_id", id)
     .order("sort_order");
 
@@ -36,12 +41,12 @@ export default async function SessionDetailPage({
       const skillLinks = (se.session_exercise_skills as Array<Record<string, unknown>>) || [];
       return {
         id: se.id as number,
-        name: (exercise?.name as string) || "",
+        name: (exercise?.[nameCol] as string) || "",
         skills: skillLinks.map((sl) => {
           const skill = sl.skills as Record<string, unknown>;
           return {
             id: sl.skill_id as number,
-            name: (skill?.name as string) || "",
+            name: (skill?.[nameCol] as string) || "",
           };
         }),
       };
@@ -75,7 +80,7 @@ export default async function SessionDetailPage({
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Session {session.session_number}
+          {isRu ? "Сессия" : "Session"} {session.session_number}
         </span>
         <div className="w-10" />
       </header>
@@ -83,13 +88,15 @@ export default async function SessionDetailPage({
       <main className="px-5 pt-6 pb-36 max-w-[430px] mx-auto space-y-6">
         <div>
           <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em] mb-1">
-            {session.status === "completed" ? "Completed" : "Planned"}
+            {session.status === "completed"
+              ? isRu ? "Завершена" : "Completed"
+              : isRu ? "Запланирована" : "Planned"}
           </p>
           <h1 className="text-3xl font-black tracking-tighter">
-            Session {session.session_number}
+            {isRu ? "Сессия" : "Session"} {session.session_number}
           </h1>
           <p className="text-on-surface-variant text-sm mt-1">
-            {new Date(session.created_at).toLocaleDateString("en-US", {
+            {new Date(session.created_at).toLocaleDateString(dateLocale, {
               day: "numeric",
               month: "long",
               year: "numeric",
@@ -99,7 +106,7 @@ export default async function SessionDetailPage({
 
         <section className="bg-surface-card rounded-3xl p-5">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
-            Exercises
+            {isRu ? "Упражнения" : "Exercises"}
           </p>
           <div className="space-y-3">
             {exercises.map((exercise) => (
@@ -124,7 +131,7 @@ export default async function SessionDetailPage({
             ))}
             {exercises.length === 0 && (
               <p className="text-on-surface-variant text-sm">
-                No exercises added yet
+                {isRu ? "Упражнения ещё не добавлены" : "No exercises added yet"}
               </p>
             )}
           </div>
@@ -133,7 +140,7 @@ export default async function SessionDetailPage({
         {allSkills.length > 0 && (
           <section className="bg-surface-high rounded-3xl p-5">
             <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3">
-              Skill gains
+              {isRu ? "Прокачка навыков" : "Skill gains"}
             </p>
             <div className="flex flex-wrap gap-2">
               {allSkills.map((skill) => (
@@ -150,7 +157,7 @@ export default async function SessionDetailPage({
 
         <section className="space-y-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-            Insights
+            {isRu ? "Карточки" : "Insights"}
           </p>
 
           {isTrainer && (
@@ -160,20 +167,20 @@ export default async function SessionDetailPage({
             >
               <p className="text-sm font-bold text-on-surface">
                 {allCards.length === 0
-                  ? "Add insight cards"
-                  : `Manage cards (${allCards.length})`}
+                  ? isRu ? "Добавить карточки" : "Add insight cards"
+                  : `${isRu ? "Карточки" : "Cards"} (${allCards.length})`}
               </p>
               <p className="text-xs text-on-surface-variant mt-1">
                 {session.trainer_review_completed
-                  ? "Review marked as finished"
-                  : "Review still in progress"}
+                  ? isRu ? "Разбор завершён" : "Review marked as finished"
+                  : isRu ? "Разбор в процессе" : "Review still in progress"}
               </p>
             </Link>
           )}
 
           {!isTrainer && approvedCards.length === 0 && (
             <p className="text-sm text-on-surface-variant">
-              Your trainer hasn&apos;t shared any insights yet.
+              {isRu ? "Тренер ещё не поделился карточками." : "Your trainer hasn't shared any insights yet."}
             </p>
           )}
 
@@ -183,23 +190,24 @@ export default async function SessionDetailPage({
               className="block rounded-2xl kinetic-gradient text-on-primary p-4 glow-primary"
             >
               <p className="font-black text-base">
-                Trainer sent {pendingForStudent.length}{" "}
-                {pendingForStudent.length === 1 ? "insight" : "insights"}
+                {isRu
+                  ? `Тренер прислал ${pendingForStudent.length} ${pendingForStudent.length === 1 ? "карточку" : "карточек"}`
+                  : `Trainer sent ${pendingForStudent.length} ${pendingForStudent.length === 1 ? "insight" : "insights"}`}
               </p>
-              <p className="text-xs mt-1 opacity-80">Tap to review →</p>
+              <p className="text-xs mt-1 opacity-80">{isRu ? "Нажмите, чтобы разобрать →" : "Tap to review →"}</p>
             </Link>
           )}
 
           {!isTrainer && approvedCards.length > 0 && pendingForStudent.length === 0 && (
             <p className="text-xs text-on-surface-variant uppercase tracking-widest">
-              All cards reviewed
+              {isRu ? "Все карточки разобраны" : "All cards reviewed"}
             </p>
           )}
 
           {takenCards.length > 0 && (
             <div className="space-y-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-                Taken ({takenCards.length})
+                {isRu ? "Взято" : "Taken"} ({takenCards.length})
               </p>
               {takenCards.map((c) => (
                 <div
@@ -217,13 +225,15 @@ export default async function SessionDetailPage({
           {skippedCards.length > 0 && !isTrainer && (
             <div className="space-y-2">
               <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                Skipped ({skippedCards.length}) — review again any time
+                {isRu
+                  ? `Пропущено (${skippedCards.length}) — можно вернуться в любой момент`
+                  : `Skipped (${skippedCards.length}) — review again any time`}
               </p>
               <Link
                 href={`/sessions/${id}/insights?include=skipped`}
                 className="block text-xs text-secondary font-bold uppercase tracking-wider"
               >
-                Re-open skipped →
+                {isRu ? "Открыть пропущенные →" : "Re-open skipped →"}
               </Link>
             </div>
           )}

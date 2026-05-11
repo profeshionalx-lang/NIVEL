@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { getLocale } from "@/lib/i18n";
 import type { Profile } from "@/lib/types";
 import BottomNav from "@/components/navigation/BottomNav";
 
@@ -10,12 +11,13 @@ export default async function InsightsLayout({
 }) {
   const user = await getSession();
   if (!user) redirect("/login");
+  const locale = await getLocale();
   const profile = { role: user.role };
 
   return (
     <div className="relative mx-auto min-h-screen max-w-[430px] bg-background">
       {children}
-      <BottomNav role={(profile as Pick<Profile, "role">).role} />
+      <BottomNav role={(profile as Pick<Profile, "role">).role} locale={locale} />
     </div>
   );
 }

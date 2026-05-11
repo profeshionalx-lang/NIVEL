@@ -5,18 +5,22 @@ import { calculateSkillLevel } from "@/lib/types";
 import Link from "next/link";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { getMasterPlan } from "@/lib/actions/masterPlan";
+import { getLocale, t } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/navigation/LanguageSwitcher";
 
 export default async function DashboardPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
+  const locale = await getLocale();
+  const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
   const profile = user;
   const supabase = await createClient();
 
   const { data: goalsRaw } = await supabase
     .from("goals")
     .select(
-      "*, goal_problems(problem_id, problems(id, name, problem_categories(name)))"
+      "*, goal_problems(problem_id, problems(id, name_ru, name_en, problem_categories(name_ru, name_en)))"
     )
     .eq("user_id", user.id)
     .eq("status", "active")
@@ -30,13 +34,14 @@ export default async function DashboardPage() {
         .eq("goal_id", goal.id as string);
 
       const goalProblems = (goal.goal_problems as Array<Record<string, unknown>>) || [];
+      const nameCol = locale === "en" ? "name_en" : "name_ru";
       const problems = goalProblems.map((gp) => {
         const prob = gp.problems as Record<string, unknown>;
         const cat = prob?.problem_categories as Record<string, unknown>;
         return {
           id: prob?.id as number,
-          name: prob?.name as string,
-          category_name: (cat?.name as string) || "",
+          name: (prob?.[nameCol] as string) ?? "",
+          category_name: (cat?.[nameCol] as string) || "",
         };
       });
 
@@ -61,10 +66,11 @@ export default async function DashboardPage() {
 
   const { data: skillProgressRaw } = await supabase
     .from("skill_progress")
-    .select("*, skills(name)")
+    .select("*, skills(name_ru, name_en)")
     .eq("user_id", user.id)
     .order("points", { ascending: false });
 
+  const skillNameCol = locale === "en" ? "name_en" : "name_ru";
   const skillProgress = (skillProgressRaw || []).map(
     (sp: Record<string, unknown>) => {
       const skill = sp.skills as Record<string, unknown>;
@@ -72,7 +78,7 @@ export default async function DashboardPage() {
       const { level, points_in_level } = calculateSkillLevel(points);
       return {
         skill_id: sp.skill_id as number,
-        skill_name: (skill?.name as string) || "",
+        skill_name: (skill?.[skillNameCol] as string) || "",
         points,
         level,
         points_in_level,
@@ -92,7 +98,7 @@ export default async function DashboardPage() {
   const { data: nextSessionRaw } = await supabase
     .from("sessions")
     .select(
-      "*, goals!inner(user_id), session_exercises(id, exercises(name))"
+      "*, goals!inner(user_id), session_exercises(id, exercises(name_ru, name_en))"
     )
     .eq("goals.user_id", user.id)
     .eq("status", "planned")
@@ -101,9 +107,10 @@ export default async function DashboardPage() {
     .maybeSingle();
 
   const nextSession = nextSessionRaw as Record<string, unknown> | null;
+  const exerciseNameCol = locale === "en" ? "name_en" : "name_ru";
   const nextExercises = nextSession
     ? ((nextSession.session_exercises as Array<Record<string, unknown>>) || [])
-        .map((se) => (se.exercises as Record<string, unknown>)?.name as string)
+        .map((se) => (se.exercises as Record<string, unknown>)?.[exerciseNameCol] as string)
         .filter(Boolean)
     : [];
 
@@ -123,7 +130,7 @@ export default async function DashboardPage() {
   const masterPlan = await getMasterPlan(user.id);
   const masterPlanPreview = masterPlan?.sections.slice(0, 2) ?? [];
 
-  const firstName = profile.full_name?.split(" ")[0] || "Player";
+  const firstName = profile.full_name?.split(" ")[0] || t(locale, "dashboard.player");
   const isEmpty = goals.length === 0 && skillProgress.length === 0;
 
   const planGoal =
@@ -146,7 +153,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-on-surface-variant text-sm font-medium">Welcome,</p>
+        <p className="text-on-surface-variant text-sm font-medium">{t(locale, "dashboard.welcome")}</p>
         <h1 className="text-4xl font-black tracking-tighter leading-none mt-0.5">
           {firstName} <span className="kinetic-text">👋</span>
         </h1>
@@ -158,8 +165,7 @@ export default async function DashboardPage() {
             Nivel
           </h2>
           <p className="text-on-surface-variant text-center text-sm max-w-xs">
-            Start by creating your first goal — pick the problems you want to
-            work on.
+            {t(locale, "dashboard.emptyHint")}
           </p>
           <Link
             href="/goals/new"
@@ -169,7 +175,7 @@ export default async function DashboardPage() {
                 "0 10px 30px rgba(202,253,0,0.25), 0 4px 12px rgba(0,0,0,0.4)",
             }}
           >
-            Create goal
+            {t(locale, "dashboard.createGoal")}
           </Link>
         </div>
       ) : (
@@ -189,16 +195,18 @@ export default async function DashboardPage() {
                 </span>
                 <div className="flex-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
-                    Action required
+                    {t(locale, "common.actionRequired")}
                   </p>
                   <h2 className="text-xl font-black tracking-tight">
-                    {totalPendingCards} new{" "}
-                    {totalPendingCards === 1 ? "insight" : "insights"} to review
+                    {totalPendingCards}{" "}
+                    {totalPendingCards === 1
+                      ? t(locale, "dashboard.insightsToReview.one")
+                      : t(locale, "dashboard.insightsToReview")}
                   </h2>
                   <p className="text-xs opacity-80 mt-0.5">
-                    From session {pendingSessionsList[0].session_number}
+                    {t(locale, "dashboard.fromSession")} {pendingSessionsList[0].session_number}
                     {pendingSessionsList.length > 1 &&
-                      ` and ${pendingSessionsList.length - 1} more`}
+                      ` ${t(locale, "dashboard.andMore")} ${pendingSessionsList.length - 1} ${t(locale, "common.more")}`}
                   </p>
                 </div>
                 <span className="material-symbols-outlined text-2xl">
@@ -215,7 +223,7 @@ export default async function DashboardPage() {
             >
               <div className="flex items-center justify-between mb-3">
                 <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em]">
-                  Master Plan
+                  {t(locale, "dashboard.masterPlan")}
                 </p>
                 <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">
                   chevron_right
@@ -227,13 +235,13 @@ export default async function DashboardPage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60 flex-shrink-0" />
                     <p className="text-sm text-on-surface-variant truncate">{section.title}</p>
                     <span className="text-[10px] text-on-surface-variant opacity-40 flex-shrink-0">
-                      {section.items.length} items
+                      {section.items.length} {t(locale, "common.items")}
                     </span>
                   </div>
                 ))}
                 {masterPlan.sections.length > 2 && (
                   <p className="text-xs text-on-surface-variant opacity-40 pl-3.5">
-                    + {masterPlan.sections.length - 2} more sections
+                    + {masterPlan.sections.length - 2} {t(locale, "dashboard.moreSections")}
                   </p>
                 )}
               </div>
@@ -245,7 +253,7 @@ export default async function DashboardPage() {
               <div className="flex justify-between items-baseline mb-2">
                 <div className="flex items-baseline gap-2">
                   <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em]">
-                    Current plan
+                    {t(locale, "dashboard.currentPlan")}
                   </p>
                   <span className="text-sm font-black tracking-tight">
                     {Math.min(planGoal.total_sessions, planGoal.session_count)}/{planGoal.session_count}
@@ -279,13 +287,13 @@ export default async function DashboardPage() {
           <section>
             <div className="flex justify-between items-center mb-4 px-1">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">
-                Active goals
+                {t(locale, "dashboard.activeGoals")}
               </h3>
               <Link
                 href="/goals/new"
                 className="text-primary text-xs font-bold uppercase tracking-wider"
               >
-                + New
+                + {t(locale, "common.new")}
               </Link>
             </div>
             <div
@@ -304,7 +312,7 @@ export default async function DashboardPage() {
                       style={{ boxShadow: "0 0 6px #cafd00" }}
                     />
                     <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                      {goal.total_sessions}/{goal.session_count} sessions
+                      {goal.total_sessions}/{goal.session_count} {t(locale, "dashboard.sessions")}
                     </span>
                   </div>
                   {goal.problems.length > 0 ? (
@@ -347,7 +355,7 @@ export default async function DashboardPage() {
           {skillProgress.length > 0 && (
             <section className="bg-surface-high rounded-3xl p-6">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-5">
-                Skill progression
+                {t(locale, "dashboard.skillProgression")}
               </h3>
               <div className="space-y-5">
                 {skillProgress.map((sp, i) => (
@@ -367,7 +375,7 @@ export default async function DashboardPage() {
           {sessions.length > 0 && (
             <section>
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4 px-1">
-                Session history
+                {t(locale, "dashboard.sessionHistory")}
               </h3>
               <div className="space-y-2">
                 {sessions.map((session) => {
@@ -394,16 +402,16 @@ export default async function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm">
-                          Session {session.session_number as number}
+                          {t(locale, "dashboard.session")} {session.session_number as number}
                         </p>
                         <p className="text-[11px] text-on-surface-variant">
                           {new Date(
                             session.created_at as string
-                          ).toLocaleDateString("en-US", {
+                          ).toLocaleDateString(dateLocale, {
                             day: "numeric",
                             month: "long",
                           })}
-                          {session.status === "completed" && " · Completed"}
+                          {session.status === "completed" && ` · ${t(locale, "common.completed")}`}
                         </p>
                       </div>
                       {pending > 0 ? (
@@ -414,7 +422,7 @@ export default async function DashboardPage() {
                           >
                             auto_awesome
                           </span>
-                          {pending} new
+                          {pending} {t(locale, "common.new").toLowerCase()}
                         </span>
                       ) : (
                         <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">
@@ -431,7 +439,7 @@ export default async function DashboardPage() {
           {nextSession && (
             <section>
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4 px-1">
-                Next session
+                {t(locale, "dashboard.nextSession")}
               </h3>
               <Link
                 href={`/sessions/${nextSession.id as string}`}
@@ -450,23 +458,23 @@ export default async function DashboardPage() {
                   />
                   <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em]">
                     {nextSession.scheduled_at
-                      ? new Date(nextSession.scheduled_at as string).toLocaleString("en-US", {
+                      ? new Date(nextSession.scheduled_at as string).toLocaleString(dateLocale, {
                           weekday: "short",
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
                         })
-                      : "Upcoming"}
+                      : t(locale, "common.upcoming")}
                   </p>
                 </div>
                 <h4 className="text-xl font-black tracking-tight mb-4">
-                  Session {nextSession.session_number as number}
+                  {t(locale, "dashboard.session")} {nextSession.session_number as number}
                 </h4>
                 {nextExercises.length > 0 && (
                   <div className="bg-surface-card rounded-2xl p-4 space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-2">
-                      Exercises
+                      {t(locale, "dashboard.exercises")}
                     </p>
                     {nextExercises.slice(0, 3).map((ex, i) => (
                       <div
@@ -479,7 +487,7 @@ export default async function DashboardPage() {
                     ))}
                     {nextExercises.length > 3 && (
                       <p className="text-xs text-on-surface-variant opacity-50 pl-4">
-                        + {nextExercises.length - 3} more
+                        + {nextExercises.length - 3} {t(locale, "common.more")}
                       </p>
                     )}
                   </div>
@@ -489,6 +497,8 @@ export default async function DashboardPage() {
           )}
         </>
       )}
+
+      <LanguageSwitcher current={locale} />
     </div>
   );
 }

@@ -28,9 +28,9 @@ export default function InsightTinder({ cards }: Props) {
         <span className="material-symbols-outlined fill-icon text-primary text-6xl">
           done_all
         </span>
-        <p className="text-on-surface font-bold">All cards reviewed</p>
+        <p className="text-on-surface font-bold">Все карточки разобраны</p>
         <p className="text-sm text-on-surface-variant">
-          Open the Insights tab to revisit what you took.
+          Откройте вкладку «Карточки», чтобы вернуться к взятым.
         </p>
       </div>
     );
@@ -105,14 +105,14 @@ export default function InsightTinder({ cards }: Props) {
       <div className="flex items-center justify-center gap-6">
         <button
           onClick={() => commit("skipped")}
-          aria-label="Skip"
+          aria-label="Пропустить"
           className="w-16 h-16 rounded-full bg-surface-card border border-border-dim flex items-center justify-center active:scale-95 transition-transform"
         >
           <span className="material-symbols-outlined text-error text-3xl">close</span>
         </button>
         <button
           onClick={() => commit("taken")}
-          aria-label="Take"
+          aria-label="Взять"
           className="w-20 h-20 rounded-full kinetic-gradient glow-primary flex items-center justify-center active:scale-95 transition-transform"
         >
           <span className="material-symbols-outlined fill-icon text-on-primary text-4xl">
@@ -122,7 +122,7 @@ export default function InsightTinder({ cards }: Props) {
       </div>
 
       <p className="text-center text-xs uppercase tracking-widest text-on-surface-variant">
-        {queue.length} {queue.length === 1 ? "card" : "cards"} left
+        осталось: {queue.length}
       </p>
     </div>
   );
@@ -149,13 +149,13 @@ function CardFace({
             className="absolute top-6 left-6 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-primary text-on-primary"
             style={{ opacity: Math.max(0, Math.min(1, dx / 80)) }}
           >
-            Take
+            Взять
           </div>
           <div
             className="absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-error text-white"
             style={{ opacity: Math.max(0, Math.min(1, -dx / 80)) }}
           >
-            Skip
+            Пропустить
           </div>
         </>
       )}
