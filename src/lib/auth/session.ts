@@ -16,7 +16,7 @@ const SESSION_COOKIE = "__session";
 const MAX_AGE_SECONDS = 14 * 24 * 60 * 60; // 14 days
 
 function getSecret() {
-  const s = process.env.SESSION_SECRET;
+  const s = process.env.SESSION_SECRET?.trim();
   if (!s) throw new Error("SESSION_SECRET is not set");
   return new TextEncoder().encode(s);
 }

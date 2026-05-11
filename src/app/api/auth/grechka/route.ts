@@ -14,8 +14,8 @@ export async function GET() {
     path: "/",
   });
 
-  const grechkaUrl = process.env.NEXT_PUBLIC_GRECHKA_URL;
-  const nivelUrl = process.env.NEXT_PUBLIC_NIVEL_URL;
+  const grechkaUrl = process.env.NEXT_PUBLIC_GRECHKA_URL?.trim();
+  const nivelUrl = process.env.NEXT_PUBLIC_NIVEL_URL?.trim();
 
   const redirectUrl = new URL(`${grechkaUrl}/auth-nivel.html`);
   redirectUrl.searchParams.set("redirect_uri", `${nivelUrl}/api/auth/grechka-callback`);
