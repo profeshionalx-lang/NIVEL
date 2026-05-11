@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { createGoal } from "@/lib/actions/goals";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLocale } from "@/lib/i18n/useLocale";
+import { t } from "@/lib/i18n/dict";
 
 interface ProblemCategory {
   id: number;
@@ -26,6 +28,7 @@ interface SearchResult {
 
 export default function NewGoalPage() {
   const router = useRouter();
+  const locale = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedProblem, setSelectedProblem] = useState<SearchResult | null>(
@@ -42,16 +45,39 @@ export default function NewGoalPage() {
   useEffect(() => {
     async function fetchProblems() {
       const supabase = createClient();
+      const col = locale === "en" ? "name_en" : "name_ru";
       const [catRes, probRes] = await Promise.all([
-        supabase.from("problem_categories").select("*").order("sort_order"),
-        supabase.from("problems").select("*").order("sort_order"),
+        supabase
+          .from("problem_categories")
+          .select(`id, sort_order, ${col}`)
+          .order("sort_order"),
+        supabase
+          .from("problems")
+          .select(`id, category_id, sort_order, ${col}`)
+          .order("sort_order"),
       ]);
-      if (catRes.data) setCategories(catRes.data);
-      if (probRes.data) setAllProblems(probRes.data);
+      if (catRes.data) {
+        setCategories(
+          catRes.data.map((c: Record<string, unknown>) => ({
+            id: c.id as number,
+            sort_order: c.sort_order as number,
+            name: c[col] as string,
+          }))
+        );
+      }
+      if (probRes.data) {
+        setAllProblems(
+          probRes.data.map((p: Record<string, unknown>) => ({
+            id: p.id as number,
+            category_id: p.category_id as number,
+            name: p[col] as string,
+          }))
+        );
+      }
       setLoading(false);
     }
     fetchProblems();
-  }, []);
+  }, [locale]);
 
   const searchProblems = useCallback(async (query: string) => {
     if (query.length < 3) {
@@ -110,7 +136,7 @@ export default function NewGoalPage() {
       router.push("/dashboard");
     } else {
       setSubmitting(false);
-      alert(result.error || "Failed to create goal");
+      alert(result.error || (locale === "en" ? "Failed to create goal" : "Не удалось создать цель"));
     }
   };
 
@@ -139,8 +165,8 @@ export default function NewGoalPage() {
       <main className="px-6 pt-6 pb-36">
         <div className="mb-8">
           <h1 className="text-3xl font-black italic uppercase leading-tight tracking-tighter">
-            Describe your{" "}
-            <span className="kinetic-text">problem.</span>
+            {locale === "en" ? "Describe your " : "Опишите свою "}
+            <span className="kinetic-text">{locale === "en" ? "problem." : "проблему."}</span>
           </h1>
         </div>
 
@@ -150,7 +176,7 @@ export default function NewGoalPage() {
             <textarea
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Describe the problem..."
+              placeholder={locale === "en" ? "Describe the problem…" : "Опишите проблему…"}
               autoFocus
               rows={3}
               className="w-full bg-surface-card rounded-2xl px-5 py-4 text-base text-on-surface placeholder:text-on-surface-variant/50 outline-none border border-border/40 focus:border-primary/50 transition-colors resize-none"
@@ -191,7 +217,7 @@ export default function NewGoalPage() {
         {searchQuery.length < 3 && searchResults.length === 0 && (
         <div>
           <p className="text-on-surface-variant text-[10px] uppercase tracking-[0.2em] font-black mb-4">
-            All problems
+            {locale === "en" ? "All problems" : "Все проблемы"}
           </p>
           <div className="space-y-3">
             {categories.map((category) => {
@@ -284,7 +310,7 @@ export default function NewGoalPage() {
               : undefined
           }
         >
-          {submitting ? "Creating..." : "Create goal"}
+          {submitting ? t(locale, "common.loading") : t(locale, "goals.create")}
         </button>
       </div>
     </div>

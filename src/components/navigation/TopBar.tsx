@@ -1,8 +1,10 @@
 import { Profile } from "@/lib/types";
+import type { Locale } from "@/lib/i18n/dict";
 import LogoutButton from "./LogoutButton";
 
 interface TopBarProps {
   profile: Pick<Profile, "full_name" | "avatar_url" | "role">;
+  locale: Locale;
 }
 
 function getInitials(name: string | null): string {
@@ -14,7 +16,7 @@ function getInitials(name: string | null): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export default function TopBar({ profile }: TopBarProps) {
+export default function TopBar({ profile, locale }: TopBarProps) {
   const initials = getInitials(profile.full_name);
 
   return (
@@ -40,7 +42,7 @@ export default function TopBar({ profile }: TopBarProps) {
       </div>
 
       {/* Right: Logout */}
-      <LogoutButton />
+      <LogoutButton locale={locale} />
     </header>
   );
 }

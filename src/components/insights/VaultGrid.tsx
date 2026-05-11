@@ -16,9 +16,9 @@ export default function VaultGrid({ cards }: Props) {
         <span className="material-symbols-outlined text-on-surface-variant text-5xl">
           inventory_2
         </span>
-        <p className="text-on-surface font-bold">Your vault is empty</p>
+        <p className="text-on-surface font-bold">Здесь пока пусто</p>
         <p className="text-sm text-on-surface-variant max-w-xs">
-          Insights you take from sessions will land here.
+          Карточки, которые вы возьмёте после сессий, появятся тут.
         </p>
       </div>
     );
@@ -65,12 +65,12 @@ export default function VaultGrid({ cards }: Props) {
                   </p>
                 ) : (
                   <p className="text-xs text-on-surface-variant italic flex-1">
-                    No extra context.
+                    Дополнительного контекста нет.
                   </p>
                 )}
                 {card.session && (
                   <p className="text-[10px] text-on-surface-variant mt-1 truncate">
-                    Session #{card.session.session_number}
+                    Сессия №{card.session.session_number}
                   </p>
                 )}
               </div>

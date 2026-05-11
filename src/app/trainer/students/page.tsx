@@ -54,7 +54,7 @@ export default async function TrainerStudentsPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Students
+          Ученики
         </span>
         <Link href="/dashboard" className="text-on-surface-variant">
           <span className="material-symbols-outlined">close</span>
@@ -67,7 +67,7 @@ export default async function TrainerStudentsPage() {
             <span className="material-symbols-outlined text-on-surface-variant text-5xl mb-4">
               groups
             </span>
-            <p className="text-on-surface-variant">No students yet</p>
+            <p className="text-on-surface-variant">Учеников пока нет</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -104,13 +104,13 @@ export default async function TrainerStudentsPage() {
                       <span className="text-primary font-bold">
                         {student.active_goals}
                       </span>{" "}
-                      goals
+                      целей
                     </span>
                     <span className="text-[11px] text-on-surface-variant">
                       <span className="text-secondary font-bold">
                         {student.total_sessions}
                       </span>{" "}
-                      sessions
+                      сессий
                     </span>
                   </div>
                 </div>

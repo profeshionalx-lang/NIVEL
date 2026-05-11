@@ -4,12 +4,13 @@ import type { ProblemCategory } from "@/lib/types";
 interface Props {
   categories: ProblemCategory[];
   activeCategoryId?: number;
+  allLabel?: string;
 }
 
-export default function VaultFilters({ categories, activeCategoryId }: Props) {
+export default function VaultFilters({ categories, activeCategoryId, allLabel = "Все" }: Props) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
-      <Chip href="/insights" active={!activeCategoryId} label="All" />
+      <Chip href="/insights" active={!activeCategoryId} label={allLabel} />
       {categories.map((c) => (
         <Chip
           key={c.id}

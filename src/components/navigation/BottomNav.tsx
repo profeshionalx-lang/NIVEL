@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { UserRole } from "@/lib/types";
+import { t, type Locale, type DictKey } from "@/lib/i18n/dict";
 
 interface BottomNavProps {
   role: UserRole;
+  locale: Locale;
 }
 
 interface Tab {
-  label: string;
+  labelKey: DictKey;
   icon: string;
   href: string;
   match: (path: string) => boolean;
@@ -18,14 +20,14 @@ interface Tab {
 
 const tabs: Tab[] = [
   {
-    label: "Home",
+    labelKey: "nav.home",
     icon: "home",
     href: "/dashboard",
     match: (p) => p === "/dashboard" || p.startsWith("/sessions") || p.startsWith("/goals"),
     roles: ["student", "trainer"],
   },
   {
-    label: "Insights",
+    labelKey: "nav.insights",
     icon: "auto_awesome",
     href: "/insights",
     match: (p) => p.startsWith("/insights"),
@@ -33,7 +35,7 @@ const tabs: Tab[] = [
   },
 ];
 
-export default function BottomNav({ role }: BottomNavProps) {
+export default function BottomNav({ role, locale }: BottomNavProps) {
   const pathname = usePathname();
   const visibleTabs = tabs.filter((tab) => tab.roles.includes(role));
 
@@ -63,7 +65,7 @@ export default function BottomNav({ role }: BottomNavProps) {
                 {tab.icon}
               </span>
               <span className="text-[10px] font-black uppercase tracking-widest">
-                {tab.label}
+                {t(locale, tab.labelKey)}
               </span>
             </Link>
           );
