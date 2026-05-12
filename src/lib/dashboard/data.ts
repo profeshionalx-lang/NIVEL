@@ -44,6 +44,7 @@ export interface DashboardProfile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  playtomic_user_id: string | null;
 }
 
 export interface DashboardData {
@@ -65,7 +66,7 @@ export async function loadDashboardData(
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("id, email, full_name, avatar_url")
+    .select("id, email, full_name, avatar_url, playtomic_user_id")
     .eq("id", userId)
     .single();
   if (!profileRow) return null;
@@ -203,6 +204,7 @@ export async function loadDashboardData(
       email: (profileRow.email as string) ?? null,
       full_name: (profileRow.full_name as string) ?? null,
       avatar_url: (profileRow.avatar_url as string) ?? null,
+      playtomic_user_id: (profileRow.playtomic_user_id as string) ?? null,
     },
     goals,
     skillProgress,

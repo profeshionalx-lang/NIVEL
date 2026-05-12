@@ -9,6 +9,7 @@ import InlineSessionCreator from "@/components/dashboard/edit/InlineSessionCreat
 import InlineProfileHeader from "@/components/dashboard/edit/InlineProfileHeader";
 import InlineSessionCardAdder from "@/components/dashboard/edit/InlineSessionCardAdder";
 import MasterPlanEditor from "@/components/masterPlan/MasterPlanEditor";
+import PlaytomicConnectBlock from "@/components/playtomic/PlaytomicConnectBlock";
 
 export interface DashboardViewEditable {
   studentId: string;
@@ -52,6 +53,11 @@ export default function DashboardView({ data, locale, editable }: Props) {
             {firstName} <span className="kinetic-text">👋</span>
           </h1>
         </div>
+      )}
+
+      {/* Playtomic connect block — student only */}
+      {!isTrainer && (
+        <PlaytomicConnectBlock currentUserId={profile.playtomic_user_id ?? null} />
       )}
 
       {/* Empty state — student only */}
