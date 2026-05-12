@@ -305,8 +305,7 @@ const en: Record<keyof typeof ru, string> = {
   // Insights — «Use at match» feature
   "insights.useAtMatch": "Use at match",
   "insights.useAtMatch.modalTitle": "Select a match",
-  "insights.useAtMatch.modalEmpty":
-    "No upcoming matches. Add a match on the Matches page.",
+  "insights.useAtMatch.modalEmpty": "No upcoming matches. Add a match on the Matches page.",
   "insights.useAtMatch.modalSave": "Attach",
   "insights.useAtMatch.modalCancel": "Cancel",
   "insights.useAtMatch.modalSaving": "Saving…",
