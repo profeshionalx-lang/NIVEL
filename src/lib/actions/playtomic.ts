@@ -27,7 +27,7 @@ export async function connectPlaytomicProfile(
     return {
       success: false,
       error:
-        "Не удалось распознать ссылку. Ожидается: https://app.playtomic.io/profile/users/…",
+        "Не удалось распознать ссылку. Ожидается: https://app.playtomic.io/profile/user/…",
     };
   }
 
