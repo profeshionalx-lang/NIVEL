@@ -38,7 +38,7 @@
 
 **Новая таблица `match_goals`:**
 - `match_id uuid references matches(id) on delete cascade`
-- `insight_id uuid references insights(id) on delete cascade`
+- `insight_id uuid references insight_cards(id) on delete cascade`  <!-- фактическое имя таблицы инсайтов в БД — `insight_cards` -->`
 - `created_at timestamptz default now()`
 - `primary key (match_id, insight_id)`
 
