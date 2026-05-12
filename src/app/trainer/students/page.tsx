@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
+import CreateStudentButton from "@/components/trainer/CreateStudentButton";
 
 export default async function TrainerStudentsPage() {
   const user = await getSession();
@@ -19,7 +20,7 @@ export default async function TrainerStudentsPage() {
   // For each student, get goal & session counts
   interface StudentWithStats {
     id: string;
-    email: string;
+    email: string | null;
     full_name: string | null;
     avatar_url: string | null;
     active_goals: number;
@@ -41,7 +42,7 @@ export default async function TrainerStudentsPage() {
 
       return {
         id: student.id as string,
-        email: student.email as string,
+        email: student.email as string | null,
         full_name: student.full_name as string | null,
         avatar_url: student.avatar_url as string | null,
         active_goals: goalCount || 0,
@@ -53,12 +54,13 @@ export default async function TrainerStudentsPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <span className="text-lg font-black text-primary uppercase italic tracking-tight">
-          Ученики
-        </span>
-        <Link href="/dashboard" className="text-on-surface-variant">
-          <span className="material-symbols-outlined">close</span>
-        </Link>
+        <span className="text-lg font-black text-primary uppercase italic tracking-tight">Ученики</span>
+        <div className="flex items-center gap-3">
+          <CreateStudentButton />
+          <Link href="/dashboard" className="text-on-surface-variant">
+            <span className="material-symbols-outlined">close</span>
+          </Link>
+        </div>
       </header>
 
       <main className="px-5 pt-6 pb-36 max-w-4xl mx-auto">
@@ -97,7 +99,7 @@ export default async function TrainerStudentsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-on-surface">
-                    {student.full_name || student.email}
+                    {student.full_name || student.email || "Unnamed"}
                   </p>
                   <div className="flex gap-3 mt-1">
                     <span className="text-[11px] text-on-surface-variant">
