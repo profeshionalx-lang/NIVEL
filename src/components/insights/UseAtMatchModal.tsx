@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { attachInsightToMatch } from "@/lib/actions/playtomic";
 import { t } from "@/lib/i18n/dict";
 import type { Locale } from "@/lib/i18n/dict";
@@ -34,6 +35,11 @@ export default function UseAtMatchModal({ insightId, locale, upcomingMatches }: 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [attached, setAttached] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function handleOpen() {
     setSelectedMatchId(null);
@@ -82,13 +88,14 @@ export default function UseAtMatchModal({ insightId, locale, upcomingMatches }: 
           : t(locale, "insights.useAtMatch")}
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-8"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
           onClick={handleClose}
         >
           <div
-            className="w-full max-w-[430px] bg-surface-card rounded-3xl p-6 space-y-4 max-h-[80vh] flex flex-col"
+            className="w-full max-w-[430px] bg-surface-card rounded-t-3xl p-6 space-y-4 max-h-[85vh] flex flex-col"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-sm font-black uppercase tracking-widest text-on-surface shrink-0">
@@ -160,7 +167,8 @@ export default function UseAtMatchModal({ insightId, locale, upcomingMatches }: 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

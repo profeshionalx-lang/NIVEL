@@ -41,8 +41,8 @@ const ru = {
   "dashboard.emptyHint":
     "Начните с создания первой цели — выберите проблемы, над которыми хотите работать.",
   "dashboard.createGoal": "Создать цель",
-  "dashboard.insightsToReview": "новых карточек на разбор",
-  "dashboard.insightsToReview.one": "новая карточка на разбор",
+  "dashboard.insightsToReview": "карточек на разбор",
+  "dashboard.insightsToReview.one": "карточка на разбор",
   "dashboard.fromSession": "По сессии",
   "dashboard.andMore": "и ещё",
   "dashboard.masterPlan": "Мастер-план",
@@ -198,8 +198,8 @@ const en: Record<keyof typeof ru, string> = {
   "dashboard.emptyHint":
     "Start by creating your first goal — pick the problems you want to work on.",
   "dashboard.createGoal": "Create goal",
-  "dashboard.insightsToReview": "new insights to review",
-  "dashboard.insightsToReview.one": "new insight to review",
+  "dashboard.insightsToReview": "insights to review",
+  "dashboard.insightsToReview.one": "insight to review",
   "dashboard.fromSession": "From session",
   "dashboard.andMore": "and",
   "dashboard.masterPlan": "Master Plan",

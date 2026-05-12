@@ -161,7 +161,7 @@ export default function DashboardView({ data, locale, editable }: Props) {
                     {t(locale, "dashboard.upcomingEmpty")}
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {allItems.map((item) => {
                       if (item.kind === "session") {
                         const dateStr = item.scheduled_at
@@ -171,20 +171,19 @@ export default function DashboardView({ data, locale, editable }: Props) {
                           <Link
                             key={`session-${item.id}`}
                             href={`/sessions/${item.id}`}
-                            className="flex items-center gap-4 bg-surface-low rounded-2xl px-4 py-3.5 active:bg-surface-card transition-colors"
+                            className="snap-start shrink-0 w-[78%] flex flex-col gap-3 bg-surface-low rounded-2xl px-4 py-4 active:bg-surface-card transition-colors"
                           >
-                            <div className="w-10 h-10 rounded-xl bg-surface-card text-primary flex items-center justify-center font-black text-sm flex-shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-surface-card text-primary flex items-center justify-center font-black text-sm">
                               {item.session_number}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="min-w-0">
                               <p className="font-semibold text-sm">
                                 {t(locale, "dashboard.session")} {item.session_number}
                               </p>
                               {dateStr && (
-                                <p className="text-[11px] text-on-surface-variant">{dateStr}</p>
+                                <p className="text-[11px] text-on-surface-variant mt-0.5">{dateStr}</p>
                               )}
                             </div>
-                            <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
                           </Link>
                         );
                       }
@@ -199,31 +198,30 @@ export default function DashboardView({ data, locale, editable }: Props) {
                         <Link
                           key={`match-${item.id}`}
                           href={`/matches/${item.id}`}
-                          className="flex items-center gap-4 bg-surface-low rounded-2xl px-4 py-3.5 active:bg-surface-card transition-colors"
+                          className="snap-start shrink-0 w-[78%] flex flex-col gap-3 bg-surface-low rounded-2xl px-4 py-4 active:bg-surface-card transition-colors"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
                             <span className="material-symbols-outlined text-[20px]">sports_tennis</span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm truncate">
                               {t(locale, "dashboard.upcomingMatch")}
                               {item.location ? ` · ${item.location}` : ""}
                             </p>
-                            <p className="text-[11px] text-on-surface-variant">
+                            <p className="text-[11px] text-on-surface-variant mt-0.5">
                               {dateStr}
                               {item.resource_name ? ` · ${item.resource_name}` : ""}
                             </p>
                             {item.goalsCount > 0 ? (
-                              <p className="text-[10px] text-primary font-bold mt-0.5">
+                              <p className="text-[10px] text-primary font-bold mt-1">
                                 {item.goalsCount} {t(locale, "matches.goalsCount")}
                               </p>
                             ) : (
-                              <p className="text-[10px] text-on-surface-variant mt-0.5">
+                              <p className="text-[10px] text-on-surface-variant mt-1">
                                 {t(locale, "matches.setGoals")}
                               </p>
                             )}
                           </div>
-                          <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
                         </Link>
                       );
                     })}

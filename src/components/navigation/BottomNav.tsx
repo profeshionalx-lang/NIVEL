@@ -38,7 +38,7 @@ const tabs: Tab[] = [
     icon: "sports_tennis",
     href: "/matches",
     match: (p) => p.startsWith("/matches"),
-    roles: ["student"],
+    roles: ["student", "trainer"],
   },
 ];
 

@@ -19,27 +19,8 @@ export default function PlaytomicConnectBlock({ currentUserId }: Props) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Already connected — show masked id
-  if (currentUserId) {
-    const masked =
-      currentUserId.length > 6
-        ? currentUserId.slice(0, 3) + "•••" + currentUserId.slice(-3)
-        : currentUserId;
-
-    return (
-      <div className="bg-surface-card rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">
-              Playtomic подключён
-            </p>
-            <p className="text-sm text-on-surface-variant font-mono">{masked}</p>
-          </div>
-          <span className="material-symbols-outlined text-primary text-2xl">check_circle</span>
-        </div>
-      </div>
-    );
-  }
+  // Already connected — hide the block entirely (status moved to /matches & profile settings)
+  if (currentUserId) return null;
 
   function handleConnect() {
     setError(null);
@@ -67,7 +48,7 @@ export default function PlaytomicConnectBlock({ currentUserId }: Props) {
         type="url"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        placeholder="https://app.playtomic.io/profile/users/…"
+        placeholder="https://app.playtomic.io/profile/user/…"
         className="w-full bg-surface-elevated rounded-xl p-3 text-sm text-on-surface border border-border-dim focus:border-primary focus:outline-none"
         disabled={isPending}
       />
