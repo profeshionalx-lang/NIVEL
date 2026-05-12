@@ -6,6 +6,7 @@ import VaultFilters from "@/components/insights/VaultFilters";
 import { getVaultCards } from "@/lib/actions/insightCards";
 import { getLocale, t } from "@/lib/i18n";
 import type { ProblemCategory } from "@/lib/types";
+import type { UpcomingMatchOption } from "@/components/insights/UseAtMatchModal";
 
 export default async function InsightsPage({
   searchParams,
@@ -21,13 +22,30 @@ export default async function InsightsPage({
 
   const categoryId = category ? Number(category) : undefined;
 
-  const [cards, { data: categoriesRaw }] = await Promise.all([
+  const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
+
+  const [cards, { data: categoriesRaw }, { data: matchesRaw }] = await Promise.all([
     getVaultCards({ categoryId }),
     supabase
       .from("problem_categories")
       .select("id, sort_order, name_ru, name_en")
       .order("sort_order"),
+    supabase
+      .from("matches")
+      .select("id, start_date, location, resource_name, status")
+      .eq("profile_id", user.id)
+      .in("status", UPCOMING_STATUSES)
+      .gte("start_date", new Date().toISOString())
+      .order("start_date", { ascending: true })
+      .limit(20),
   ]);
+
+  const upcomingMatches: UpcomingMatchOption[] = (matchesRaw ?? []).map((m) => ({
+    id: m.id as string,
+    start_date: m.start_date as string,
+    location: (m.location as string | null) ?? null,
+    resource_name: (m.resource_name as string | null) ?? null,
+  }));
 
   const nameCol = locale === "en" ? "name_en" : "name_ru";
   const categories = (categoriesRaw ?? []).map((c) => ({
@@ -53,7 +71,7 @@ export default async function InsightsPage({
           activeCategoryId={categoryId}
           allLabel={t(locale, "insights.filterAll")}
         />
-        <VaultGrid cards={cards} />
+        <VaultGrid cards={cards} upcomingMatches={upcomingMatches} locale={locale} />
       </main>
     </div>
   );

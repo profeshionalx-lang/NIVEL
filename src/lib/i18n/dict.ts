@@ -32,6 +32,7 @@ const ru = {
   // Nav
   "nav.home": "Главная",
   "nav.insights": "Карточки",
+  "nav.matches": "Матчи",
   "nav.logout": "Выйти",
 
   // Dashboard
@@ -79,6 +80,7 @@ const ru = {
   "trainer.finishReview": "Завершить разбор",
   "trainer.cards": "Карточки",
   "trainer.masterPlan": "Мастер-план",
+  "trainer.matches.empty": "У ученика нет матчей.",
 
   // Goals
   "goals.new": "Новая цель",
@@ -104,6 +106,55 @@ const ru = {
   "masterPlan.addItem": "Добавить пункт",
   "masterPlan.sectionTitle": "Название раздела",
   "masterPlan.itemText": "Текст пункта",
+
+  // Matches
+  "matches.title": "Матчи",
+  "matches.tabUpcoming": "Предстоящие",
+  "matches.tabPast": "Прошедшие",
+  "matches.refresh": "Обновить",
+  "matches.addByUrl": "Добавить по ссылке",
+  "matches.addByUrlPlaceholder": "https://app.playtomic.io/matches/…",
+  "matches.addByUrlSubmit": "Добавить",
+  "matches.addByUrlAdding": "Добавление…",
+  "matches.emptyUpcoming": "Нет предстоящих матчей",
+  "matches.emptyPast": "Нет прошедших матчей",
+  "matches.noPlaytomic": "Подключи Playtomic, чтобы видеть матчи.",
+  "matches.goToSettings": "Настройки профиля",
+  "matches.goalsCount": "целей",
+  "matches.setGoals": "Поставь цели",
+  "matches.refreshing": "Обновление…",
+  "matches.detail.goals": "Цели на игру",
+  "matches.detail.attachInsight": "Прикрепить инсайт",
+  "matches.detail.noGoals": "Нет прикреплённых инсайтов",
+  "matches.detail.modalTitle": "Выберите инсайты",
+  "matches.detail.modalEmpty": "Нет инсайтов в коллекции",
+  "matches.detail.modalSave": "Сохранить",
+  "matches.detail.modalCancel": "Отмена",
+  "matches.detail.modalSaving": "Сохранение…",
+  "matches.detail.detach": "Открепить",
+  "matches.detail.notFound": "Матч не найден",
+  "matches.detail.court": "Корт",
+  "matches.detail.score": "Счёт",
+  "matches.detail.goalsReadOnly": "Цели на игру (итог)",
+  "matches.detail.reflection": "Как прошло?",
+  "matches.detail.reflectionPlaceholder": "Запиши свои мысли после матча…",
+  "matches.detail.reflectionSaving": "Сохранение…",
+  "matches.detail.reflectionSaved": "Сохранено",
+
+  // Dashboard — «Актуальное» block
+  "dashboard.upcoming": "Актуальное",
+  "dashboard.upcomingEmpty": "Нет предстоящих тренировок или матчей",
+  "dashboard.upcomingMatch": "Матч",
+
+  // Insights — «Use at match» feature
+  "insights.useAtMatch": "Использовать на игре",
+  "insights.useAtMatch.modalTitle": "Выберите матч",
+  "insights.useAtMatch.modalEmpty": "Нет предстоящих матчей. Добавьте матч на странице Матчи.",
+  "insights.useAtMatch.modalSave": "Прикрепить",
+  "insights.useAtMatch.modalCancel": "Отмена",
+  "insights.useAtMatch.modalSaving": "Сохранение…",
+  "insights.useAtMatch.success": "Прикреплено",
+  "insights.useAtMatch.noPlaytomic": "Подключи Playtomic, чтобы использовать матчи",
 
   // Language switcher
   "lang.label": "Язык",
@@ -139,6 +190,7 @@ const en: Record<keyof typeof ru, string> = {
 
   "nav.home": "Home",
   "nav.insights": "Insights",
+  "nav.matches": "Matches",
   "nav.logout": "Sign out",
 
   "dashboard.welcome": "Welcome,",
@@ -183,6 +235,7 @@ const en: Record<keyof typeof ru, string> = {
   "trainer.finishReview": "Finish review",
   "trainer.cards": "Cards",
   "trainer.masterPlan": "Master plan",
+  "trainer.matches.empty": "This student has no matches yet.",
 
   "goals.new": "New goal",
   "goals.searchProblems": "Find a problem…",
@@ -209,6 +262,55 @@ const en: Record<keyof typeof ru, string> = {
   "lang.label": "Language",
   "lang.ru": "Русский",
   "lang.en": "English",
+
+  // Dashboard — «Актуальное» block
+  "dashboard.upcoming": "Upcoming",
+  "dashboard.upcomingEmpty": "No upcoming sessions or matches",
+  "dashboard.upcomingMatch": "Match",
+
+  // Matches
+  "matches.title": "Matches",
+  "matches.tabUpcoming": "Upcoming",
+  "matches.tabPast": "Past",
+  "matches.refresh": "Refresh",
+  "matches.addByUrl": "Add by link",
+  "matches.addByUrlPlaceholder": "https://app.playtomic.io/matches/…",
+  "matches.addByUrlSubmit": "Add",
+  "matches.addByUrlAdding": "Adding…",
+  "matches.emptyUpcoming": "No upcoming matches",
+  "matches.emptyPast": "No past matches",
+  "matches.noPlaytomic": "Connect Playtomic to see your matches.",
+  "matches.goToSettings": "Profile settings",
+  "matches.goalsCount": "goals",
+  "matches.setGoals": "Set goals",
+  "matches.refreshing": "Refreshing…",
+  "matches.detail.goals": "Match goals",
+  "matches.detail.attachInsight": "Attach insight",
+  "matches.detail.noGoals": "No insights attached yet",
+  "matches.detail.modalTitle": "Select insights",
+  "matches.detail.modalEmpty": "No insights in your vault",
+  "matches.detail.modalSave": "Save",
+  "matches.detail.modalCancel": "Cancel",
+  "matches.detail.modalSaving": "Saving…",
+  "matches.detail.detach": "Detach",
+  "matches.detail.notFound": "Match not found",
+  "matches.detail.court": "Court",
+  "matches.detail.score": "Score",
+  "matches.detail.goalsReadOnly": "Match goals (result)",
+  "matches.detail.reflection": "How did it go?",
+  "matches.detail.reflectionPlaceholder": "Write your thoughts after the match…",
+  "matches.detail.reflectionSaving": "Saving…",
+  "matches.detail.reflectionSaved": "Saved",
+
+  // Insights — «Use at match» feature
+  "insights.useAtMatch": "Use at match",
+  "insights.useAtMatch.modalTitle": "Select a match",
+  "insights.useAtMatch.modalEmpty": "No upcoming matches. Add a match on the Matches page.",
+  "insights.useAtMatch.modalSave": "Attach",
+  "insights.useAtMatch.modalCancel": "Cancel",
+  "insights.useAtMatch.modalSaving": "Saving…",
+  "insights.useAtMatch.success": "Attached",
+  "insights.useAtMatch.noPlaytomic": "Connect Playtomic to use matches",
 };
 
 export type DictKey = keyof typeof ru;

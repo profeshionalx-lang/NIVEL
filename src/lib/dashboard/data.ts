@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { calculateSkillLevel } from "@/lib/types";
 import { getMasterPlan } from "@/lib/actions/masterPlan";
+import { syncUserMatches } from "@/lib/playtomic/sync";
 import type { Locale } from "@/lib/i18n";
 import type { MasterPlan } from "@/lib/types";
 
@@ -44,6 +45,17 @@ export interface DashboardProfile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  playtomic_user_id: string | null;
+}
+
+export interface DashboardMatch {
+  id: string;
+  start_date: string;
+  location: string | null;
+  resource_name: string | null;
+  status: string | null;
+  teams: unknown;
+  goalsCount: number;
 }
 
 export interface DashboardData {
@@ -55,6 +67,7 @@ export interface DashboardData {
   masterPlan: MasterPlan | null;
   totalPendingCards: number;
   firstPendingSessionId: string | null;
+  upcomingMatches: DashboardMatch[];
 }
 
 export async function loadDashboardData(
@@ -65,7 +78,7 @@ export async function loadDashboardData(
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("id, email, full_name, avatar_url")
+    .select("id, email, full_name, avatar_url, playtomic_user_id")
     .eq("id", userId)
     .single();
   if (!profileRow) return null;
@@ -197,12 +210,48 @@ export async function loadDashboardData(
 
   const masterPlan = await getMasterPlan(userId);
 
+  // Sync Playtomic matches (10-min cooldown) and fetch upcoming ones
+  await syncUserMatches(userId);
+
+  const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
+  const { data: matchesRaw } = await supabase
+    .from("matches")
+    .select(
+      `id, start_date, location, resource_name, status, teams, match_goals(count)`
+    )
+    .eq("profile_id", userId)
+    .in("status", UPCOMING_STATUSES)
+    .gte("start_date", new Date().toISOString())
+    .order("start_date", { ascending: true })
+    .limit(5);
+
+  const upcomingMatches: DashboardMatch[] = (matchesRaw ?? []).map(
+    (r: {
+      id: string;
+      start_date: string;
+      location: string | null;
+      resource_name: string | null;
+      status: string | null;
+      teams: unknown;
+      match_goals: Array<{ count: number }>;
+    }) => ({
+      id: r.id,
+      start_date: r.start_date,
+      location: r.location,
+      resource_name: r.resource_name,
+      status: r.status,
+      teams: r.teams,
+      goalsCount: r.match_goals?.[0]?.count ?? 0,
+    })
+  );
+
   return {
     profile: {
       id: profileRow.id as string,
       email: (profileRow.email as string) ?? null,
       full_name: (profileRow.full_name as string) ?? null,
       avatar_url: (profileRow.avatar_url as string) ?? null,
+      playtomic_user_id: (profileRow.playtomic_user_id as string) ?? null,
     },
     goals,
     skillProgress,
@@ -211,5 +260,6 @@ export async function loadDashboardData(
     masterPlan,
     totalPendingCards,
     firstPendingSessionId,
+    upcomingMatches,
   };
 }

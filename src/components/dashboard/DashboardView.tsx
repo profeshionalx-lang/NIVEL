@@ -9,6 +9,7 @@ import InlineSessionCreator from "@/components/dashboard/edit/InlineSessionCreat
 import InlineProfileHeader from "@/components/dashboard/edit/InlineProfileHeader";
 import InlineSessionCardAdder from "@/components/dashboard/edit/InlineSessionCardAdder";
 import MasterPlanEditor from "@/components/masterPlan/MasterPlanEditor";
+import PlaytomicConnectBlock from "@/components/playtomic/PlaytomicConnectBlock";
 
 export interface DashboardViewEditable {
   studentId: string;
@@ -23,7 +24,7 @@ interface Props {
 
 export default function DashboardView({ data, locale, editable }: Props) {
   const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
-  const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId } = data;
+  const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId, upcomingMatches } = data;
   const isTrainer = !!editable;
 
   const displayName = profile.full_name || profile.email || "Unnamed";
@@ -52,6 +53,11 @@ export default function DashboardView({ data, locale, editable }: Props) {
             {firstName} <span className="kinetic-text">👋</span>
           </h1>
         </div>
+      )}
+
+      {/* Playtomic connect block — student only */}
+      {!isTrainer && (
+        <PlaytomicConnectBlock currentUserId={profile.playtomic_user_id ?? null} />
       )}
 
       {/* Empty state — student only */}
@@ -95,6 +101,137 @@ export default function DashboardView({ data, locale, editable }: Props) {
               </div>
             </Link>
           )}
+
+          {/* Актуальное — student only */}
+          {!isTrainer && (() => {
+            // Build unified timeline: upcoming sessions + upcoming matches, sorted by date asc
+            type TimelineItem =
+              | { kind: "session"; id: string; session_number: number; scheduled_at: string | null; date: number }
+              | { kind: "match"; id: string; start_date: string; location: string | null; resource_name: string | null; goalsCount: number; date: number };
+
+            const now = Date.now();
+
+            const sessionItems: TimelineItem[] = sessions
+              .filter((s) => s.status === "planned")
+              .map((s) => ({
+                kind: "session" as const,
+                id: s.id,
+                session_number: s.session_number,
+                scheduled_at: null,
+                date: new Date(s.created_at).getTime(),
+              }));
+
+            // Also include nextSession if it has a scheduled_at
+            const nextSessionItems: TimelineItem[] = nextSession?.scheduled_at
+              ? [{
+                  kind: "session" as const,
+                  id: nextSession.id,
+                  session_number: nextSession.session_number,
+                  scheduled_at: nextSession.scheduled_at,
+                  date: new Date(nextSession.scheduled_at).getTime(),
+                }]
+              : [];
+
+            const matchItems: TimelineItem[] = (upcomingMatches ?? []).map((m) => ({
+              kind: "match" as const,
+              id: m.id,
+              start_date: m.start_date,
+              location: m.location,
+              resource_name: m.resource_name,
+              goalsCount: m.goalsCount,
+              date: new Date(m.start_date).getTime(),
+            }));
+
+            // Merge: nextSession (has scheduled_at) + session items without duplicating nextSession + matches
+            const sessionSet = new Set(sessionItems.map((s) => s.id));
+            const uniqueNextSession = nextSessionItems.filter((ns) => !sessionSet.has(ns.id));
+
+            const allItems = [...sessionItems, ...uniqueNextSession, ...matchItems]
+              .filter((item) => item.date >= now - 60 * 60 * 1000) // at most 1hr past
+              .sort((a, b) => a.date - b.date)
+              .slice(0, 5);
+
+            return (
+              <section>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-3 px-1">
+                  {t(locale, "dashboard.upcoming")}
+                </h3>
+                {allItems.length === 0 ? (
+                  <p className="text-on-surface-variant text-sm bg-surface-card rounded-2xl p-4">
+                    {t(locale, "dashboard.upcomingEmpty")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {allItems.map((item) => {
+                      if (item.kind === "session") {
+                        const dateStr = item.scheduled_at
+                          ? new Date(item.scheduled_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+                          : null;
+                        return (
+                          <Link
+                            key={`session-${item.id}`}
+                            href={`/sessions/${item.id}`}
+                            className="flex items-center gap-4 bg-surface-low rounded-2xl px-4 py-3.5 active:bg-surface-card transition-colors"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-surface-card text-primary flex items-center justify-center font-black text-sm flex-shrink-0">
+                              {item.session_number}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm">
+                                {t(locale, "dashboard.session")} {item.session_number}
+                              </p>
+                              {dateStr && (
+                                <p className="text-[11px] text-on-surface-variant">{dateStr}</p>
+                              )}
+                            </div>
+                            <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
+                          </Link>
+                        );
+                      }
+                      // match
+                      const dateStr = new Date(item.start_date).toLocaleDateString(dateLocale, {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+                      return (
+                        <Link
+                          key={`match-${item.id}`}
+                          href={`/matches/${item.id}`}
+                          className="flex items-center gap-4 bg-surface-low rounded-2xl px-4 py-3.5 active:bg-surface-card transition-colors"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
+                            <span className="material-symbols-outlined text-[20px]">sports_tennis</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm">
+                              {t(locale, "dashboard.upcomingMatch")}
+                              {item.location ? ` · ${item.location}` : ""}
+                            </p>
+                            <p className="text-[11px] text-on-surface-variant">
+                              {dateStr}
+                              {item.resource_name ? ` · ${item.resource_name}` : ""}
+                            </p>
+                            {item.goalsCount > 0 ? (
+                              <p className="text-[10px] text-primary font-bold mt-0.5">
+                                {item.goalsCount} {t(locale, "matches.goalsCount")}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-on-surface-variant mt-0.5">
+                                {t(locale, "matches.setGoals")}
+                              </p>
+                            )}
+                          </div>
+                          <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            );
+          })()}
 
           {/* Master plan: trainer edits, student previews */}
           {isTrainer ? (
