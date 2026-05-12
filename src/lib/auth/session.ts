@@ -76,17 +76,48 @@ async function getOrCreateSupabaseProfile(
 ): Promise<{ id: string; full_name: string; avatar_url: string | null; role: "trainer" | "student" }> {
   const supabase = await createClient();
 
-  const { data: existing } = await supabase
+  // 1) Primary lookup: firebase_uid (stable identity).
+  const { data: byUid } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url, role")
+    .eq("firebase_uid", firebase_uid)
+    .maybeSingle();
+
+  if (byUid) return byUid;
+
+  // 2) Secondary lookup: email. If found and firebase_uid is still NULL,
+  //    attach this Firebase identity to that profile (first-login bind).
+  const { data: byEmail } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, role, firebase_uid")
     .eq("email", email)
-    .single();
+    .maybeSingle();
 
-  if (existing) return existing;
+  if (byEmail) {
+    if (!byEmail.firebase_uid) {
+      const { error: bindErr } = await supabase
+        .from("profiles")
+        .update({ firebase_uid })
+        .eq("id", byEmail.id);
+      if (bindErr) throw new Error(`Failed to bind firebase_uid: ${bindErr.message}`);
+    }
+    return {
+      id: byEmail.id,
+      full_name: byEmail.full_name,
+      avatar_url: byEmail.avatar_url,
+      role: byEmail.role,
+    };
+  }
 
+  // 3) Brand-new user: create profile with both email AND firebase_uid set.
   const { data: created, error } = await supabase
     .from("profiles")
-    .insert({ email, full_name: email.split("@")[0], role: "student" })
+    .insert({
+      email,
+      firebase_uid,
+      full_name: email.split("@")[0],
+      role: "student",
+    })
     .select("id, full_name, avatar_url, role")
     .single();
 
