@@ -125,14 +125,19 @@ export async function revokeClaimToken(studentId: string): Promise<void> {
 
 export async function updateStudentProfile(
   studentId: string,
-  patch: { full_name?: string; avatar_url?: string }
-): Promise<void> {
-  await requireTrainer();
-  const supabase = await createClient();
+  patch: { full_name?: string | null; avatar_url?: string | null }
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await requireTrainer();
+    const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("profiles")
-    .update(patch)
-    .eq("id", studentId);
-  if (error) throw new Error(`Failed to update student profile: ${error.message}`);
+    const { error } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("id", studentId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Unknown error" };
+  }
 }
