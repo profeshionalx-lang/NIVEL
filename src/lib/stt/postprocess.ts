@@ -30,12 +30,9 @@ export interface ProcessedSegment {
 
 function applyGlossary(text: string): string {
   let result = text;
-  for (const [canonical, patterns] of Object.entries(PADEL_GLOSSARY)) {
-    for (const pattern of patterns) {
-      // Reset lastIndex for stateful regexes
-      pattern.lastIndex = 0;
-      result = result.replace(pattern, canonical);
-    }
+  for (const [pattern, canonical] of PADEL_GLOSSARY) {
+    pattern.lastIndex = 0;
+    result = result.replace(pattern, canonical);
   }
   return result;
 }
