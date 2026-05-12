@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLocale } from "@/lib/i18n";
 import { t } from "@/lib/i18n/dict";
 import AttachInsightModal from "@/components/matches/AttachInsightModal";
+import ReflectionTextarea from "@/components/matches/ReflectionTextarea";
 import { getVaultCards } from "@/lib/actions/insightCards";
 
 const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
@@ -41,6 +42,49 @@ function extractTeams(raw: unknown): Team[] {
   return raw as Team[];
 }
 
+/**
+ * Parses the Playtomic `results` jsonb into a human-readable score string.
+ * Playtomic results can be an array of game objects like:
+ *   [{ sets: [{local_score: 6, visitor_score: 3}, ...] }]
+ * or a flat array of score objects.
+ * Returns a formatted string like "6-3, 4-6, 6-4", or null if not parseable.
+ */
+function formatScore(results: unknown): string | null {
+  if (results == null || typeof results !== "object") return null;
+  if (!Array.isArray(results)) return null;
+
+  const sets: string[] = [];
+
+  for (const item of results) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+
+    // Shape: { sets: [{local_score, visitor_score}] }
+    if (Array.isArray(obj["sets"])) {
+      for (const s of obj["sets"] as unknown[]) {
+        if (!s || typeof s !== "object") continue;
+        const setObj = s as Record<string, unknown>;
+        const local =
+          setObj["local_score"] ?? setObj["team1"] ?? setObj["home"];
+        const visitor =
+          setObj["visitor_score"] ?? setObj["team2"] ?? setObj["away"];
+        if (local != null && visitor != null) {
+          sets.push(`${local}-${visitor}`);
+        }
+      }
+    } else {
+      // Flat shape: [{local_score, visitor_score}]
+      const local = obj["local_score"] ?? obj["team1"] ?? obj["home"];
+      const visitor = obj["visitor_score"] ?? obj["team2"] ?? obj["away"];
+      if (local != null && visitor != null) {
+        sets.push(`${local}-${visitor}`);
+      }
+    }
+  }
+
+  return sets.length > 0 ? sets.join(", ") : null;
+}
+
 export default async function MatchDetailPage({ params }: PageProps) {
   const user = await getSession();
   if (!user) redirect("/login");
@@ -49,7 +93,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
   const locale = await getLocale();
   const supabase = await createClient();
 
-  // Fetch match with attached insight ids
+  // Fetch match with attached insight ids and reflection
   const { data: matchRaw, error } = await supabase
     .from("matches")
     .select(
@@ -62,6 +106,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
       status,
       teams,
       results,
+      reflection,
       match_goals(insight_id)
     `
     )
@@ -80,11 +125,14 @@ export default async function MatchDetailPage({ params }: PageProps) {
     status: string | null;
     teams: unknown;
     results: unknown;
+    reflection: string | null;
     match_goals: Array<{ insight_id: string }>;
   };
 
   const attachedIds = match.match_goals.map((g) => g.insight_id);
   const isUpcoming = UPCOMING_STATUSES.includes(match.status ?? "");
+  const isPlayed = match.status === "PLAYED";
+  const scoreText = isPlayed ? formatScore(match.results) : null;
 
   // Fetch profile for playtomic_user_id to highlight "me"
   const { data: profile } = await supabase
@@ -273,6 +321,61 @@ export default async function MatchDetailPage({ params }: PageProps) {
               </div>
             )}
           </section>
+        )}
+
+        {/* Post-match block — only for PLAYED matches */}
+        {isPlayed && (
+          <>
+            {/* Score */}
+            {scoreText && (
+              <section className="bg-surface-card rounded-2xl p-4 space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                  {t(locale, "matches.detail.score")}
+                </p>
+                <p className="text-2xl font-black text-on-surface tracking-tight">
+                  {scoreText}
+                </p>
+              </section>
+            )}
+
+            {/* Read-only goals (result view) */}
+            {attachedInsights.length > 0 && (
+              <section className="space-y-3">
+                <p className="text-sm font-black uppercase tracking-widest text-on-surface">
+                  {t(locale, "matches.detail.goalsReadOnly")}
+                </p>
+                <div className="space-y-2">
+                  {attachedInsights.map((insight) => (
+                    <div
+                      key={insight.id}
+                      className="bg-surface-card rounded-2xl p-4 flex items-start gap-3"
+                    >
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant mt-0.5 shrink-0">
+                        flag
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-on-surface leading-snug">
+                          {insight.front_text}
+                        </p>
+                        {insight.problem?.name && (
+                          <p className="text-xs text-on-surface-variant mt-0.5">
+                            {insight.problem.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Reflection textarea with auto-save */}
+            <ReflectionTextarea
+              matchId={match.id}
+              initialValue={match.reflection ?? ""}
+              locale={locale}
+            />
+          </>
         )}
       </main>
     </div>
