@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { getLocale } from "@/lib/i18n";
 import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
+import { AudioUploader } from "@/components/sessions/AudioUploader";
 
 export default async function SessionDetailPage({
   params,
@@ -58,6 +59,12 @@ export default async function SessionDetailPage({
       exercises.flatMap((e) => e.skills).map((s) => [s.id, s])
     ).values(),
   ];
+
+  const { data: transcript } = await supabase
+    .from("transcripts")
+    .select("status")
+    .eq("session_id", id)
+    .maybeSingle();
 
   const { data: cards } = await supabase
     .from("insight_cards")
@@ -152,6 +159,43 @@ export default async function SessionDetailPage({
                 </span>
               ))}
             </div>
+          </section>
+        )}
+
+        {isTrainer && (
+          <section>
+            {transcript ? (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                  {isRu ? "Аудио тренировки" : "Session audio"}
+                </p>
+                <Link
+                  href={`/sessions/${id}/transcript`}
+                  className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim"
+                >
+                  <span className="material-symbols-outlined text-primary">description</span>
+                  <div>
+                    <p className="text-sm font-bold text-on-surface">
+                      {transcript.status === "ready"
+                        ? isRu ? "Открыть транскрипт" : "Open transcript"
+                        : transcript.status === "processing"
+                        ? isRu ? "Транскрипция…" : "Transcribing…"
+                        : isRu ? "Ошибка транскрипции" : "Transcription failed"}
+                    </p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {transcript.status === "processing"
+                        ? isRu ? "Обычно занимает 15–30 сек" : "Usually takes 15–30 sec"
+                        : ""}
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined text-on-surface-variant ml-auto">
+                    chevron_right
+                  </span>
+                </Link>
+              </div>
+            ) : (
+              <AudioUploader sessionId={id} />
+            )}
           </section>
         )}
 
