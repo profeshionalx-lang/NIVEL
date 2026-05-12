@@ -94,3 +94,77 @@ export async function addMatchByUrlAction(url: string): Promise<AddMatchByUrlRes
   revalidatePath("/matches");
   return { success: true };
 }
+
+export type AttachInsightResult = { success: true } | { success: false; error: string };
+
+/**
+ * Attaches an insight card to a match (creates a match_goals row).
+ */
+export async function attachInsightToMatch(
+  matchId: string,
+  insightId: string
+): Promise<AttachInsightResult> {
+  const session = await getSession();
+  if (!session) return { success: false, error: "unauthorized" };
+
+  const supabase = await createClient();
+
+  // Verify the match belongs to the current user
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("id", matchId)
+    .eq("profile_id", session.id)
+    .single();
+
+  if (matchError || !match) {
+    return { success: false, error: "Match not found" };
+  }
+
+  const { error } = await supabase
+    .from("match_goals")
+    .upsert({ match_id: matchId, insight_id: insightId }, { onConflict: "match_id,insight_id" });
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/matches/${matchId}`);
+  return { success: true };
+}
+
+export type DetachInsightResult = { success: true } | { success: false; error: string };
+
+/**
+ * Detaches an insight card from a match (removes the match_goals row).
+ */
+export async function detachInsightFromMatch(
+  matchId: string,
+  insightId: string
+): Promise<DetachInsightResult> {
+  const session = await getSession();
+  if (!session) return { success: false, error: "unauthorized" };
+
+  const supabase = await createClient();
+
+  // Verify the match belongs to the current user
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("id", matchId)
+    .eq("profile_id", session.id)
+    .single();
+
+  if (matchError || !match) {
+    return { success: false, error: "Match not found" };
+  }
+
+  const { error } = await supabase
+    .from("match_goals")
+    .delete()
+    .eq("match_id", matchId)
+    .eq("insight_id", insightId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/matches/${matchId}`);
+  return { success: true };
+}
