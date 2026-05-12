@@ -33,6 +33,13 @@ const tabs: Tab[] = [
     match: (p) => p.startsWith("/insights"),
     roles: ["student", "trainer"],
   },
+  {
+    labelKey: "nav.matches",
+    icon: "sports_tennis",
+    href: "/matches",
+    match: (p) => p.startsWith("/matches"),
+    roles: ["student"],
+  },
 ];
 
 export default function BottomNav({ role, locale }: BottomNavProps) {

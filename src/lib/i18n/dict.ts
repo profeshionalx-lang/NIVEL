@@ -32,6 +32,7 @@ const ru = {
   // Nav
   "nav.home": "Главная",
   "nav.insights": "Карточки",
+  "nav.matches": "Матчи",
   "nav.logout": "Выйти",
 
   // Dashboard
@@ -105,6 +106,23 @@ const ru = {
   "masterPlan.sectionTitle": "Название раздела",
   "masterPlan.itemText": "Текст пункта",
 
+  // Matches
+  "matches.title": "Матчи",
+  "matches.tabUpcoming": "Предстоящие",
+  "matches.tabPast": "Прошедшие",
+  "matches.refresh": "Обновить",
+  "matches.addByUrl": "Добавить по ссылке",
+  "matches.addByUrlPlaceholder": "https://app.playtomic.io/matches/…",
+  "matches.addByUrlSubmit": "Добавить",
+  "matches.addByUrlAdding": "Добавление…",
+  "matches.emptyUpcoming": "Нет предстоящих матчей",
+  "matches.emptyPast": "Нет прошедших матчей",
+  "matches.noPlaytomic": "Подключи Playtomic, чтобы видеть матчи.",
+  "matches.goToSettings": "Настройки профиля",
+  "matches.goalsCount": "целей",
+  "matches.setGoals": "Поставь цели",
+  "matches.refreshing": "Обновление…",
+
   // Language switcher
   "lang.label": "Язык",
   "lang.ru": "Русский",
@@ -139,6 +157,7 @@ const en: Record<keyof typeof ru, string> = {
 
   "nav.home": "Home",
   "nav.insights": "Insights",
+  "nav.matches": "Matches",
   "nav.logout": "Sign out",
 
   "dashboard.welcome": "Welcome,",
@@ -209,6 +228,23 @@ const en: Record<keyof typeof ru, string> = {
   "lang.label": "Language",
   "lang.ru": "Русский",
   "lang.en": "English",
+
+  // Matches
+  "matches.title": "Matches",
+  "matches.tabUpcoming": "Upcoming",
+  "matches.tabPast": "Past",
+  "matches.refresh": "Refresh",
+  "matches.addByUrl": "Add by link",
+  "matches.addByUrlPlaceholder": "https://app.playtomic.io/matches/…",
+  "matches.addByUrlSubmit": "Add",
+  "matches.addByUrlAdding": "Adding…",
+  "matches.emptyUpcoming": "No upcoming matches",
+  "matches.emptyPast": "No past matches",
+  "matches.noPlaytomic": "Connect Playtomic to see your matches.",
+  "matches.goToSettings": "Profile settings",
+  "matches.goalsCount": "goals",
+  "matches.setGoals": "Set goals",
+  "matches.refreshing": "Refreshing…",
 };
 
 export type DictKey = keyof typeof ru;
