@@ -71,6 +71,7 @@ SESSION_SECRET                 — 64-char hex, для подписи HMAC JWT
 SUPABASE_SERVICE_ROLE_KEY      — server-only, bypasses RLS
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_SUPABASE_URL
+GROQ_API_KEY                   — STT через Groq Whisper (https://console.groq.com)
 ```
 
 ---
