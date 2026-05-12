@@ -122,6 +122,22 @@ const ru = {
   "matches.goalsCount": "целей",
   "matches.setGoals": "Поставь цели",
   "matches.refreshing": "Обновление…",
+  "matches.detail.goals": "Цели на игру",
+  "matches.detail.attachInsight": "Прикрепить инсайт",
+  "matches.detail.noGoals": "Нет прикреплённых инсайтов",
+  "matches.detail.modalTitle": "Выберите инсайты",
+  "matches.detail.modalEmpty": "Нет инсайтов в коллекции",
+  "matches.detail.modalSave": "Сохранить",
+  "matches.detail.modalCancel": "Отмена",
+  "matches.detail.modalSaving": "Сохранение…",
+  "matches.detail.detach": "Открепить",
+  "matches.detail.notFound": "Матч не найден",
+  "matches.detail.court": "Корт",
+
+  // Dashboard — «Актуальное» block
+  "dashboard.upcoming": "Актуальное",
+  "dashboard.upcomingEmpty": "Нет предстоящих тренировок или матчей",
+  "dashboard.upcomingMatch": "Матч",
 
   // Language switcher
   "lang.label": "Язык",
@@ -229,6 +245,11 @@ const en: Record<keyof typeof ru, string> = {
   "lang.ru": "Русский",
   "lang.en": "English",
 
+  // Dashboard — «Актуальное» block
+  "dashboard.upcoming": "Upcoming",
+  "dashboard.upcomingEmpty": "No upcoming sessions or matches",
+  "dashboard.upcomingMatch": "Match",
+
   // Matches
   "matches.title": "Matches",
   "matches.tabUpcoming": "Upcoming",
@@ -245,6 +266,17 @@ const en: Record<keyof typeof ru, string> = {
   "matches.goalsCount": "goals",
   "matches.setGoals": "Set goals",
   "matches.refreshing": "Refreshing…",
+  "matches.detail.goals": "Match goals",
+  "matches.detail.attachInsight": "Attach insight",
+  "matches.detail.noGoals": "No insights attached yet",
+  "matches.detail.modalTitle": "Select insights",
+  "matches.detail.modalEmpty": "No insights in your vault",
+  "matches.detail.modalSave": "Save",
+  "matches.detail.modalCancel": "Cancel",
+  "matches.detail.modalSaving": "Saving…",
+  "matches.detail.detach": "Detach",
+  "matches.detail.notFound": "Match not found",
+  "matches.detail.court": "Court",
 };
 
 export type DictKey = keyof typeof ru;
