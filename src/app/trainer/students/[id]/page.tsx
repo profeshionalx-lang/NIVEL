@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/i18n";
 import { loadDashboardData } from "@/lib/dashboard/data";
 import DashboardView from "@/components/dashboard/DashboardView";
 import InviteBlock from "@/components/trainer/InviteBlock";
+import TrainerMatchesBlock from "@/components/trainer/TrainerMatchesBlock";
 
 export default async function TrainerStudentDetailPage({
   params,
@@ -36,6 +37,7 @@ export default async function TrainerStudentDetailPage({
           locale={locale}
           editable={{ studentId, trainerId: user!.id }}
         />
+        <TrainerMatchesBlock studentId={studentId} locale={locale} />
       </main>
     </div>
   );

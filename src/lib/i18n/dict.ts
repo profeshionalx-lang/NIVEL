@@ -80,6 +80,7 @@ const ru = {
   "trainer.finishReview": "Завершить разбор",
   "trainer.cards": "Карточки",
   "trainer.masterPlan": "Мастер-план",
+  "trainer.matches.empty": "У ученика нет матчей.",
 
   // Goals
   "goals.new": "Новая цель",
@@ -144,6 +145,16 @@ const ru = {
   "dashboard.upcoming": "Актуальное",
   "dashboard.upcomingEmpty": "Нет предстоящих тренировок или матчей",
   "dashboard.upcomingMatch": "Матч",
+
+  // Insights — «Use at match» feature
+  "insights.useAtMatch": "Использовать на игре",
+  "insights.useAtMatch.modalTitle": "Выберите матч",
+  "insights.useAtMatch.modalEmpty": "Нет предстоящих матчей. Добавьте матч на странице Матчи.",
+  "insights.useAtMatch.modalSave": "Прикрепить",
+  "insights.useAtMatch.modalCancel": "Отмена",
+  "insights.useAtMatch.modalSaving": "Сохранение…",
+  "insights.useAtMatch.success": "Прикреплено",
+  "insights.useAtMatch.noPlaytomic": "Подключи Playtomic, чтобы использовать матчи",
 
   // Language switcher
   "lang.label": "Язык",
@@ -224,6 +235,7 @@ const en: Record<keyof typeof ru, string> = {
   "trainer.finishReview": "Finish review",
   "trainer.cards": "Cards",
   "trainer.masterPlan": "Master plan",
+  "trainer.matches.empty": "This student has no matches yet.",
 
   "goals.new": "New goal",
   "goals.searchProblems": "Find a problem…",
@@ -289,6 +301,16 @@ const en: Record<keyof typeof ru, string> = {
   "matches.detail.reflectionPlaceholder": "Write your thoughts after the match…",
   "matches.detail.reflectionSaving": "Saving…",
   "matches.detail.reflectionSaved": "Saved",
+
+  // Insights — «Use at match» feature
+  "insights.useAtMatch": "Use at match",
+  "insights.useAtMatch.modalTitle": "Select a match",
+  "insights.useAtMatch.modalEmpty": "No upcoming matches. Add a match on the Matches page.",
+  "insights.useAtMatch.modalSave": "Attach",
+  "insights.useAtMatch.modalCancel": "Cancel",
+  "insights.useAtMatch.modalSaving": "Saving…",
+  "insights.useAtMatch.success": "Attached",
+  "insights.useAtMatch.noPlaytomic": "Connect Playtomic to use matches",
 };
 
 export type DictKey = keyof typeof ru;
