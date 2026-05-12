@@ -122,9 +122,10 @@ export default async function MatchDetailPage({ params }: PageProps) {
 
     attachedInsights = (insightRows ?? []).map((r) => {
       const prob = r.problem as unknown;
+      const probNormalized = Array.isArray(prob) ? prob[0] : prob;
       const problemObj =
-        prob != null && !Array.isArray(prob) && typeof prob === "object"
-          ? (prob as { name: string })
+        probNormalized != null && typeof probNormalized === "object"
+          ? (probNormalized as { name: string })
           : null;
       return {
         id: r.id,
