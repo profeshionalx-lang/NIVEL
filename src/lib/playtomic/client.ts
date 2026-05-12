@@ -14,13 +14,13 @@ export interface PlaytomicMatch {
 
 /**
  * Extracts user_id from Playtomic profile URL.
- * Supports both numeric IDs (e.g. "5536921") and UUIDs.
- * Example: https://app.playtomic.io/profile/users/5536921
+ * Supports both numeric IDs and UUIDs.
+ * Both /profile/users/{id} (web) and /profile/user/{id} (Android share) are accepted.
  */
 export function parseProfileUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
-    const match = parsed.pathname.match(/\/profile\/users\/([^/?#]+)/);
+    const match = parsed.pathname.match(/\/profile\/users?\/([^/?#]+)/);
     return match ? match[1] : null;
   } catch {
     return null;
