@@ -124,3 +124,132 @@ async function getOrCreateSupabaseProfile(
   if (error || !created) throw new Error(`Failed to create profile: ${error?.message}`);
   return created;
 }
+
+export class ClaimError extends Error {
+  code:
+    | "invalid_token"
+    | "expired"
+    | "already_claimed"
+    | "email_collision"
+    | "uid_collision"
+    | "firebase_invalid";
+  constructor(code: ClaimError["code"], message?: string) {
+    super(message ?? code);
+    this.code = code;
+  }
+}
+
+export async function claimSession(
+  idToken: string,
+  claimToken: string
+): Promise<SessionUser> {
+  // 1) Verify Firebase ID token.
+  let uid: string;
+  let email: string;
+  let avatar_url: string | null = null;
+  try {
+    const verified = await verifyFirebaseIdToken(idToken);
+    uid = verified.uid;
+    email = verified.email;
+    // verifyFirebaseIdToken returns { uid, email }; picture (if present) is optional.
+    // If your verifier exposes more claims, extend it; for now avatar_url stays null
+    // and will be updated via a future profile-edit screen.
+  } catch {
+    throw new ClaimError("firebase_invalid");
+  }
+
+  const supabase = await createClient();
+
+  // 2) Find shadow profile by claim_token.
+  const { data: shadow } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, role, claim_expires_at, claimed_at, firebase_uid")
+    .eq("claim_token", claimToken)
+    .maybeSingle();
+
+  if (!shadow) throw new ClaimError("invalid_token");
+  if (shadow.claimed_at) throw new ClaimError("already_claimed");
+  if (
+    shadow.claim_expires_at &&
+    new Date(shadow.claim_expires_at).getTime() < Date.now()
+  ) {
+    throw new ClaimError("expired");
+  }
+
+  // 3) Detect collisions: another profile already bound to this firebase_uid
+  //    or holding this email.
+  const { data: byUid } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("firebase_uid", uid)
+    .neq("id", shadow.id)
+    .maybeSingle();
+  if (byUid) {
+    // Revoke the token so the link can't be re-used.
+    await supabase
+      .from("profiles")
+      .update({ claim_token: null, claim_expires_at: null })
+      .eq("id", shadow.id);
+    throw new ClaimError("uid_collision");
+  }
+
+  const { data: byEmail } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .neq("id", shadow.id)
+    .maybeSingle();
+  if (byEmail) {
+    await supabase
+      .from("profiles")
+      .update({ claim_token: null, claim_expires_at: null })
+      .eq("id", shadow.id);
+    throw new ClaimError("email_collision");
+  }
+
+  // 4) Bind Firebase identity to the shadow profile.
+  const { data: updated, error: updErr } = await supabase
+    .from("profiles")
+    .update({
+      firebase_uid: uid,
+      email,
+      avatar_url: avatar_url ?? shadow.avatar_url,
+      claimed_at: new Date().toISOString(),
+      claim_token: null,
+      claim_expires_at: null,
+    })
+    .eq("id", shadow.id)
+    .select("id, full_name, avatar_url, role")
+    .single();
+
+  if (updErr || !updated) {
+    throw new ClaimError("invalid_token", `Failed to update profile: ${updErr?.message}`);
+  }
+
+  // 5) Mint session cookie (same logic as createSession).
+  const payload: SessionUser = {
+    firebase_uid: uid,
+    email,
+    id: updated.id,
+    full_name: updated.full_name,
+    avatar_url: updated.avatar_url,
+    role: updated.role,
+  };
+
+  const token = await new SignJWT({ ...payload })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
+    .sign(getSecret());
+
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: MAX_AGE_SECONDS,
+    path: "/",
+  });
+
+  return payload;
+}
