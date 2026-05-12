@@ -80,6 +80,7 @@ const ru = {
   "trainer.finishReview": "Завершить разбор",
   "trainer.cards": "Карточки",
   "trainer.masterPlan": "Мастер-план",
+  "trainer.matches.empty": "У ученика нет матчей.",
 
   // Goals
   "goals.new": "Новая цель",
@@ -133,16 +134,17 @@ const ru = {
   "matches.detail.detach": "Открепить",
   "matches.detail.notFound": "Матч не найден",
   "matches.detail.court": "Корт",
+  "matches.detail.score": "Счёт",
+  "matches.detail.goalsReadOnly": "Цели на игру (итог)",
+  "matches.detail.reflection": "Как прошло?",
+  "matches.detail.reflectionPlaceholder": "Запиши свои мысли после матча…",
+  "matches.detail.reflectionSaving": "Сохранение…",
+  "matches.detail.reflectionSaved": "Сохранено",
 
   // Dashboard — «Актуальное» block
   "dashboard.upcoming": "Актуальное",
   "dashboard.upcomingEmpty": "Нет предстоящих тренировок или матчей",
   "dashboard.upcomingMatch": "Матч",
-
-  // Language switcher
-  "lang.label": "Язык",
-  "lang.ru": "Русский",
-  "lang.en": "English",
 
   // Insights — «Use at match» feature
   "insights.useAtMatch": "Использовать на игре",
@@ -153,6 +155,11 @@ const ru = {
   "insights.useAtMatch.modalSaving": "Сохранение…",
   "insights.useAtMatch.success": "Прикреплено",
   "insights.useAtMatch.noPlaytomic": "Подключи Playtomic, чтобы использовать матчи",
+
+  // Language switcher
+  "lang.label": "Язык",
+  "lang.ru": "Русский",
+  "lang.en": "English",
 } as const;
 
 const en: Record<keyof typeof ru, string> = {
@@ -228,6 +235,7 @@ const en: Record<keyof typeof ru, string> = {
   "trainer.finishReview": "Finish review",
   "trainer.cards": "Cards",
   "trainer.masterPlan": "Master plan",
+  "trainer.matches.empty": "This student has no matches yet.",
 
   "goals.new": "New goal",
   "goals.searchProblems": "Find a problem…",
@@ -287,6 +295,12 @@ const en: Record<keyof typeof ru, string> = {
   "matches.detail.detach": "Detach",
   "matches.detail.notFound": "Match not found",
   "matches.detail.court": "Court",
+  "matches.detail.score": "Score",
+  "matches.detail.goalsReadOnly": "Match goals (result)",
+  "matches.detail.reflection": "How did it go?",
+  "matches.detail.reflectionPlaceholder": "Write your thoughts after the match…",
+  "matches.detail.reflectionSaving": "Saving…",
+  "matches.detail.reflectionSaved": "Saved",
 
   // Insights — «Use at match» feature
   "insights.useAtMatch": "Use at match",
