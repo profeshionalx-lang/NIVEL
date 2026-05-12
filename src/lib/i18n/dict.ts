@@ -143,6 +143,16 @@ const ru = {
   "lang.label": "Язык",
   "lang.ru": "Русский",
   "lang.en": "English",
+
+  // Insights — «Use at match» feature
+  "insights.useAtMatch": "Использовать на игре",
+  "insights.useAtMatch.modalTitle": "Выберите матч",
+  "insights.useAtMatch.modalEmpty": "Нет предстоящих матчей. Добавьте матч на странице Матчи.",
+  "insights.useAtMatch.modalSave": "Прикрепить",
+  "insights.useAtMatch.modalCancel": "Отмена",
+  "insights.useAtMatch.modalSaving": "Сохранение…",
+  "insights.useAtMatch.success": "Прикреплено",
+  "insights.useAtMatch.noPlaytomic": "Подключи Playtomic, чтобы использовать матчи",
 } as const;
 
 const en: Record<keyof typeof ru, string> = {
@@ -277,6 +287,16 @@ const en: Record<keyof typeof ru, string> = {
   "matches.detail.detach": "Detach",
   "matches.detail.notFound": "Match not found",
   "matches.detail.court": "Court",
+
+  // Insights — «Use at match» feature
+  "insights.useAtMatch": "Use at match",
+  "insights.useAtMatch.modalTitle": "Select a match",
+  "insights.useAtMatch.modalEmpty": "No upcoming matches. Add a match on the Matches page.",
+  "insights.useAtMatch.modalSave": "Attach",
+  "insights.useAtMatch.modalCancel": "Cancel",
+  "insights.useAtMatch.modalSaving": "Saving…",
+  "insights.useAtMatch.success": "Attached",
+  "insights.useAtMatch.noPlaytomic": "Connect Playtomic to use matches",
 };
 
 export type DictKey = keyof typeof ru;

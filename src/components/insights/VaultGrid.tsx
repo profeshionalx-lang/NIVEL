@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import type { InsightCardWithRelations } from "@/lib/types";
+import UseAtMatchModal, {
+  type UpcomingMatchOption,
+} from "@/components/insights/UseAtMatchModal";
+import type { Locale } from "@/lib/i18n/dict";
 
 interface Props {
   cards: InsightCardWithRelations[];
+  upcomingMatches?: UpcomingMatchOption[];
+  locale?: Locale;
 }
 
-export default function VaultGrid({ cards }: Props) {
+export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Props) {
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
 
   if (cards.length === 0) {
@@ -72,6 +78,13 @@ export default function VaultGrid({ cards }: Props) {
                   <p className="text-[10px] text-on-surface-variant mt-1 truncate">
                     Сессия №{card.session.session_number}
                   </p>
+                )}
+                {upcomingMatches !== undefined && (
+                  <UseAtMatchModal
+                    insightId={card.id}
+                    locale={locale}
+                    upcomingMatches={upcomingMatches}
+                  />
                 )}
               </div>
             </div>
