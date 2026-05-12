@@ -133,6 +133,12 @@ const ru = {
   "matches.detail.detach": "Открепить",
   "matches.detail.notFound": "Матч не найден",
   "matches.detail.court": "Корт",
+  "matches.detail.score": "Счёт",
+  "matches.detail.goalsReadOnly": "Цели на игру (итог)",
+  "matches.detail.reflection": "Как прошло?",
+  "matches.detail.reflectionPlaceholder": "Запиши свои мысли после матча…",
+  "matches.detail.reflectionSaving": "Сохранение…",
+  "matches.detail.reflectionSaved": "Сохранено",
 
   // Dashboard — «Актуальное» block
   "dashboard.upcoming": "Актуальное",
@@ -277,6 +283,12 @@ const en: Record<keyof typeof ru, string> = {
   "matches.detail.detach": "Detach",
   "matches.detail.notFound": "Match not found",
   "matches.detail.court": "Court",
+  "matches.detail.score": "Score",
+  "matches.detail.goalsReadOnly": "Match goals (result)",
+  "matches.detail.reflection": "How did it go?",
+  "matches.detail.reflectionPlaceholder": "Write your thoughts after the match…",
+  "matches.detail.reflectionSaving": "Saving…",
+  "matches.detail.reflectionSaved": "Saved",
 };
 
 export type DictKey = keyof typeof ru;

@@ -56,41 +56,36 @@ export async function syncUserMatches(
 
   // 4. Fetch from Playtomic
   const remoteMatches = await fetchUserMatches(playtomic_user_id);
-  if (remoteMatches.length === 0) {
-    // Still update sync timestamp so we don't spam the API
-    await supabase
-      .from("profiles")
-      .update({ playtomic_synced_at: new Date().toISOString() })
-      .eq("id", profileId);
-    return;
+
+  if (remoteMatches.length > 0) {
+    const now = new Date();
+
+    // 5. Load existing match IDs from our DB for this profile
+    const { data: existingRows } = await supabase
+      .from("matches")
+      .select("playtomic_match_id")
+      .eq("profile_id", profileId);
+
+    const existingIds = new Set(
+      (existingRows ?? []).map(
+        (r: { playtomic_match_id: string }) => r.playtomic_match_id
+      )
+    );
+
+    // Filter: upcoming OR already in DB (to refresh status/score)
+    const toSync = remoteMatches.filter((m) => {
+      if (existingIds.has(m.match_id)) return true;
+      if (!m.start_date) return false;
+      return new Date(m.start_date) >= now;
+    });
+
+    if (toSync.length > 0) {
+      await upsertMatches(supabase, profileId, toSync);
+    }
   }
 
-  const now = new Date();
-
-  // 5. Load existing match IDs from our DB for this profile
-  const { data: existingRows } = await supabase
-    .from("matches")
-    .select("playtomic_match_id")
-    .eq("profile_id", profileId);
-
-  const existingIds = new Set(
-    (existingRows ?? []).map(
-      (r: { playtomic_match_id: string }) => r.playtomic_match_id
-    )
-  );
-
-  // Filter: upcoming OR already in DB
-  const toSync = remoteMatches.filter((m) => {
-    if (existingIds.has(m.match_id)) return true;
-    if (!m.start_date) return false;
-    return new Date(m.start_date) >= now;
-  });
-
-  if (toSync.length > 0) {
-    await upsertMatches(supabase, profileId, toSync);
-  }
-
-  // 6 & 7. Mark past matches with results as PLAYED
+  // Always mark past matches with results as PLAYED, even when Playtomic returns
+  // no matches (guarantees correct status for already-synced records).
   await markPlayedMatches(supabase, profileId);
 
   // 8. Update sync timestamp

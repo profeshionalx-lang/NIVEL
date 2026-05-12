@@ -131,6 +131,34 @@ export async function attachInsightToMatch(
   return { success: true };
 }
 
+export type SaveReflectionResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Saves the reflection text for a played match.
+ */
+export async function saveReflection(
+  matchId: string,
+  reflection: string
+): Promise<SaveReflectionResult> {
+  const session = await getSession();
+  if (!session) return { success: false, error: "unauthorized" };
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("matches")
+    .update({ reflection })
+    .eq("id", matchId)
+    .eq("profile_id", session.id);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/matches/${matchId}`);
+  return { success: true };
+}
+
 export type DetachInsightResult = { success: true } | { success: false; error: string };
 
 /**
