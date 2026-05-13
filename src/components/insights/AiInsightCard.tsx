@@ -75,13 +75,15 @@ export function AiInsightCard({ card, isTrainer, onEdit }: Props) {
           >
             ✓ Approve
           </button>
-          <button
-            onClick={() => onEdit?.(card)}
-            disabled={isPending}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold border border-border-dim text-on-surface min-h-[44px]"
-          >
-            ✎ Edit
-          </button>
+          {onEdit && (
+            <button
+              onClick={() => onEdit(card)}
+              disabled={isPending}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold border border-border-dim text-on-surface min-h-[44px]"
+            >
+              ✎ Edit
+            </button>
+          )}
           <button
             onClick={reject}
             disabled={isPending}
