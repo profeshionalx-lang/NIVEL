@@ -88,23 +88,11 @@ export function DraftCardsList({ cards, isTrainer }: Props) {
   const dx = drag?.x ?? 0;
   const rot = dx / 18;
   const opacity = exiting ? 0 : 1 - Math.min(Math.abs(dx) / 400, 0.4);
-  const topTag = top.tags?.[0] ?? null;
 
   return (
     <>
       <div className="space-y-5">
-        <div>
-          <div className="flex items-center gap-2 px-1 mb-2">
-            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
-              AI черновик
-            </span>
-            {topTag && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                {topTag}
-              </span>
-            )}
-          </div>
-          <div className="tinder-stack">
+        <div className="tinder-stack">
           {next && <DraftCardFace card={next} stacked />}
           <div
             className={`tinder-card ${drag ? "dragging" : ""} ${
@@ -123,7 +111,6 @@ export function DraftCardsList({ cards, isTrainer }: Props) {
           >
             <DraftCardFace card={top} dx={dx} />
           </div>
-        </div>
         </div>
 
         {isTrainer && (
@@ -177,38 +164,51 @@ function DraftCardFace({
 }) {
   const title = card.title || card.front_text || "";
   const body = card.body || card.context_text || "";
+  const tag = card.tags?.[0] ?? null;
 
   return (
     <div
-      className={`absolute inset-0 rounded-3xl p-6 flex flex-col gap-3 bg-white border border-gray-200 shadow-lg overflow-hidden ${
+      className={`absolute inset-0 rounded-3xl p-6 flex flex-col bg-white border border-gray-200 shadow-lg overflow-hidden ${
         stacked ? "scale-[0.94] -translate-y-3 opacity-60" : ""
       }`}
     >
       {!stacked && (
         <>
           <div
-            className="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-green-500 text-white pointer-events-none"
+            className="absolute top-4 left-4 z-20 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-green-500 text-white pointer-events-none"
             style={{ opacity: Math.max(0, Math.min(1, dx / 80)) }}
           >
             Принять
           </div>
           <div
-            className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-red-500 text-white pointer-events-none"
+            className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-red-500 text-white pointer-events-none"
             style={{ opacity: Math.max(0, Math.min(1, -dx / 80)) }}
           >
             Отклонить
           </div>
         </>
       )}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700">
+          AI черновик
+        </span>
+        {tag && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            {tag}
+          </span>
+        )}
+      </div>
       <p className="text-2xl font-black text-gray-900 leading-tight">{title}</p>
-      {body && (
-        <p className="text-sm text-gray-700 leading-relaxed">{body}</p>
-      )}
-      {card.quote && (
-        <p className="text-xs text-gray-500 italic border-l-2 border-amber-400 pl-2">
-          «{card.quote}»
-        </p>
-      )}
+      <div className="mt-auto pt-6 flex flex-col gap-5">
+        {body && (
+          <p className="text-sm text-gray-700 leading-relaxed">{body}</p>
+        )}
+        {card.quote && (
+          <p className="text-xs text-gray-500 italic border-l-2 border-amber-400 pl-2">
+            «{card.quote}»
+          </p>
+        )}
+      </div>
     </div>
   );
 }
