@@ -7,6 +7,7 @@ import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
 import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
 import { AiInsightCard } from "@/components/insights/AiInsightCard";
+import { DraftCardsList } from "@/components/insights/DraftCardsList";
 
 export default async function SessionDetailPage({
   params,
@@ -216,9 +217,7 @@ export default async function SessionDetailPage({
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">
                 {isRu ? `Черновики (${draftCards.length})` : `Drafts (${draftCards.length})`}
               </p>
-              {draftCards.map((c) => (
-                <AiInsightCard key={c.id} card={c} isTrainer={isTrainer} />
-              ))}
+              <DraftCardsList cards={draftCards} isTrainer={isTrainer} />
             </div>
           )}
 
