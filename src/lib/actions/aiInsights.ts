@@ -20,41 +20,24 @@ export async function pasteInsightsFromClaude(
 
   const { supabase, studentId, trainerId } = ctx;
 
-  const { error: deleteError } = await supabase
-    .from("insight_cards")
-    .delete()
-    .eq("session_id", sessionId)
-    .eq("trainer_status", "draft")
-    .eq("source", "ai-paste");
+  const { data, error } = await supabase.rpc("replace_ai_draft_cards", {
+    p_session_id: sessionId,
+    p_student_id: studentId,
+    p_trainer_id: trainerId,
+    p_cards: parsed.cards.map((c) => ({
+      title: c.title,
+      body: c.body,
+      quote: c.quote,
+      tag: c.tag,
+    })),
+  });
 
-  if (deleteError) {
-    return { error: deleteError.message };
-  }
-
-  const rows = parsed.cards.map((card) => ({
-    session_id: sessionId,
-    student_id: studentId,
-    trainer_id: trainerId,
-    source: "ai-paste" as const,
-    trainer_status: "draft" as const,
-    front_text: card.title,
-    context_text: card.body,
-    title: card.title,
-    body: card.body,
-    quote: card.quote,
-    tags: [card.tag],
-  }));
-
-  const { error: insertError } = await supabase
-    .from("insight_cards")
-    .insert(rows);
-
-  if (insertError) {
-    return { error: insertError.message };
+  if (error) {
+    return { error: error.message };
   }
 
   revalidatePath(`/sessions/${sessionId}`);
-  return { success: true, count: parsed.cards.length };
+  return { success: true, count: (data as number) ?? parsed.cards.length };
 }
 
 async function requireTrainerOwnsCard(cardId: string) {
