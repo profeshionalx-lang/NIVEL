@@ -53,7 +53,6 @@ const ru = {
   "dashboard.skillProgression": "Прогресс навыков",
   "dashboard.sessionHistory": "Тренировки",
   "dashboard.session": "Сессия",
-  "dashboard.trainingType.individual": "Индивидуальная",
   "dashboard.nextSession": "Следующая сессия",
   "dashboard.exercises": "Упражнения",
 
@@ -211,7 +210,6 @@ const en: Record<keyof typeof ru, string> = {
   "dashboard.skillProgression": "Skill progression",
   "dashboard.sessionHistory": "Trainings",
   "dashboard.session": "Session",
-  "dashboard.trainingType.individual": "Individual",
   "dashboard.nextSession": "Next session",
   "dashboard.exercises": "Exercises",
 
