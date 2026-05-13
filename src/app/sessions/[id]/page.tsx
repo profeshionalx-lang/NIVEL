@@ -275,7 +275,7 @@ export default async function SessionDetailPage({
                   className="rounded-2xl bg-surface-card p-3 border-l-2 border-primary"
                 >
                   <p className="text-sm text-on-surface">
-                    {c.student_edited_text || c.front_text}
+                    {c.student_edited_text || c.title || c.front_text}
                   </p>
                 </div>
               ))}

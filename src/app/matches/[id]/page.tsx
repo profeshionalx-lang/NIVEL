@@ -159,13 +159,14 @@ export default async function MatchDetailPage({ params }: PageProps) {
   let attachedInsights: Array<{
     id: string;
     front_text: string;
+    title: string | null;
     problem: { name: string } | null;
   }> = [];
 
   if (attachedIds.length > 0) {
     const { data: insightRows } = await supabase
       .from("insight_cards")
-      .select("id, front_text, problem:problems(id, name)")
+      .select("id, front_text, title, problem:problems(id, name)")
       .in("id", attachedIds);
 
     attachedInsights = (insightRows ?? []).map((r) => {
@@ -178,6 +179,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
       return {
         id: r.id,
         front_text: r.front_text,
+        title: (r.title as string | null) ?? null,
         problem: problemObj,
       };
     });
@@ -308,7 +310,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-on-surface leading-snug">
-                        {insight.front_text}
+                        {insight.title || insight.front_text}
                       </p>
                       {insight.problem?.name && (
                         <p className="text-xs text-on-surface-variant mt-0.5">
@@ -355,7 +357,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
                       </span>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-on-surface leading-snug">
-                          {insight.front_text}
+                          {insight.title || insight.front_text}
                         </p>
                         {insight.problem?.name && (
                           <p className="text-xs text-on-surface-variant mt-0.5">

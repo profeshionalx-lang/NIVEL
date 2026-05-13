@@ -43,7 +43,8 @@ export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Pro
     <div className="grid grid-cols-2 gap-3">
       {cards.map((card) => {
         const isFlipped = flipped.has(card.id);
-        const front = card.student_edited_text || card.front_text;
+        const front = card.student_edited_text || card.title || card.front_text;
+        const back = card.body || card.context_text;
         return (
           <div
             key={card.id}
@@ -57,6 +58,11 @@ export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Pro
                     {card.category.name}
                   </span>
                 )}
+                {card.tags && card.tags.length > 0 && (
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">
+                    {card.tags[0]}
+                  </span>
+                )}
                 <p className="text-sm font-bold text-on-surface leading-tight flex-1 line-clamp-3">
                   {front}
                 </p>
@@ -65,13 +71,18 @@ export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Pro
                 </span>
               </div>
               <div className="vault-card-face vault-card-back">
-                {card.context_text ? (
+                {back ? (
                   <p className="text-xs text-on-surface leading-snug flex-1 line-clamp-4">
-                    {card.context_text}
+                    {back}
                   </p>
                 ) : (
                   <p className="text-xs text-on-surface-variant italic flex-1">
                     Дополнительного контекста нет.
+                  </p>
+                )}
+                {card.quote && (
+                  <p className="text-[10px] text-on-surface-variant italic border-l-2 border-primary/40 pl-2 mt-1 line-clamp-2">
+                    «{card.quote}»
                   </p>
                 )}
                 {card.session && (
