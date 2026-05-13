@@ -46,11 +46,12 @@ export async function pasteInsightsFromClaude(
     return { error: parsed.error, line: parsed.line };
   }
 
-  const { supabase, studentId } = ctx;
+  const { supabase, studentId, trainerId } = ctx;
 
   const { data, error } = await supabase.rpc("replace_ai_draft_cards", {
     p_session_id: sessionId,
     p_student_id: studentId,
+    p_trainer_id: trainerId,
     p_cards: parsed.cards.map((c) => ({
       title: c.title,
       body: c.body,
