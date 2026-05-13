@@ -40,6 +40,7 @@ async function resolveCategoryFromProblem(
   return data?.category_id ?? null;
 }
 
+/** @deprecated Cards are created via AI paste flow only (Epic 5). No UI calls this. */
 export async function createInsightCard(
   sessionId: string,
   payload: {

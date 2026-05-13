@@ -7,7 +7,6 @@ import type { DashboardData } from "@/lib/dashboard/data";
 import InlineGoalCreator from "@/components/dashboard/edit/InlineGoalCreator";
 import InlineSessionCreator from "@/components/dashboard/edit/InlineSessionCreator";
 import InlineProfileHeader from "@/components/dashboard/edit/InlineProfileHeader";
-import InlineSessionCardAdder from "@/components/dashboard/edit/InlineSessionCardAdder";
 import MasterPlanEditor from "@/components/masterPlan/MasterPlanEditor";
 import PlaytomicConnectBlock from "@/components/playtomic/PlaytomicConnectBlock";
 
@@ -382,7 +381,6 @@ export default function DashboardView({ data, locale, editable }: Props) {
                       </div>
                       <span className="material-symbols-outlined text-on-surface-variant opacity-40 text-base">chevron_right</span>
                     </Link>
-                    {isTrainer && <InlineSessionCardAdder sessionId={session.id} />}
                   </div>
                 ))}
               </div>
