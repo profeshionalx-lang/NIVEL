@@ -16,6 +16,24 @@ export default async function TranscriptPage({
 
   const supabase = await createClient();
 
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("id, goals(user_id)")
+    .eq("id", id)
+    .single();
+
+  const studentId = (session?.goals as unknown as { user_id: string } | null)?.user_id;
+  if (!studentId) redirect("/dashboard");
+
+  const { data: studentProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", studentId)
+    .eq("created_by", user.id)
+    .maybeSingle();
+
+  if (!studentProfile) redirect("/dashboard");
+
   const { data: transcript } = await supabase
     .from("transcripts")
     .select("status, error_message, raw_text, segments_json, duration_seconds, created_at")

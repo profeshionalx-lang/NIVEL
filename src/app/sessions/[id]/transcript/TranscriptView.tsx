@@ -40,6 +40,7 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
   const [selection, setSelection] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [insightText, setInsightText] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +57,7 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
   }, [sessionId, status, router]);
 
   useEffect(() => {
+    if (status !== "ready") return;
     function onSelectionChange() {
       const sel = window.getSelection();
       const text = sel?.toString().trim() ?? "";
@@ -72,15 +74,17 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
     }
     document.addEventListener("selectionchange", onSelectionChange);
     return () => document.removeEventListener("selectionchange", onSelectionChange);
-  }, []);
+  }, [status]);
 
   function openModal() {
     setInsightText("");
+    setCreateError(null);
     setShowModal(true);
   }
 
   function handleCreate() {
     if (!insightText.trim()) return;
+    setCreateError(null);
     startTransition(async () => {
       const res = await createInsightCard(sessionId, {
         frontText: insightText,
@@ -92,6 +96,8 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
         setSelection("");
         window.getSelection()?.removeAllRanges();
         router.refresh();
+      } else {
+        setCreateError(res.error || "Не удалось создать карточку");
       }
     });
   }
@@ -208,6 +214,9 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
               autoFocus
               className="w-full bg-surface-elevated rounded-xl p-3 text-sm text-on-surface placeholder-on-surface-variant/50 resize-none border border-border-dim focus:border-primary focus:outline-none"
             />
+            {createError && (
+              <p className="text-xs text-red-400 break-words">{createError}</p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleCreate}
