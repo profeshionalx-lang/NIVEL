@@ -1,40 +1,10 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/auth/session";
 import { postprocessTranscript } from "@/lib/stt/postprocess";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
-
-async function requireTrainerOwnsSession(sessionId: string) {
-  const user = await getSession();
-  if (!user || user.role !== "trainer") return null;
-
-  const supabase = await createClient();
-
-  const { data: session } = await supabase
-    .from("sessions")
-    .select("id, goals(user_id)")
-    .eq("id", sessionId)
-    .single();
-
-  if (!session) return null;
-
-  const goal = session.goals as unknown as { user_id: string } | null;
-  if (!goal) return null;
-
-  const { data: studentProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", goal.user_id)
-    .eq("created_by", user.id)
-    .maybeSingle();
-
-  if (!studentProfile) return null;
-
-  return { user, supabase };
-}
+import { requireTrainerOwnsSession } from "@/lib/auth/ownership";
 
 const ALLOWED_AUDIO_EXTENSIONS = new Set(["m4a", "mp3", "wav", "ogg", "webm", "mp4", "aac"]);
 
