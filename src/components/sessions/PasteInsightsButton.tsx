@@ -71,7 +71,8 @@ export function PasteInsightsButton({ sessionId }: { sessionId: string }) {
               <h3 className="text-lg font-black tracking-tight">Вставить инсайты от Claude</h3>
               <button
                 onClick={handleClose}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-elevated text-on-surface-variant"
+                aria-label="Закрыть"
+                className="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-elevated text-on-surface-variant"
               >
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
