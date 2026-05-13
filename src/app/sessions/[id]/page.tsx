@@ -5,6 +5,9 @@ import { getLocale } from "@/lib/i18n";
 import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
+import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
+import { AiInsightCard } from "@/components/insights/AiInsightCard";
+import { DraftCardsList } from "@/components/insights/DraftCardsList";
 
 export default async function SessionDetailPage({
   params,
@@ -73,6 +76,7 @@ export default async function SessionDetailPage({
     .order("created_at");
 
   const allCards = (cards ?? []) as InsightCard[];
+  const draftCards = allCards.filter((c) => c.trainer_status === "draft");
   const approvedCards = allCards.filter((c) => c.trainer_status === "approved");
   const pendingForStudent = approvedCards.filter(
     (c) => c.student_decision === null
@@ -205,21 +209,33 @@ export default async function SessionDetailPage({
           </p>
 
           {isTrainer && (
-            <Link
-              href={`/trainer/sessions/${id}/insights`}
-              className="block rounded-2xl bg-surface-card p-4 border border-border-dim"
-            >
-              <p className="text-sm font-bold text-on-surface">
-                {allCards.length === 0
-                  ? isRu ? "Добавить карточки" : "Add insight cards"
-                  : `${isRu ? "Карточки" : "Cards"} (${allCards.length})`}
+            <PasteInsightsButton sessionId={id} />
+          )}
+
+          {isTrainer && draftCards.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+                {isRu ? `Черновики (${draftCards.length})` : `Drafts (${draftCards.length})`}
               </p>
-              <p className="text-xs text-on-surface-variant mt-1">
-                {session.trainer_review_completed
-                  ? isRu ? "Разбор завершён" : "Review marked as finished"
-                  : isRu ? "Разбор в процессе" : "Review still in progress"}
+              <DraftCardsList cards={draftCards} isTrainer={isTrainer} />
+            </div>
+          )}
+
+          {isTrainer && approvedCards.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                {isRu ? `Approved (${approvedCards.length})` : `Approved (${approvedCards.length})`}
               </p>
-            </Link>
+              {approvedCards.map((c) => (
+                <AiInsightCard key={c.id} card={c} isTrainer={isTrainer} />
+              ))}
+            </div>
+          )}
+
+          {isTrainer && draftCards.length === 0 && approvedCards.length === 0 && (
+            <p className="text-sm text-on-surface-variant">
+              {isRu ? "Карточек пока нет — вставьте инсайты выше." : "No cards yet — paste insights above."}
+            </p>
           )}
 
           {!isTrainer && approvedCards.length === 0 && (
