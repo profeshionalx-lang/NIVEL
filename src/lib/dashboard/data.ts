@@ -1,4 +1,5 @@
 // src/lib/dashboard/data.ts
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { calculateSkillLevel } from "@/lib/types";
 import { getMasterPlan } from "@/lib/actions/masterPlan";
@@ -210,8 +211,9 @@ export async function loadDashboardData(
 
   const masterPlan = await getMasterPlan(userId);
 
-  // Sync Playtomic matches (10-min cooldown) and fetch upcoming ones
-  await syncUserMatches(userId);
+  // Fire-and-forget Playtomic sync: runs after the response is sent so the
+  // dashboard renders immediately from the DB. Cooldown logic still applies.
+  after(() => syncUserMatches(userId));
 
   const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
   const { data: matchesRaw } = await supabase
