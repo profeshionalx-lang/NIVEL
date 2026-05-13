@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import { DeleteTranscriptButton } from "./DeleteTranscriptButton";
 import { TranscriptView } from "./TranscriptView";
+import { ReTranscribeButton } from "./ReTranscribeButton";
 
 export default async function TranscriptPage({
   params,
@@ -73,7 +74,8 @@ export default async function TranscriptPage({
           segments={segments}
         />
 
-        <div className="pt-4 border-t border-border-dim flex justify-center">
+        <div className="pt-4 border-t border-border-dim flex items-center justify-center gap-3 flex-wrap">
+          <ReTranscribeButton sessionId={id} />
           <DeleteTranscriptButton sessionId={id} />
         </div>
       </main>

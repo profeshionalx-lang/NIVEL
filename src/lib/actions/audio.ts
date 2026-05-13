@@ -146,6 +146,29 @@ export async function getTranscriptStatus(
   return data ? { status: data.status, error_message: data.error_message } : null;
 }
 
+export async function resetTranscript(sessionId: string): Promise<void> {
+  const ctx = await requireTrainerOwnsSession(sessionId);
+  if (!ctx) return;
+
+  const { supabase } = ctx;
+
+  const { data: existing } = await supabase
+    .from("transcripts")
+    .select("storage_path")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+
+  if (existing?.storage_path) {
+    await supabase.storage.from("session-audio").remove([existing.storage_path]);
+  }
+
+  await supabase.from("transcripts").delete().eq("session_id", sessionId);
+
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath(`/sessions/${sessionId}/transcript`);
+  redirect(`/sessions/${sessionId}`);
+}
+
 export async function deleteTranscript(sessionId: string): Promise<void> {
   const ctx = await requireTrainerOwnsSession(sessionId);
   if (!ctx) return;
