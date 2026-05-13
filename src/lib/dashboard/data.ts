@@ -76,67 +76,129 @@ export async function loadDashboardData(
   locale: Locale
 ): Promise<DashboardData | null> {
   const supabase = await createClient();
+  const nameCol = locale === "en" ? "name_en" : "name_ru";
+  const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
+  const nowIso = new Date().toISOString();
 
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, avatar_url, playtomic_user_id")
-    .eq("id", userId)
-    .single();
+  // Fire-and-forget Playtomic sync (cooldown enforced). Don't block the page.
+  after(() => syncUserMatches(userId));
+
+  // Stage 1: 8 independent queries in parallel (single round-trip on the wire).
+  const [
+    profileRes,
+    goalsRes,
+    skillProgressRes,
+    sessionsRes,
+    pendingByCardRes,
+    nextSessionRes,
+    masterPlan,
+    matchesRes,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, full_name, avatar_url, playtomic_user_id")
+      .eq("id", userId)
+      .single(),
+    supabase
+      .from("goals")
+      .select(
+        `*, goal_problems(problem_id, problems(id, ${nameCol}, problem_categories(${nameCol})))`
+      )
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("skill_progress")
+      .select(`*, skills(${nameCol})`)
+      .eq("user_id", userId)
+      .order("points", { ascending: false }),
+    supabase
+      .from("sessions")
+      .select("*, goals!inner(user_id)")
+      .eq("goals.user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("insight_cards")
+      .select("session_id")
+      .eq("student_id", userId)
+      .eq("trainer_status", "approved")
+      .is("student_decision", null),
+    supabase
+      .from("sessions")
+      .select(
+        `*, goals!inner(user_id), session_exercises(id, exercises(${nameCol}))`
+      )
+      .eq("goals.user_id", userId)
+      .eq("status", "planned")
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
+    getMasterPlan(userId),
+    supabase
+      .from("matches")
+      .select(
+        `id, start_date, location, resource_name, status, teams, match_goals(count)`
+      )
+      .eq("profile_id", userId)
+      .in("status", UPCOMING_STATUSES)
+      .gte("start_date", nowIso)
+      .order("start_date", { ascending: true })
+      .limit(5),
+  ]);
+
+  const profileRow = profileRes.data;
   if (!profileRow) return null;
 
-  const nameCol = locale === "en" ? "name_en" : "name_ru";
+  const goalsRaw = goalsRes.data;
+  const skillProgressRaw = skillProgressRes.data;
+  const sessionsRaw = sessionsRes.data;
+  const pendingByCard = pendingByCardRes.data;
+  const nextSessionRaw = nextSessionRes.data;
+  const matchesRaw = matchesRes.data;
 
-  const { data: goalsRaw } = await supabase
-    .from("goals")
-    .select(
-      `*, goal_problems(problem_id, problems(id, ${nameCol}, problem_categories(${nameCol})))`
-    )
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
-
-  const goals: DashboardGoal[] = await Promise.all(
-    (goalsRaw || []).map(async (goal: Record<string, unknown>) => {
-      const { count } = await supabase
+  // Stage 2: one extra query for per-goal session counts (replaces N×2 loop).
+  const goalIds = (goalsRaw ?? []).map((g: Record<string, unknown>) => g.id as string);
+  const { data: goalSessions } = goalIds.length > 0
+    ? await supabase
         .from("sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("goal_id", goal.id as string);
+        .select("goal_id, status")
+        .in("goal_id", goalIds)
+    : { data: [] as Array<{ goal_id: string; status: string }> };
 
-      const completedCount = await supabase
-        .from("sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("goal_id", goal.id as string)
-        .eq("status", "completed");
+  const totalByGoal = new Map<string, number>();
+  const completedByGoal = new Map<string, number>();
+  for (const s of (goalSessions ?? []) as Array<{ goal_id: string; status: string }>) {
+    totalByGoal.set(s.goal_id, (totalByGoal.get(s.goal_id) ?? 0) + 1);
+    if (s.status === "completed") {
+      completedByGoal.set(s.goal_id, (completedByGoal.get(s.goal_id) ?? 0) + 1);
+    }
+  }
 
-      const goalProblems = (goal.goal_problems as Array<Record<string, unknown>>) || [];
-      const problems = goalProblems.map((gp) => {
-        const prob = gp.problems as Record<string, unknown>;
-        const cat = prob?.problem_categories as Record<string, unknown>;
-        return {
-          id: prob?.id as number,
-          name: (prob?.[nameCol] as string) ?? "",
-          category_name: (cat?.[nameCol] as string) || "",
-        };
-      });
-
+  const goals: DashboardGoal[] = (goalsRaw ?? []).map((goal: Record<string, unknown>) => {
+    const goalProblems = (goal.goal_problems as Array<Record<string, unknown>>) || [];
+    const problems = goalProblems.map((gp) => {
+      const prob = gp.problems as Record<string, unknown>;
+      const cat = prob?.problem_categories as Record<string, unknown>;
       return {
-        id: goal.id as string,
-        custom_problem: (goal.custom_problem as string) || null,
-        status: goal.status as string,
-        session_count: (goal.session_count as number) ?? 0,
-        created_at: goal.created_at as string,
-        problems,
-        total_sessions: count || 0,
-        completed_sessions: completedCount.count || 0,
+        id: prob?.id as number,
+        name: (prob?.[nameCol] as string) ?? "",
+        category_name: (cat?.[nameCol] as string) || "",
       };
-    })
-  );
+    });
 
-  const { data: skillProgressRaw } = await supabase
-    .from("skill_progress")
-    .select(`*, skills(${nameCol})`)
-    .eq("user_id", userId)
-    .order("points", { ascending: false });
+    const id = goal.id as string;
+    return {
+      id,
+      custom_problem: (goal.custom_problem as string) || null,
+      status: goal.status as string,
+      session_count: (goal.session_count as number) ?? 0,
+      created_at: goal.created_at as string,
+      problems,
+      total_sessions: totalByGoal.get(id) ?? 0,
+      completed_sessions: completedByGoal.get(id) ?? 0,
+    };
+  });
 
   const skillProgress: DashboardSkill[] = (skillProgressRaw || []).map(
     (sp: Record<string, unknown>) => {
@@ -152,20 +214,6 @@ export async function loadDashboardData(
       };
     }
   );
-
-  const { data: sessionsRaw } = await supabase
-    .from("sessions")
-    .select("*, goals!inner(user_id)")
-    .eq("goals.user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  const { data: pendingByCard } = await supabase
-    .from("insight_cards")
-    .select("session_id")
-    .eq("student_id", userId)
-    .eq("trainer_status", "approved")
-    .is("student_decision", null);
 
   const pendingCounts = new Map<string, number>();
   (pendingByCard ?? []).forEach((row: { session_id: string }) => {
@@ -186,17 +234,6 @@ export async function loadDashboardData(
   const totalPendingCards = sessions.reduce((sum, s) => sum + s.pending, 0);
   const firstPendingSessionId = sessions.find((s) => s.pending > 0)?.id ?? null;
 
-  const { data: nextSessionRaw } = await supabase
-    .from("sessions")
-    .select(
-      `*, goals!inner(user_id), session_exercises(id, exercises(${nameCol}))`
-    )
-    .eq("goals.user_id", userId)
-    .eq("status", "planned")
-    .order("scheduled_at", { ascending: true, nullsFirst: false })
-    .limit(1)
-    .maybeSingle();
-
   const nextSessionRow = nextSessionRaw as Record<string, unknown> | null;
   const nextSession: DashboardNextSession | null = nextSessionRow
     ? {
@@ -208,24 +245,6 @@ export async function loadDashboardData(
           .filter(Boolean),
       }
     : null;
-
-  const masterPlan = await getMasterPlan(userId);
-
-  // Fire-and-forget Playtomic sync: runs after the response is sent so the
-  // dashboard renders immediately from the DB. Cooldown logic still applies.
-  after(() => syncUserMatches(userId));
-
-  const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
-  const { data: matchesRaw } = await supabase
-    .from("matches")
-    .select(
-      `id, start_date, location, resource_name, status, teams, match_goals(count)`
-    )
-    .eq("profile_id", userId)
-    .in("status", UPCOMING_STATUSES)
-    .gte("start_date", new Date().toISOString())
-    .order("start_date", { ascending: true })
-    .limit(5);
 
   const upcomingMatches: DashboardMatch[] = (matchesRaw ?? []).map(
     (r: {
