@@ -160,20 +160,34 @@ function CardFace({
         </>
       )}
       <div className="flex flex-col gap-3 mt-12">
-        {card.category && (
-          <span className="text-xs uppercase tracking-widest text-secondary font-bold">
-            {card.category.name}
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {card.category && (
+            <span className="text-xs uppercase tracking-widest text-secondary font-bold">
+              {card.category.name}
+            </span>
+          )}
+          {card.tags && card.tags.length > 0 && (
+            <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">
+              {card.tags[0]}
+            </span>
+          )}
+        </div>
         <p className="text-2xl font-black text-on-surface leading-tight">
-          {card.front_text}
+          {card.title || card.front_text}
         </p>
       </div>
-      {card.context_text && (
-        <p className="text-sm text-on-surface-variant leading-relaxed">
-          {card.context_text}
-        </p>
-      )}
+      <div className="flex flex-col gap-2">
+        {(card.body || card.context_text) && (
+          <p className="text-sm text-on-surface-variant leading-relaxed">
+            {card.body || card.context_text}
+          </p>
+        )}
+        {card.quote && (
+          <p className="text-xs text-on-surface-variant italic border-l-2 border-primary/40 pl-2">
+            «{card.quote}»
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -43,8 +43,13 @@ export default function VaultPreview({ cards, totalCount }: Props) {
                   {card.category.name}
                 </span>
               )}
+              {card.tags && card.tags.length > 0 && (
+                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  {card.tags[0]}
+                </span>
+              )}
               <p className="text-xs font-bold text-on-surface leading-snug line-clamp-4">
-                {card.student_edited_text || card.front_text}
+                {card.student_edited_text || card.title || card.front_text}
               </p>
             </Link>
           ))}
