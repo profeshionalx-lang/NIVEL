@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { postprocessTranscript } from "@/lib/stt/postprocess";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
@@ -66,8 +67,7 @@ export async function transcribeSession(
 
   const { supabase } = ctx;
 
-  // M4 will replace this stub with real Groq STT logic.
-  const { error } = await supabase.from("transcripts").upsert(
+  const { error: upsertError } = await supabase.from("transcripts").upsert(
     {
       session_id: sessionId,
       storage_path: storagePath,
@@ -80,10 +80,55 @@ export async function transcribeSession(
     { onConflict: "session_id" }
   );
 
-  if (error) return { success: false, error: error.message };
+  if (upsertError) return { success: false, error: upsertError.message };
 
-  revalidatePath(`/sessions/${sessionId}`);
-  return { success: true };
+  try {
+    const filename = storagePath.split("/").pop() ?? "audio.m4a";
+
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from("session-audio")
+      .download(storagePath);
+
+    if (downloadError || !blob) {
+      throw new Error(downloadError?.message ?? "Failed to download audio from Storage");
+    }
+
+    const audioBuffer = Buffer.from(await blob.arrayBuffer());
+
+    const { transcribeAudio } = await import("@/lib/stt/groq");
+    const verboseJson = await transcribeAudio(audioBuffer, filename);
+
+    const { raw_text, segments } = postprocessTranscript(verboseJson);
+
+    await supabase
+      .from("transcripts")
+      .update({
+        raw_text,
+        segments_json: segments,
+        duration_seconds: verboseJson.duration != null ? Math.round(verboseJson.duration) : null,
+        status: "ready",
+        error_message: null,
+      })
+      .eq("session_id", sessionId);
+
+    await supabase.storage.from("session-audio").remove([storagePath]);
+
+    await supabase
+      .from("transcripts")
+      .update({ storage_path: null })
+      .eq("session_id", sessionId);
+
+    revalidatePath(`/sessions/${sessionId}`);
+    revalidatePath(`/sessions/${sessionId}/transcript`);
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await supabase
+      .from("transcripts")
+      .update({ status: "failed", error_message: message })
+      .eq("session_id", sessionId);
+    return { success: false, error: message };
+  }
 }
 
 export async function getTranscriptStatus(
