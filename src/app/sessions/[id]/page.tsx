@@ -6,8 +6,8 @@ import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
 import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
-import { AiInsightCard } from "@/components/insights/AiInsightCard";
 import { DraftCardsList } from "@/components/insights/DraftCardsList";
+import { ApprovedInsightCard } from "@/components/insights/ApprovedInsightCard";
 
 export default async function SessionDetailPage({
   params,
@@ -227,7 +227,7 @@ export default async function SessionDetailPage({
                 {isRu ? `Approved (${approvedCards.length})` : `Approved (${approvedCards.length})`}
               </p>
               {approvedCards.map((c) => (
-                <AiInsightCard key={c.id} card={c} isTrainer={isTrainer} />
+                <ApprovedInsightCard key={c.id} card={c} />
               ))}
             </div>
           )}
