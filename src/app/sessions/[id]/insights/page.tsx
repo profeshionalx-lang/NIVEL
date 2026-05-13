@@ -10,13 +10,14 @@ export default async function SessionInsightsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ include?: string }>;
+  searchParams: Promise<{ include?: string; as?: string }>;
 }) {
   const user = await getSession();
   if (!user) redirect("/login");
 
   const { id } = await params;
-  const { include } = await searchParams;
+  const { include, as } = await searchParams;
+  const previewAsStudent = user.role === "trainer" && as === "student";
   const supabase = await createClient();
 
   let query = supabase
@@ -44,7 +45,7 @@ export default async function SessionInsightsPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href={`/sessions/${id}`} className="text-on-surface-variant">
+        <Link href={`/sessions/${id}${previewAsStudent ? "?as=student" : ""}`} className="text-on-surface-variant">
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">

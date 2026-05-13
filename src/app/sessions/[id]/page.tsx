@@ -11,15 +11,19 @@ import { ApprovedInsightCard } from "@/components/insights/ApprovedInsightCard";
 
 export default async function SessionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ as?: string }>;
 }) {
   const { id } = await params;
+  const { as } = await searchParams;
   const user = await getSession();
   if (!user) redirect("/login");
 
   const supabase = await createClient();
-  const isTrainer = user.role === "trainer";
+  const previewAsStudent = user.role === "trainer" && as === "student";
+  const isTrainer = user.role === "trainer" && !previewAsStudent;
   const locale = await getLocale();
   const isRu = locale === "ru";
   const nameCol = isRu ? "name_ru" : "name_en";
@@ -87,7 +91,14 @@ export default async function SessionDetailPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href="/dashboard" className="text-on-surface-variant">
+        <Link
+          href={
+            previewAsStudent && session.goals?.user_id
+              ? `/trainer/students/${session.goals.user_id}/preview`
+              : "/dashboard"
+          }
+          className="text-on-surface-variant"
+        >
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
@@ -246,7 +257,7 @@ export default async function SessionDetailPage({
 
           {!isTrainer && pendingForStudent.length > 0 && (
             <Link
-              href={`/sessions/${id}/insights`}
+              href={`/sessions/${id}/insights${previewAsStudent ? "?as=student" : ""}`}
               className="block rounded-2xl kinetic-gradient text-on-primary p-4 glow-primary"
             >
               <p className="font-black text-base">
@@ -290,7 +301,7 @@ export default async function SessionDetailPage({
                   : `Skipped (${skippedCards.length}) — review again any time`}
               </p>
               <Link
-                href={`/sessions/${id}/insights?include=skipped`}
+                href={`/sessions/${id}/insights?include=skipped${previewAsStudent ? "&as=student" : ""}`}
                 className="block text-xs text-secondary font-bold uppercase tracking-wider"
               >
                 {isRu ? "Открыть пропущенные →" : "Re-open skipped →"}
