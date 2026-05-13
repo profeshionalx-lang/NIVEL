@@ -84,3 +84,56 @@ export async function pasteInsightsFromClaude(
   revalidatePath(`/sessions/${sessionId}`);
   return { success: true, count: parsed.cards.length };
 }
+
+async function requireTrainerOwnsCard(cardId: string) {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") return null;
+
+  const supabase = await createClient();
+
+  const { data: card } = await supabase
+    .from("insight_cards")
+    .select("id, session_id, trainer_id")
+    .eq("id", cardId)
+    .single();
+
+  if (!card || card.trainer_id !== user.id) return null;
+
+  return { supabase, sessionId: card.session_id as string };
+}
+
+export async function approveInsightCard(
+  cardId: string
+): Promise<{ success: true } | { error: string }> {
+  const ctx = await requireTrainerOwnsCard(cardId);
+  if (!ctx) return { error: "Forbidden" };
+
+  const { supabase, sessionId } = ctx;
+  const { error } = await supabase
+    .from("insight_cards")
+    .update({ trainer_status: "approved" })
+    .eq("id", cardId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/sessions/${sessionId}`);
+  return { success: true };
+}
+
+export async function rejectInsightCard(
+  cardId: string
+): Promise<{ success: true } | { error: string }> {
+  const ctx = await requireTrainerOwnsCard(cardId);
+  if (!ctx) return { error: "Forbidden" };
+
+  const { supabase, sessionId } = ctx;
+  const { error } = await supabase
+    .from("insight_cards")
+    .update({ trainer_status: "rejected" })
+    .eq("id", cardId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/sessions/${sessionId}`);
+  return { success: true };
+}
