@@ -35,6 +35,8 @@ async function requireTrainerOwnsSession(sessionId: string) {
   return { user, supabase };
 }
 
+const ALLOWED_AUDIO_EXTENSIONS = new Set(["m4a", "mp3", "wav", "ogg", "webm", "mp4", "aac"]);
+
 export async function requestAudioUploadUrl(
   sessionId: string,
   ext = "m4a"
@@ -42,8 +44,9 @@ export async function requestAudioUploadUrl(
   const ctx = await requireTrainerOwnsSession(sessionId);
   if (!ctx) return { error: "Forbidden" };
 
+  const safeExt = ALLOWED_AUDIO_EXTENSIONS.has(ext.toLowerCase()) ? ext.toLowerCase() : "m4a";
   const { supabase } = ctx;
-  const storagePath = `${sessionId}/${randomUUID()}.${ext}`;
+  const storagePath = `${sessionId}/${randomUUID()}.${safeExt}`;
 
   const { data, error } = await supabase.storage
     .from("session-audio")
@@ -86,12 +89,10 @@ export async function transcribeSession(
 export async function getTranscriptStatus(
   sessionId: string
 ): Promise<{ status: string; error_message: string | null } | null> {
-  const user = await getSession();
-  if (!user) return null;
+  const ctx = await requireTrainerOwnsSession(sessionId);
+  if (!ctx) return null;
 
-  const supabase = await createClient();
-
-  const { data } = await supabase
+  const { data } = await ctx.supabase
     .from("transcripts")
     .select("status, error_message")
     .eq("session_id", sessionId)
