@@ -178,4 +178,67 @@ describe("parseInsightsMarkdown", () => {
     if (!result.ok) return;
     expect(result.cards[0].quote).toBe("вот так он говорил");
   });
+
+  it("стрипит типографские кавычки из Claude", () => {
+    const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Замах
+- Описание: Описание.
+- Цитата: “не думай о счёте”
+`;
+    const result = parseInsightsMarkdown(md);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cards[0].quote).toBe("не думай о счёте");
+  });
+
+  it("склеивает многострочное Описание", () => {
+    const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Замах
+- Описание: Первая строка описания
+  продолжение на следующей строке
+  и ещё одна строка.
+- Цитата: "тест"
+`;
+    const result = parseInsightsMarkdown(md);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cards[0].body).toContain("Первая строка");
+    expect(result.cards[0].body).toContain("продолжение");
+    expect(result.cards[0].body).toContain("ещё одна строка");
+  });
+
+  it("поддерживает разные маркеры пунктов (* • —)", () => {
+    const md = `
+## Карточка 1
+* Тема: техника
+• Заголовок: Тест
+— Описание: Описание.
+* Цитата: "тест"
+`;
+    const result = parseInsightsMarkdown(md);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cards[0].title).toBe("Тест");
+    expect(result.cards[0].tag).toBe("техника");
+  });
+
+  it("возвращает ошибку на пустую строку", () => {
+    const result = parseInsightsMarkdown("");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatch(/Не найдено/);
+  });
+
+  it("поддерживает CRLF (Windows line endings)", () => {
+    const md = "## Карточка 1\r\n- Тема: техника\r\n- Заголовок: Тест\r\n- Описание: Описание.\r\n- Цитата: \"тест\"\r\n";
+    const result = parseInsightsMarkdown(md);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cards[0].title).toBe("Тест");
+    expect(result.cards[0].quote).toBe("тест");
+  });
 });

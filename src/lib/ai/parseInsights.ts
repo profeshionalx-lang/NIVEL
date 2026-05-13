@@ -13,78 +13,109 @@ export type ParseResult =
 
 const VALID_TAGS = new Set<InsightTag>(["техника", "тактика", "физика", "ментал"]);
 
+const FIELD_KEYS = ["тема", "заголовок", "описание", "цитата"] as const;
+type FieldKey = (typeof FIELD_KEYS)[number];
+
+const FIELD_LINE = new RegExp(
+  `^\\s*[-–—*•]?\\s*(${FIELD_KEYS.join("|")})\\s*:(.*)$`,
+  "i"
+);
+
 function stripQuotes(s: string): string {
-  return s.replace(/^["«"]+|["»"]+$/g, "").trim();
+  return s.replace(/^["'«“‘«]+|["'»”’»]+$/g, "").trim();
 }
 
-function extractField(lines: string[], key: string): string | undefined {
-  const pattern = new RegExp(`^[-–]?\\s*${key}\\s*:(.*)$`, "i");
+interface CardBlock {
+  startLine: number;
+  fields: Partial<Record<FieldKey, string>>;
+}
+
+function parseBlock(lines: string[]): Partial<Record<FieldKey, string>> {
+  const acc: Record<FieldKey, string[]> = {
+    тема: [],
+    заголовок: [],
+    описание: [],
+    цитата: [],
+  };
+  const seen = new Set<FieldKey>();
+  let current: FieldKey | null = null;
+
   for (const line of lines) {
-    const m = line.match(pattern);
-    if (m) return m[1].trim();
+    const m = line.match(FIELD_LINE);
+    if (m) {
+      const key = m[1].toLowerCase() as FieldKey;
+      current = key;
+      seen.add(key);
+      acc[key].push(m[2].trim());
+    } else if (current) {
+      const trimmed = line.trim();
+      if (trimmed) acc[current].push(trimmed);
+    }
   }
-  return undefined;
+
+  const out: Partial<Record<FieldKey, string>> = {};
+  for (const key of FIELD_KEYS) {
+    if (seen.has(key)) out[key] = acc[key].join(" ").replace(/\s+/g, " ").trim();
+  }
+  return out;
 }
 
 export function parseInsightsMarkdown(input: string): ParseResult {
-  const lines = input.split("\n");
-  const cardBlocks: { startLine: number; lines: string[] }[] = [];
-
+  const lines = input.split(/\r?\n/);
+  const blocks: CardBlock[] = [];
   let current: { startLine: number; lines: string[] } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.match(/^##\s+/)) {
-      if (current) cardBlocks.push(current);
+    if (/^\s*##\s+/.test(lines[i])) {
+      if (current) {
+        blocks.push({ startLine: current.startLine, fields: parseBlock(current.lines) });
+      }
       current = { startLine: i + 1, lines: [] };
     } else if (current) {
-      current.lines.push(line);
+      current.lines.push(lines[i]);
     }
   }
-  if (current) cardBlocks.push(current);
+  if (current) {
+    blocks.push({ startLine: current.startLine, fields: parseBlock(current.lines) });
+  }
 
-  if (cardBlocks.length === 0) {
+  if (blocks.length === 0) {
     return { ok: false, error: "Не найдено ни одной карточки" };
   }
 
   const cards: InsightCardDraft[] = [];
 
-  for (let idx = 0; idx < cardBlocks.length; idx++) {
-    const block = cardBlocks[idx];
+  for (let idx = 0; idx < blocks.length; idx++) {
+    const { fields, startLine } = blocks[idx];
     const cardNum = idx + 1;
 
-    const rawTag = extractField(block.lines, "Тема");
-    const title = extractField(block.lines, "Заголовок");
-    const body = extractField(block.lines, "Описание");
-    const rawQuote = extractField(block.lines, "Цитата");
-
-    if (!rawTag) {
-      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Тема»`, line: block.startLine };
+    if (!fields.тема) {
+      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Тема»`, line: startLine };
     }
-    if (!title) {
-      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Заголовок»`, line: block.startLine };
+    if (!fields.заголовок) {
+      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Заголовок»`, line: startLine };
     }
-    if (!body) {
-      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Описание»`, line: block.startLine };
+    if (!fields.описание) {
+      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Описание»`, line: startLine };
     }
-    if (rawQuote === undefined) {
-      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Цитата»`, line: block.startLine };
+    if (fields.цитата === undefined) {
+      return { ok: false, error: `Карточка ${cardNum}: отсутствует поле «Цитата»`, line: startLine };
     }
 
-    const tag = rawTag.toLowerCase().trim() as InsightTag;
+    const tag = fields.тема.toLowerCase() as InsightTag;
     if (!VALID_TAGS.has(tag)) {
       return {
         ok: false,
-        error: `Карточка ${cardNum}: неизвестная тема «${rawTag}». Допустимые: техника, тактика, физика, ментал`,
-        line: block.startLine,
+        error: `Карточка ${cardNum}: неизвестная тема «${fields.тема}». Допустимые: техника, тактика, физика, ментал`,
+        line: startLine,
       };
     }
 
     cards.push({
-      title: title.trim(),
-      body: body.trim(),
+      title: fields.заголовок,
+      body: fields.описание,
       tag,
-      quote: stripQuotes(rawQuote),
+      quote: stripQuotes(fields.цитата),
     });
   }
 
