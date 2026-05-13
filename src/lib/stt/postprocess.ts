@@ -26,6 +26,7 @@ export interface ProcessedSegment {
   start: number;
   end: number;
   text: string;
+  avg_logprob?: number;
 }
 
 function applyGlossary(text: string): string {
@@ -60,6 +61,7 @@ export function postprocessTranscript(verboseJson: WhisperVerboseJson): {
     start: seg.start,
     end: seg.end,
     text: cleanText(seg.text),
+    ...(seg.avg_logprob != null ? { avg_logprob: seg.avg_logprob } : {}),
   }));
 
   const raw_text = cleanText(verboseJson.text);

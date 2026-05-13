@@ -8,6 +8,8 @@ function requireGroqKey(): string {
 
 const GROQ_API_KEY = requireGroqKey();
 
+const GROQ_TIMEOUT_MS = 120_000;
+
 export async function transcribeAudio(
   audioBuffer: Buffer,
   filename: string
@@ -19,16 +21,29 @@ export async function transcribeAudio(
   form.append('response_format', 'verbose_json');
   form.append('temperature', '0');
 
-  const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
-    body: form,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Groq API ${res.status}: ${errText}`);
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: form,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Groq API ${res.status}: ${errText}`);
+    }
+
+    return (await res.json()) as WhisperVerboseJson;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Groq API timed out after ${GROQ_TIMEOUT_MS}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return res.json() as Promise<WhisperVerboseJson>;
 }
