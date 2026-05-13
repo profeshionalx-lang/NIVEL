@@ -51,8 +51,9 @@ const ru = {
   "dashboard.activeGoals": "Активные цели",
   "dashboard.sessions": "сессий",
   "dashboard.skillProgression": "Прогресс навыков",
-  "dashboard.sessionHistory": "История сессий",
+  "dashboard.sessionHistory": "Тренировки",
   "dashboard.session": "Сессия",
+  "dashboard.trainingType.individual": "Индивидуальная",
   "dashboard.nextSession": "Следующая сессия",
   "dashboard.exercises": "Упражнения",
 
@@ -208,8 +209,9 @@ const en: Record<keyof typeof ru, string> = {
   "dashboard.activeGoals": "Active goals",
   "dashboard.sessions": "sessions",
   "dashboard.skillProgression": "Skill progression",
-  "dashboard.sessionHistory": "Session history",
+  "dashboard.sessionHistory": "Trainings",
   "dashboard.session": "Session",
+  "dashboard.trainingType.individual": "Individual",
   "dashboard.nextSession": "Next session",
   "dashboard.exercises": "Exercises",
 

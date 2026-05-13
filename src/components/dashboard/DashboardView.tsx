@@ -372,7 +372,7 @@ export default function DashboardView({ data, locale, editable }: Props) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm">
-                          {t(locale, "dashboard.session")} {session.session_number}
+                          {t(locale, "dashboard.trainingType.individual")} {session.session_number}
                         </p>
                         <p className="text-[11px] text-on-surface-variant">
                           {new Date(session.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long" })}
