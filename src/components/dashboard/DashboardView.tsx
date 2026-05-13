@@ -19,12 +19,14 @@ interface Props {
   data: DashboardData;
   locale: Locale;
   editable?: DashboardViewEditable | false;
+  previewMode?: boolean;
 }
 
-export default function DashboardView({ data, locale, editable }: Props) {
+export default function DashboardView({ data, locale, editable, previewMode }: Props) {
   const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
   const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId, upcomingMatches } = data;
-  const isTrainer = !!editable;
+  const isTrainer = !!editable && !previewMode;
+  const sessionLinkSuffix = previewMode ? "?as=student" : "";
 
   const displayName = profile.full_name || profile.email || "Unnamed";
   const firstName = profile.full_name?.split(" ")[0] || profile.email?.split("@")[0] || t(locale, "dashboard.player");
@@ -54,8 +56,8 @@ export default function DashboardView({ data, locale, editable }: Props) {
         </div>
       )}
 
-      {/* Playtomic connect block — student only */}
-      {!isTrainer && (
+      {/* Playtomic connect block — student only (skip in trainer preview to avoid mutating trainer's account) */}
+      {!isTrainer && !previewMode && (
         <PlaytomicConnectBlock currentUserId={profile.playtomic_user_id ?? null} />
       )}
 
@@ -79,7 +81,7 @@ export default function DashboardView({ data, locale, editable }: Props) {
           {/* Pending banner — student only */}
           {!isTrainer && totalPendingCards > 0 && firstPendingSessionId && (
             <Link
-              href={`/sessions/${firstPendingSessionId}/insights`}
+              href={`/sessions/${firstPendingSessionId}/insights${sessionLinkSuffix}`}
               className="block kinetic-gradient text-on-primary rounded-3xl p-5 glow-primary"
               style={{ boxShadow: "0 10px 30px rgba(202,253,0,0.35)" }}
             >
@@ -169,7 +171,7 @@ export default function DashboardView({ data, locale, editable }: Props) {
                         return (
                           <Link
                             key={`session-${item.id}`}
-                            href={`/sessions/${item.id}`}
+                            href={`/sessions/${item.id}${sessionLinkSuffix}`}
                             className="snap-start shrink-0 w-[78%] flex flex-col gap-3 bg-surface-low rounded-2xl px-4 py-4 active:bg-surface-card transition-colors"
                           >
                             <div className="w-10 h-10 rounded-xl bg-surface-card text-primary flex items-center justify-center font-black text-sm">
@@ -358,7 +360,7 @@ export default function DashboardView({ data, locale, editable }: Props) {
                 {sessions.map((session) => (
                   <div key={session.id} className="flex items-center gap-2">
                     <Link
-                      href={`/sessions/${session.id}`}
+                      href={`/sessions/${session.id}${sessionLinkSuffix}`}
                       className={`flex-1 flex items-center gap-4 rounded-2xl px-4 py-3.5 transition-colors ${
                         session.pending > 0
                           ? "bg-primary/10 border border-primary/40 glow-primary"
@@ -398,7 +400,7 @@ export default function DashboardView({ data, locale, editable }: Props) {
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4 px-1">
                 {t(locale, "dashboard.nextSession")}
               </h3>
-              <Link href={`/sessions/${nextSession.id}`} className="block bg-surface-low rounded-3xl p-5">
+              <Link href={`/sessions/${nextSession.id}${sessionLinkSuffix}`} className="block bg-surface-low rounded-3xl p-5">
                 <h4 className="text-xl font-black tracking-tight mb-4">
                   {t(locale, "dashboard.session")} {nextSession.session_number}
                 </h4>
