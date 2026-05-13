@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -25,8 +26,9 @@ export default async function MatchesPage({ searchParams }: PageProps) {
   const { tab } = await searchParams;
   const activeTab: "upcoming" | "past" = tab === "past" ? "past" : "upcoming";
 
-  // Lazy sync (10-min cooldown)
-  await syncUserMatches(user.id);
+  // Fire-and-forget Playtomic sync: page renders immediately from the DB,
+  // sync runs after the response is sent (cooldown logic still enforced).
+  after(() => syncUserMatches(user.id));
 
   const supabase = await createClient();
 
