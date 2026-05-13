@@ -93,6 +93,24 @@ export async function rejectInsightCard(
   return { success: true };
 }
 
+export async function deleteAiInsightCard(
+  cardId: string
+): Promise<{ success: true } | { error: string }> {
+  const ctx = await requireTrainerOwnsCard(cardId);
+  if (!ctx) return { error: "Forbidden" };
+
+  const { supabase, sessionId } = ctx;
+  const { error } = await supabase
+    .from("insight_cards")
+    .delete()
+    .eq("id", cardId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/sessions/${sessionId}`);
+  return { success: true };
+}
+
 const VALID_TAGS = new Set(["техника", "тактика", "физика", "ментал"]);
 
 export async function updateAiInsightCard(
