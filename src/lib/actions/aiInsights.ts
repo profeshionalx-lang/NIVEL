@@ -66,6 +66,7 @@ export async function pasteInsightsFromClaude(
     source: "ai-paste" as const,
     trainer_status: "draft" as const,
     front_text: card.title,
+    context_text: card.body,
     title: card.title,
     body: card.body,
     quote: card.quote,
