@@ -161,6 +161,7 @@ export async function updateAiInsightCard(
       body: patch.body.trim(),
       tags: [patch.tag],
       front_text: patch.title.trim(),
+      context_text: patch.body.trim(),
     })
     .eq("id", cardId);
 

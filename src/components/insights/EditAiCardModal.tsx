@@ -55,7 +55,8 @@ export function EditAiCardModal({ card, onClose }: Props) {
           <h3 className="text-lg font-black tracking-tight">Редактировать карточку</h3>
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-elevated text-on-surface-variant"
+            aria-label="Закрыть"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-elevated text-on-surface-variant"
           >
             <span className="material-symbols-outlined text-base">close</span>
           </button>
