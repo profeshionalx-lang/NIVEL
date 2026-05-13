@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/i18n";
 import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
+import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
 
 export default async function SessionDetailPage({
   params,
@@ -203,6 +204,10 @@ export default async function SessionDetailPage({
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
             {isRu ? "Карточки" : "Insights"}
           </p>
+
+          {isTrainer && (
+            <PasteInsightsButton sessionId={id} />
+          )}
 
           {isTrainer && (
             <Link
