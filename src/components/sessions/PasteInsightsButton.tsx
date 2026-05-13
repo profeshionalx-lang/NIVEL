@@ -16,12 +16,55 @@ const FORMAT_EXAMPLE = `## Карточка 1
 - Описание: После удара смещайся к сетке, не оставайся у задней линии.
 - Цитата: «не стой сзади, иди вперёд»`;
 
+const PROMPT_TEMPLATE = `Ты помогаешь тренеру по паделю. Прочитай транскрипт тренировки во вложении и выдели практические инсайты для ученика.
+
+ВЫВЕДИ РЕЗУЛЬТАТ СТРОГО В ЭТОМ ФОРМАТЕ (никаких таблиц, нумерации, bold-выделений):
+
+## Карточка 1
+- Тема: техника
+- Заголовок: <короткий совет, до 80 знаков>
+- Описание: <конкретное действие, до 400 знаков>
+- Цитата: "<дословная фраза из транскрипта>"
+
+## Карточка 2
+- Тема: тактика
+- Заголовок: ...
+- Описание: ...
+- Цитата: "..."
+
+ПРАВИЛА:
+- Тема обязательно одна из: техника, тактика, физика, ментал (строчные буквы)
+- Минимум 5, максимум 15 карточек
+- В каждой карточке цитата — дословная фраза из транскрипта (без неё инсайт невалиден)
+- Только actionable советы, не пересказ
+- Никакого markdown-форматирования внутри полей (**bold**, *italic* и т.п.)
+- Никаких таблиц, нумерованных списков, заголовков # или ###`;
+
 export function PasteInsightsButton({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [markdown, setMarkdown] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [copied, setCopied] = useState(false);
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(PROMPT_TEMPLATE);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const ta = document.createElement("textarea");
+      ta.value = PROMPT_TEMPLATE;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   function handleSubmit() {
     if (!markdown.trim()) return;
@@ -77,6 +120,17 @@ export function PasteInsightsButton({ sessionId }: { sessionId: string }) {
                 <span className="material-symbols-outlined text-base">close</span>
               </button>
             </div>
+
+            <button
+              onClick={copyPrompt}
+              type="button"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-border-dim text-sm font-bold text-on-surface min-h-[44px] active:scale-[0.98] transition-transform"
+            >
+              <span className="material-symbols-outlined text-base">
+                {copied ? "check" : "content_copy"}
+              </span>
+              {copied ? "Промпт скопирован" : "Скопировать промпт-шаблон"}
+            </button>
 
             <textarea
               value={markdown}
