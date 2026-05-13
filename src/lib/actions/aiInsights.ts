@@ -1,38 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 import { parseInsightsMarkdown } from "@/lib/ai/parseInsights";
-
-async function requireTrainerOwnsSession(sessionId: string) {
-  const user = await getSession();
-  if (!user || user.role !== "trainer") return null;
-
-  const supabase = await createClient();
-
-  const { data: session } = await supabase
-    .from("sessions")
-    .select("id, goals!inner(user_id)")
-    .eq("id", sessionId)
-    .single();
-
-  if (!session) return null;
-
-  const goal = (session as unknown as { goals: { user_id: string } }).goals;
-  const studentId = goal.user_id;
-
-  const { data: studentProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", studentId)
-    .eq("created_by", user.id)
-    .maybeSingle();
-
-  if (!studentProfile) return null;
-
-  return { user, supabase, studentId, trainerId: user.id };
-}
+import { requireTrainerOwnsSession } from "@/lib/auth/ownership";
 
 export async function pasteInsightsFromClaude(
   sessionId: string,
