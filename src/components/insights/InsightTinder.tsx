@@ -11,12 +11,13 @@ interface Props {
 
 const SWIPE_THRESHOLD = 110;
 const TAP_THRESHOLD = 8;
+const COMMIT_MS = 380;
 
 export default function InsightTinder({ cards }: Props) {
   const router = useRouter();
   const [queue, setQueue] = useState(cards);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
-  const [exiting, setExiting] = useState<"left" | "right" | null>(null);
+  const [committing, setCommitting] = useState<"left" | "right" | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [intro, setIntro] = useState(false);
   const [, startTransition] = useTransition();
@@ -25,17 +26,15 @@ export default function InsightTinder({ cards }: Props) {
   const total = cards.length;
 
   const top = queue[0];
-  const next = queue[1];
   const currentIndex = total - queue.length + 1;
   const topId = top?.id;
 
-  // Play hint flip only on first card the user sees
   useEffect(() => {
     setFlipped(false);
     if (!topId || introPlayedRef.current) return;
     introPlayedRef.current = true;
     setIntro(true);
-    const t = setTimeout(() => setIntro(false), 2400);
+    const t = setTimeout(() => setIntro(false), 2700);
     return () => clearTimeout(t);
   }, [topId]);
 
@@ -54,35 +53,36 @@ export default function InsightTinder({ cards }: Props) {
   }
 
   function commit(decision: "taken" | "skipped") {
-    if (!top || exiting) return;
-    setExiting(decision === "taken" ? "right" : "left");
+    if (!top || committing) return;
+    const dir = decision === "taken" ? "right" : "left";
+    setCommitting(dir);
+    setDrag(null);
 
     setTimeout(() => {
       startTransition(async () => {
         await decideInsightCard(top.id, decision);
       });
       setQueue((q) => q.slice(1));
-      setDrag(null);
-      setExiting(null);
+      setCommitting(null);
       router.refresh();
-    }, 320);
+    }, COMMIT_MS);
   }
 
   function onPointerDown(e: React.PointerEvent) {
-    if (exiting) return;
+    if (committing) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     startRef.current = { x: e.clientX, y: e.clientY };
     setDrag({ x: 0, y: 0 });
   }
   function onPointerMove(e: React.PointerEvent) {
-    if (!startRef.current || exiting) return;
+    if (!startRef.current || committing) return;
     setDrag({
       x: e.clientX - startRef.current.x,
       y: e.clientY - startRef.current.y,
     });
   }
   function onPointerUp() {
-    if (!drag || exiting) {
+    if (!drag || committing) {
       startRef.current = null;
       return;
     }
@@ -99,8 +99,53 @@ export default function InsightTinder({ cards }: Props) {
   }
 
   const dx = drag?.x ?? 0;
-  const rot = dx / 18;
-  const opacity = exiting ? 0 : 1 - Math.min(Math.abs(dx) / 400, 0.4);
+  const dy = drag?.y ?? 0;
+  const dragProgress = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
+  const isDragging = !!drag;
+
+  function slotStyle(slot: number, slotProgress: number): React.CSSProperties {
+    if (slot === -1) {
+      const dir = committing === "right" ? 1 : -1;
+      return {
+        transform: `translateX(${dir * 140}%) rotate(${dir * 22}deg)`,
+        opacity: 0,
+      };
+    }
+    if (slot === 0) {
+      if (isDragging) {
+        const rot = dx / 18;
+        return {
+          transform: `translateX(${dx}px) translateY(${dy * 0.3}px) rotate(${rot}deg)`,
+          opacity: 1 - Math.min(Math.abs(dx) / 420, 0.3),
+        };
+      }
+      return { transform: "translate(0,0) rotate(0deg) scale(1)", opacity: 1 };
+    }
+    if (slot === 1) {
+      const lift = slotProgress;
+      const ty = -22 + lift * 22;
+      const rot = -5 + lift * 5;
+      const scale = 0.93 + lift * 0.07;
+      const opacity = 0.6 + lift * 0.4;
+      return {
+        transform: `translateY(${ty}px) rotate(${rot}deg) scale(${scale})`,
+        opacity,
+      };
+    }
+    if (slot === 2) {
+      return {
+        transform: "translateY(-38px) rotate(6deg) scale(0.88)",
+        opacity: 0.36,
+      };
+    }
+    return { transform: "translateY(-44px) scale(0.84)", opacity: 0 };
+  }
+
+  function slotFor(i: number) {
+    return committing ? i - 1 : i;
+  }
+
+  const visible = queue.slice(0, 3);
 
   return (
     <div className="space-y-4">
@@ -113,68 +158,59 @@ export default function InsightTinder({ cards }: Props) {
       </div>
 
       <div className="tinder-stack">
-        {queue.length > 2 && (
-          <div
-            className="tinder-card pointer-events-none"
-            style={{
-              transform: "translateY(-34px) rotate(4deg) scale(0.92)",
-              opacity: 0.32,
-            }}
-          >
-            <div className="absolute inset-0 rounded-3xl bg-white/70 shadow-[0_18px_40px_rgba(0,0,0,0.3)]" />
-          </div>
-        )}
-        {next && (
-          <div
-            className="tinder-card pointer-events-none"
-            style={{
-              transform: "translateY(-18px) rotate(-3deg) scale(0.96)",
-              opacity: 0.55,
-            }}
-          >
-            <div className="absolute inset-0 rounded-3xl bg-white/85 shadow-[0_20px_44px_rgba(0,0,0,0.35)]" />
-          </div>
-        )}
-        <div
-          className={`tinder-card ${drag ? "dragging" : ""} ${
-            exiting === "right" ? "swipe-right" : exiting === "left" ? "swipe-left" : ""
-          }`}
-          style={{
-            transform: exiting
-              ? undefined
-              : `translateX(${dx}px) translateY(${(drag?.y ?? 0) * 0.3}px) rotate(${rot}deg)`,
-            opacity,
-          }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-        >
-          <div className="insight-flip">
+        {visible.map((card, i) => {
+          const slot = slotFor(i);
+          const isTopSlot = slot === 0;
+          const isExiting = slot === -1;
+          const slotProgress = slot === 1 ? dragProgress : 0;
+          const style = slotStyle(slot, slotProgress);
+          const zIndex = slot === -1 ? 4 : slot === 0 ? 3 : slot === 1 ? 2 : 1;
+
+          return (
             <div
-              className={`insight-flip-inner ${flipped ? "flipped" : ""} ${
-                intro && !flipped ? "intro" : ""
+              key={card.id}
+              className={`tinder-card ${isTopSlot && isDragging ? "dragging" : ""} ${
+                isTopSlot ? "" : "pointer-events-none"
               }`}
+              style={{ ...style, zIndex }}
+              onPointerDown={isTopSlot ? onPointerDown : undefined}
+              onPointerMove={isTopSlot ? onPointerMove : undefined}
+              onPointerUp={isTopSlot ? onPointerUp : undefined}
+              onPointerCancel={isTopSlot ? onPointerUp : undefined}
             >
-              <div className="insight-flip-face">
-                <FrontFace card={top} dx={dx} />
-              </div>
-              <div className="insight-flip-face insight-flip-back">
-                <BackFace card={top} />
+              <div className="insight-flip">
+                <div
+                  className={`insight-flip-inner ${isTopSlot && flipped ? "flipped" : ""} ${
+                    isTopSlot && intro && !flipped ? "intro" : ""
+                  }`}
+                >
+                  <div className="insight-flip-face">
+                    <FrontFace
+                      card={card}
+                      dx={isTopSlot ? dx : 0}
+                      preview={!isTopSlot && !isExiting}
+                      previewOpacity={slot === 1 ? dragProgress : 0}
+                      muted={slot === 2}
+                    />
+                  </div>
+                  <div className="insight-flip-face insight-flip-back">
+                    <BackFace card={card} />
+                  </div>
+                </div>
+                {isTopSlot && intro && !flipped && (
+                  <>
+                    <span className="insight-tap-ring" />
+                    <span className="insight-tap-hint">
+                      <span className="material-symbols-outlined fill-icon text-primary text-[44px] drop-shadow-[0_4px_12px_rgba(202,253,0,0.45)]">
+                        touch_app
+                      </span>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
-            {intro && !flipped && (
-              <>
-                <span className="insight-tap-ring" />
-                <span className="insight-tap-hint">
-                  <span className="material-symbols-outlined fill-icon text-primary text-[44px] drop-shadow-[0_4px_12px_rgba(202,253,0,0.45)]">
-                    touch_app
-                  </span>
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       <div className="flex items-center justify-center gap-6 pt-2">
@@ -212,19 +248,27 @@ function sideMeta(side: string | null | undefined) {
 function FrontFace({
   card,
   dx,
-  stacked,
+  preview,
+  previewOpacity = 0,
+  muted,
 }: {
   card: InsightCardWithRelations;
   dx: number;
-  stacked?: boolean;
+  preview?: boolean;
+  previewOpacity?: number;
+  muted?: boolean;
 }) {
   const topic = card.tags?.[0] ?? null;
   const side = sideMeta(card.tags?.[1] ?? null);
   const displayTitle = card.title || card.front_text;
 
+  // Preview = next-in-line: text fades in as user drags top away.
+  // Muted = ghost (slot 2): barely-visible silhouette.
+  const contentOpacity = muted ? 0 : preview ? 0.18 + previewOpacity * 0.82 : 1;
+
   return (
     <div className="relative h-full w-full p-6 flex flex-col">
-      {!stacked && (
+      {!preview && !muted && (
         <>
           <div
             className="absolute top-5 left-5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-primary text-on-primary z-10"
@@ -238,19 +282,19 @@ function FrontFace({
           >
             Пропустить
           </div>
+          <span
+            className="absolute bottom-5 right-5 w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center pointer-events-none"
+            aria-hidden
+          >
+            <span className="material-symbols-outlined text-[18px]">touch_app</span>
+          </span>
         </>
       )}
 
-      {!stacked && (
-        <span
-          className="absolute bottom-5 right-5 w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center pointer-events-none"
-          aria-hidden
-        >
-          <span className="material-symbols-outlined text-[18px]">touch_app</span>
-        </span>
-      )}
-
-      <div className="flex flex-col gap-4 mt-8">
+      <div
+        className="flex flex-col gap-4 mt-8 transition-opacity duration-150"
+        style={{ opacity: contentOpacity }}
+      >
         <div className="flex flex-wrap items-center gap-2">
           {topic && (
             <span className="text-[10px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
@@ -278,7 +322,6 @@ function BackFace({ card }: { card: InsightCardWithRelations }) {
   const quote = card.quote || "";
   const total = body.length + quote.length;
 
-  // Auto-size: short content → bigger text; long content → smaller. Overall сдвинуто на размер вниз.
   const bodySize =
     total > 520 ? "text-[11px] leading-snug" :
     total > 320 ? "text-[12px] leading-snug" :
@@ -303,8 +346,11 @@ function BackFace({ card }: { card: InsightCardWithRelations }) {
           {body}
         </p>
       )}
+      <div className="flex-1" />
       {quote && (
-        <p className={`text-gray-500 italic border-l-2 border-amber-400 pl-3 mt-5 ${quoteSize}`}>
+        <p
+          className={`text-gray-500 italic border-l-2 border-amber-400 pl-3 mt-4 flex-shrink-0 ${quoteSize}`}
+        >
           «{quote}»
         </p>
       )}
