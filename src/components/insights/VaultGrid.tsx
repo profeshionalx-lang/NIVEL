@@ -1,14 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { InsightCardWithRelations } from "@/lib/types";
 
 interface Props {
   cards: InsightCardWithRelations[];
 }
 
+const FLIP_HINT_KEY = "nivel:vault-flip-hint-seen";
+
 export default function VaultGrid({ cards }: Props) {
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
+
+  const firstCardId = cards[0]?.id;
+
+  // One-time intro: on the very first visit, briefly flip the first card so the
+  // user discovers the interaction. Persisted in localStorage — на последующих
+  // заходах карточка показывается сразу без анимации.
+  useEffect(() => {
+    if (!firstCardId) return;
+    if (localStorage.getItem(FLIP_HINT_KEY)) return;
+
+    const flipOn = setTimeout(() => {
+      setFlipped(new Set([firstCardId]));
+    }, 500);
+    const flipOff = setTimeout(() => {
+      setFlipped((prev) => {
+        const next = new Set(prev);
+        next.delete(firstCardId);
+        return next;
+      });
+      localStorage.setItem(FLIP_HINT_KEY, "1");
+    }, 1900);
+
+    return () => {
+      clearTimeout(flipOn);
+      clearTimeout(flipOff);
+    };
+  }, [firstCardId]);
 
   if (cards.length === 0) {
     return (
