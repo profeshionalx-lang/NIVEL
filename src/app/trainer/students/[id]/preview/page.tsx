@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getLocale } from "@/lib/i18n";
 import { loadDashboardData } from "@/lib/dashboard/data";
 import DashboardView from "@/components/dashboard/DashboardView";
+import BackButton from "@/components/navigation/BackButton";
 
 export default async function TrainerStudentPreviewPage({
   params,
@@ -21,9 +22,7 @@ export default async function TrainerStudentPreviewPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href={`/trainer/students/${studentId}`} className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref={`/trainer/students/${studentId}`} />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           Preview
         </span>

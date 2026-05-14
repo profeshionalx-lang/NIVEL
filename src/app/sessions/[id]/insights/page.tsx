@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import InsightTinder from "@/components/insights/InsightTinder";
+import BackButton from "@/components/navigation/BackButton";
 import type { InsightCardWithRelations } from "@/lib/types";
 
 export default async function SessionInsightsPage({
@@ -51,9 +52,7 @@ export default async function SessionInsightsPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href={backHref} className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref={backHref} />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           Insights
         </span>

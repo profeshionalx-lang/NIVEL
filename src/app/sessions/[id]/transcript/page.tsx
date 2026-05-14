@@ -6,6 +6,7 @@ import { DeleteTranscriptButton } from "./DeleteTranscriptButton";
 import { DownloadTranscriptButton } from "./DownloadTranscriptButton";
 import { TranscriptView } from "./TranscriptView";
 import { ReTranscribeButton } from "./ReTranscribeButton";
+import BackButton from "@/components/navigation/BackButton";
 
 export default async function TranscriptPage({
   params,
@@ -57,9 +58,7 @@ export default async function TranscriptPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href={`/sessions/${id}`} className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref={`/sessions/${id}`} />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           Транскрипт
         </span>

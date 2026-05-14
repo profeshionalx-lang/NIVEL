@@ -6,6 +6,7 @@ import { loadDashboardData } from "@/lib/dashboard/data";
 import DashboardView from "@/components/dashboard/DashboardView";
 import InviteBlock from "@/components/trainer/InviteBlock";
 import TrainerMatchesBlock from "@/components/trainer/TrainerMatchesBlock";
+import BackButton from "@/components/navigation/BackButton";
 
 export default async function TrainerStudentDetailPage({
   params,
@@ -23,9 +24,7 @@ export default async function TrainerStudentDetailPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href="/trainer/students" className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref="/trainer/students" />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">Student</span>
         <Link
           href={`/trainer/students/${studentId}/preview`}

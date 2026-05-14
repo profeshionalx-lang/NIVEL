@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n/dict";
 import AttachInsightModal from "@/components/matches/AttachInsightModal";
 import ReflectionTextarea from "@/components/matches/ReflectionTextarea";
 import { getVaultCards } from "@/lib/actions/insightCards";
+import BackButton from "@/components/navigation/BackButton";
 
 const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
 
@@ -189,14 +190,10 @@ export default async function MatchDetailPage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-30 glass-nav h-16 flex items-center gap-3 px-4">
-        <Link
-          href="/matches"
-          className="flex items-center justify-center w-9 h-9 rounded-xl bg-surface-elevated hover:bg-border-dim transition-colors"
-        >
-          <span className="material-symbols-outlined text-[20px] text-on-surface-variant">
-            arrow_back
-          </span>
-        </Link>
+        <BackButton
+          fallbackHref="/matches"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-surface-elevated hover:bg-border-dim transition-colors text-[20px] text-on-surface-variant"
+        />
         <span className="text-base font-black text-primary uppercase italic tracking-tight">
           {match.location ?? t(locale, "matches.title")}
         </span>
