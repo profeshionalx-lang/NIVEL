@@ -98,7 +98,7 @@ export default async function DashboardPage() {
   const { data: nextSessionRaw } = await supabase
     .from("sessions")
     .select(
-      "*, goals!inner(user_id), session_exercises(id, exercises(name_ru, name_en))"
+      "*, goals!inner(user_id), session_exercises(id, sort_order, exercises(name_ru, name_en), session_exercise_skills(skill_id, skills(name_ru, name_en)))"
     )
     .eq("goals.user_id", user.id)
     .eq("status", "planned")
@@ -110,8 +110,22 @@ export default async function DashboardPage() {
   const exerciseNameCol = locale === "en" ? "name_en" : "name_ru";
   const nextExercises = nextSession
     ? ((nextSession.session_exercises as Array<Record<string, unknown>>) || [])
-        .map((se) => (se.exercises as Record<string, unknown>)?.[exerciseNameCol] as string)
-        .filter(Boolean)
+        .map((se) => {
+          const ex = se.exercises as Record<string, unknown>;
+          const skillLinks =
+            (se.session_exercise_skills as Array<Record<string, unknown>>) || [];
+          return {
+            id: se.id as number,
+            name: (ex?.[exerciseNameCol] as string) || "",
+            skills: skillLinks
+              .map(
+                (sl) =>
+                  (sl.skills as Record<string, unknown>)?.[exerciseNameCol] as string
+              )
+              .filter(Boolean),
+          };
+        })
+        .filter((e) => e.name)
     : [];
 
   const { data: pendingByCard } = await supabase
@@ -468,31 +482,40 @@ export default async function DashboardPage() {
                       : t(locale, "common.upcoming")}
                   </p>
                 </div>
-                <h4 className="text-xl font-black tracking-tight mb-4">
+                <h4 className="text-xl font-black tracking-tight">
                   {t(locale, "dashboard.session")} {nextSession.session_number as number}
                 </h4>
-                {nextExercises.length > 0 && (
-                  <div className="bg-surface-card rounded-2xl p-4 space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-2">
-                      {t(locale, "dashboard.exercises")}
-                    </p>
-                    {nextExercises.slice(0, 3).map((ex, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 text-sm text-on-surface-variant"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60" />
-                        {ex}
+              </Link>
+            </section>
+          )}
+
+          {nextExercises.length > 0 && (
+            <section className="bg-surface-card rounded-3xl p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
+                {t(locale, "dashboard.exercises")}
+              </p>
+              <div className="space-y-3">
+                {nextExercises.map((exercise) => (
+                  <div key={exercise.id} className="space-y-2">
+                    <div className="flex items-center gap-3 text-sm text-on-surface">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60 flex-shrink-0" />
+                      {exercise.name}
+                    </div>
+                    {exercise.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pl-4">
+                        {exercise.skills.map((skill, i) => (
+                          <span
+                            key={i}
+                            className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wide"
+                          >
+                            +{skill}
+                          </span>
+                        ))}
                       </div>
-                    ))}
-                    {nextExercises.length > 3 && (
-                      <p className="text-xs text-on-surface-variant opacity-50 pl-4">
-                        + {nextExercises.length - 3} {t(locale, "common.more")}
-                      </p>
                     )}
                   </div>
-                )}
-              </Link>
+                ))}
+              </div>
             </section>
           )}
         </>

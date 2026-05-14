@@ -104,39 +104,6 @@ export default async function SessionDetailPage({
           </p>
         </div>
 
-        <section className="bg-surface-card rounded-3xl p-5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
-            {isRu ? "Упражнения" : "Exercises"}
-          </p>
-          <div className="space-y-3">
-            {exercises.map((exercise) => (
-              <div key={exercise.id} className="space-y-2">
-                <div className="flex items-center gap-3 text-sm text-on-surface">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60 flex-shrink-0" />
-                  {exercise.name}
-                </div>
-                {exercise.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pl-4">
-                    {exercise.skills.map((skill) => (
-                      <span
-                        key={skill.id}
-                        className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wide"
-                      >
-                        +{skill.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {exercises.length === 0 && (
-              <p className="text-on-surface-variant text-sm">
-                {isRu ? "Упражнения ещё не добавлены" : "No exercises added yet"}
-              </p>
-            )}
-          </div>
-        </section>
-
         {allSkills.length > 0 && (
           <section className="bg-surface-high rounded-3xl p-5">
             <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3">
