@@ -6,29 +6,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const claim = searchParams.get("claim");
 
-  const state = randomBytes(16).toString("hex");
-  const cookieStore = await cookies();
+  // CSRF nonce stored in cookie; claim token rides along inside `state` itself,
+  // because the OAuth `state` round-trips reliably through Гречка while a
+  // separate cookie can be dropped by in-app browsers / long redirect chains.
+  const csrf = randomBytes(16).toString("hex");
+  const state = claim ? `${csrf}~${claim}` : csrf;
 
-  cookieStore.set("__grechka_state", state, {
+  const cookieStore = await cookies();
+  cookieStore.set("__grechka_state", csrf, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 600, // 10 min
     path: "/",
   });
-
-  if (claim) {
-    cookieStore.set("__grechka_claim", claim, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 600, // 10 min — must outlive the round-trip
-      path: "/",
-    });
-  } else {
-    // Defensive: clear any stale claim cookie.
-    cookieStore.delete("__grechka_claim");
-  }
 
   const grechkaUrl = process.env.NEXT_PUBLIC_GRECHKA_URL?.trim();
   const nivelUrl = process.env.NEXT_PUBLIC_NIVEL_URL?.trim();
