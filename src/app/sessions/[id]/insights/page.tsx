@@ -54,7 +54,7 @@ export default async function SessionInsightsPage({
         <div className="w-10" />
       </header>
 
-      <main className="px-5 pt-6 pb-36 max-w-[430px] mx-auto">
+      <main className="px-5 pt-4 pb-8 max-w-[430px] mx-auto">
         <InsightTinder cards={cards} />
       </main>
     </div>
