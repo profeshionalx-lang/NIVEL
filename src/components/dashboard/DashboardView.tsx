@@ -22,6 +22,20 @@ interface Props {
   previewMode?: boolean;
 }
 
+function pluralizeInsights(locale: Locale, n: number): string {
+  if (locale === "ru") {
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    if (mod100 >= 11 && mod100 <= 14) return t(locale, "dashboard.insightsToReview");
+    if (mod10 === 1) return t(locale, "dashboard.insightsToReview.one");
+    if (mod10 >= 2 && mod10 <= 4) return t(locale, "dashboard.insightsToReview.few");
+    return t(locale, "dashboard.insightsToReview");
+  }
+  return n === 1
+    ? t(locale, "dashboard.insightsToReview.one")
+    : t(locale, "dashboard.insightsToReview");
+}
+
 export default function DashboardView({ data, locale, editable, previewMode }: Props) {
   const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
   const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId, upcomingMatches } = data;
@@ -93,9 +107,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                   </p>
                   <h2 className="text-xl font-black tracking-tight">
                     {totalPendingCards}{" "}
-                    {totalPendingCards === 1
-                      ? t(locale, "dashboard.insightsToReview.one")
-                      : t(locale, "dashboard.insightsToReview")}
+                    {pluralizeInsights(locale, totalPendingCards)}
                   </h2>
                 </div>
                 <span className="material-symbols-outlined text-2xl">arrow_forward</span>
