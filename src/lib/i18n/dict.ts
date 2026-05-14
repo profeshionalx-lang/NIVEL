@@ -17,7 +17,7 @@ const ru = {
   "common.more": "ещё",
   "common.new": "Новое",
   "common.done": "Готово",
-  "common.actionRequired": "Требуется действие",
+  "common.actionRequired": "Ждут свайпа",
   "common.completed": "Завершено",
   "common.upcoming": "Скоро",
   "common.items": "элементов",
@@ -31,7 +31,7 @@ const ru = {
 
   // Nav
   "nav.home": "Главная",
-  "nav.insights": "Карточки",
+  "nav.insights": "Инсайты",
   "nav.matches": "Матчи",
   "nav.logout": "Выйти",
 
@@ -41,8 +41,9 @@ const ru = {
   "dashboard.emptyHint":
     "Начните с создания первой цели — выберите проблемы, над которыми хотите работать.",
   "dashboard.createGoal": "Создать цель",
-  "dashboard.insightsToReview": "карточек на разбор",
-  "dashboard.insightsToReview.one": "карточка на разбор",
+  "dashboard.insightsToReview": "инсайтов",
+  "dashboard.insightsToReview.few": "инсайта",
+  "dashboard.insightsToReview.one": "инсайт",
   "dashboard.fromSession": "По сессии",
   "dashboard.andMore": "и ещё",
   "dashboard.masterPlan": "Мастер-план",
@@ -57,13 +58,13 @@ const ru = {
   "dashboard.exercises": "Упражнения",
 
   // Insights / vault
-  "insights.title": "Карточки разборов",
-  "insights.empty": "Пока нет карточек. Они появятся после сессий с тренером.",
+  "insights.title": "Инсайты",
+  "insights.empty": "Пока нет инсайтов. Они появятся после сессий с тренером.",
   "insights.filterAll": "Все",
   "insights.take": "Взять",
   "insights.skip": "Пропустить",
   "insights.skipped": "Пропущенные",
-  "insights.allReviewed": "Все карточки разобраны 🎉",
+  "insights.allReviewed": "Все инсайты разобраны 🎉",
   "insights.swipeHint": "Свайпните влево, чтобы пропустить, вправо — чтобы взять",
   "insights.category": "Категория",
 
@@ -78,7 +79,7 @@ const ru = {
   "trainer.approve": "Утвердить",
   "trainer.reject": "Отклонить",
   "trainer.finishReview": "Завершить разбор",
-  "trainer.cards": "Карточки",
+  "trainer.cards": "Инсайты",
   "trainer.masterPlan": "Мастер-план",
   "trainer.matches.empty": "У ученика нет матчей.",
 
@@ -96,7 +97,7 @@ const ru = {
   "sessions.status.completed": "Завершена",
   "sessions.notes": "Заметки",
   "sessions.exercises": "Упражнения",
-  "sessions.insights": "Карточки",
+  "sessions.insights": "Инсайты",
   "sessions.markComplete": "Отметить как завершённую",
 
   // Master plan
@@ -199,6 +200,7 @@ const en: Record<keyof typeof ru, string> = {
     "Start by creating your first goal — pick the problems you want to work on.",
   "dashboard.createGoal": "Create goal",
   "dashboard.insightsToReview": "insights to review",
+  "dashboard.insightsToReview.few": "insights to review",
   "dashboard.insightsToReview.one": "insight to review",
   "dashboard.fromSession": "From session",
   "dashboard.andMore": "and",
