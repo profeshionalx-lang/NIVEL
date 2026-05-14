@@ -8,6 +8,7 @@ import { AudioUploader } from "@/components/sessions/AudioUploader";
 import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
 import { DraftCardsList } from "@/components/insights/DraftCardsList";
 import { ApprovedInsightCard } from "@/components/insights/ApprovedInsightCard";
+import BackButton from "@/components/navigation/BackButton";
 
 export default async function SessionDetailPage({
   params,
@@ -91,16 +92,13 @@ export default async function SessionDetailPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link
-          href={
+        <BackButton
+          fallbackHref={
             previewAsStudent && session.goals?.user_id
               ? `/trainer/students/${session.goals.user_id}/preview`
               : "/dashboard"
           }
-          className="text-on-surface-variant"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           {isRu ? "Сессия" : "Session"} {session.session_number}
         </span>

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { createSession } from "@/lib/actions/sessions";
 import Link from "next/link";
+import BackButton from "@/components/navigation/BackButton";
 
 interface ExerciseRow {
   name: string;
@@ -139,12 +140,7 @@ function NewSessionContent() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link
-          href={`/trainer/students/${studentId}`}
-          className="text-on-surface-variant"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref={`/trainer/students/${studentId}`} />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           New session
         </span>
