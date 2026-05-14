@@ -85,6 +85,7 @@ export interface InsightCard {
   trainer_status: InsightTrainerStatus;
   student_decision: InsightStudentDecision | null;
   student_edited_text: string | null;
+  position: number;
   created_at: string;
   decided_at: string | null;
 }

@@ -29,7 +29,7 @@ export default async function SessionInsightsPage({
     )
     .eq("session_id", id)
     .eq("trainer_status", "approved")
-    .order("created_at");
+    .order("position");
 
   if (include === "skipped") {
     query = query.in("student_decision", ["skipped"]).not("student_decision", "is", null);

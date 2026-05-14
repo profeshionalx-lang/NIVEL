@@ -29,7 +29,7 @@ export default async function TrainerSessionInsightsPage({
       .from("insight_cards")
       .select("*")
       .eq("session_id", id)
-      .order("created_at"),
+      .order("position"),
     supabase.from("problem_categories").select("*").order("sort_order"),
     supabase.from("problems").select("*").order("sort_order"),
   ]);

@@ -63,7 +63,7 @@ export default async function SessionDetailPage({
     .from("insight_cards")
     .select("*")
     .eq("session_id", id)
-    .order("created_at");
+    .order("position");
 
   const allCards = (cards ?? []) as InsightCard[];
   const approvedCards = allCards.filter((c) => c.trainer_status === "approved");
