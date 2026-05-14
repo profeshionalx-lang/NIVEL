@@ -46,14 +46,6 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
   const firstName = profile.full_name?.split(" ")[0] || profile.email?.split("@")[0] || t(locale, "dashboard.player");
   const masterPlanPreview = masterPlan?.sections.slice(0, 2) ?? [];
 
-  const planGoal =
-    goals.find((g) => g.total_sessions > 0) ??
-    goals.find((g) => g.session_count > 0) ??
-    goals[0];
-  const planPercent = planGoal && planGoal.session_count > 0
-    ? Math.min(100, Math.round((planGoal.total_sessions / planGoal.session_count) * 100))
-    : 0;
-
   const isEmpty = goals.length === 0 && skillProgress.length === 0 && !masterPlan && sessions.length === 0;
 
   return (
@@ -95,7 +87,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
           {/* Pending banner — student only */}
           {!isTrainer && totalPendingCards > 0 && firstPendingSessionId && (
             <Link
-              href={`/sessions/${firstPendingSessionId}/insights${sessionLinkSuffix}`}
+              href={`/sessions/${firstPendingSessionId}/insights?from=dashboard${sessionLinkSuffix ? `&as=student` : ""}`}
               className="block kinetic-gradient text-on-primary rounded-3xl p-5 glow-primary"
               style={{ boxShadow: "0 10px 30px rgba(202,253,0,0.35)" }}
             >
@@ -271,23 +263,6 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
               </div>
             </Link>
           ) : null}
-
-          {/* Plan progress — student only */}
-          {!isTrainer && planGoal && planGoal.session_count > 0 && (
-            <section className="bg-surface-low rounded-2xl p-4">
-              <div className="flex justify-between items-baseline mb-2">
-                <div className="flex items-baseline gap-2">
-                  <p className="text-secondary text-[10px] font-black uppercase tracking-[0.2em]">
-                    {t(locale, "dashboard.currentPlan")}
-                  </p>
-                  <span className="text-sm font-black tracking-tight">
-                    {Math.min(planGoal.total_sessions, planGoal.session_count)}/{planGoal.session_count}
-                  </span>
-                </div>
-                <span className="text-base font-black italic kinetic-text">{planPercent}%</span>
-              </div>
-            </section>
-          )}
 
           {/* Goals */}
           <section>
