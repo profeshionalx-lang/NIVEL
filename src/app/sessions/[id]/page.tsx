@@ -9,6 +9,7 @@ import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
 import { DraftCardsList } from "@/components/insights/DraftCardsList";
 import { ApprovedInsightCard } from "@/components/insights/ApprovedInsightCard";
 import BackButton from "@/components/navigation/BackButton";
+import { DownloadTranscriptButton } from "./transcript/DownloadTranscriptButton";
 
 export default async function SessionDetailPage({
   params,
@@ -70,7 +71,7 @@ export default async function SessionDetailPage({
 
   const { data: transcript } = await supabase
     .from("transcripts")
-    .select("status")
+    .select("status, raw_text")
     .eq("session_id", id)
     .maybeSingle();
 
@@ -182,29 +183,33 @@ export default async function SessionDetailPage({
                 <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
                   {isRu ? "Аудио тренировки" : "Session audio"}
                 </p>
-                <Link
-                  href={`/sessions/${id}/transcript`}
-                  className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim"
-                >
-                  <span className="material-symbols-outlined text-primary">description</span>
-                  <div>
-                    <p className="text-sm font-bold text-on-surface">
-                      {transcript.status === "ready"
-                        ? isRu ? "Открыть транскрипт" : "Open transcript"
-                        : transcript.status === "processing"
-                        ? isRu ? "Транскрипция…" : "Transcribing…"
-                        : isRu ? "Ошибка транскрипции" : "Transcription failed"}
+                {transcript.status === "ready" ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim">
+                    <span className="material-symbols-outlined text-primary">description</span>
+                    <p className="flex-1 text-sm font-bold text-on-surface">
+                      {isRu ? "Транскрипт готов" : "Transcript ready"}
                     </p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      {transcript.status === "processing"
-                        ? isRu ? "Обычно занимает 15–30 сек" : "Usually takes 15–30 sec"
-                        : ""}
-                    </p>
+                    <DownloadTranscriptButton sessionId={id} rawText={transcript.raw_text} />
                   </div>
-                  <span className="material-symbols-outlined text-on-surface-variant ml-auto">
-                    chevron_right
-                  </span>
-                </Link>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim">
+                    <span className="material-symbols-outlined text-on-surface-variant">
+                      {transcript.status === "processing" ? "hourglass_top" : "error"}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-on-surface">
+                        {transcript.status === "processing"
+                          ? isRu ? "Транскрипция…" : "Transcribing…"
+                          : isRu ? "Ошибка транскрипции" : "Transcription failed"}
+                      </p>
+                      {transcript.status === "processing" && (
+                        <p className="text-xs text-on-surface-variant mt-0.5">
+                          {isRu ? "Обычно занимает 15–30 сек" : "Usually takes 15–30 sec"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <AudioUploader sessionId={id} />
