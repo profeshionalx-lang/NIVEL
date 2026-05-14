@@ -35,7 +35,7 @@ export default function InsightTinder({ cards }: Props) {
     if (!topId || introPlayedRef.current) return;
     introPlayedRef.current = true;
     setIntro(true);
-    const t = setTimeout(() => setIntro(false), 1900);
+    const t = setTimeout(() => setIntro(false), 2100);
     return () => clearTimeout(t);
   }, [topId]);
 
@@ -103,17 +103,26 @@ export default function InsightTinder({ cards }: Props) {
   const opacity = exiting ? 0 : 1 - Math.min(Math.abs(dx) / 400, 0.4);
 
   return (
-    <div className="space-y-5">
-      <p className="text-center text-xs font-black uppercase tracking-[0.25em] text-on-surface-variant">
-        <span className="text-primary">{currentIndex}</span>
-        <span className="opacity-60"> / {total}</span>
-      </p>
+    <div className="space-y-4">
+      <div className="flex justify-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 backdrop-blur px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-on-surface-variant">
+          <span className="text-primary">{currentIndex}</span>
+          <span className="opacity-50">/</span>
+          <span className="opacity-70">{total}</span>
+        </span>
+      </div>
 
       <div className="tinder-stack">
+        <div
+          className="tinder-card pointer-events-none"
+          style={{ transform: "scale(0.86) translateY(-22px)", opacity: 0.22 }}
+        >
+          <div className="absolute inset-0 rounded-3xl bg-white/40 shadow-[0_24px_50px_rgba(0,0,0,0.35)]" />
+        </div>
         {next && (
           <div
-            className="tinder-card"
-            style={{ transform: "scale(0.94) translateY(-12px)", opacity: 0.4 }}
+            className="tinder-card pointer-events-none"
+            style={{ transform: "scale(0.93) translateY(-11px)", opacity: 0.55 }}
           >
             <div className="insight-flip">
               <div className="insight-flip-inner">
@@ -152,6 +161,16 @@ export default function InsightTinder({ cards }: Props) {
                 <BackFace card={top} />
               </div>
             </div>
+            {intro && !flipped && (
+              <>
+                <span className="insight-tap-ring" />
+                <span className="insight-tap-hint">
+                  <span className="material-symbols-outlined fill-icon text-primary text-[44px] drop-shadow-[0_4px_12px_rgba(202,253,0,0.45)]">
+                    touch_app
+                  </span>
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -202,7 +221,7 @@ function FrontFace({
   const displayTitle = card.title || card.front_text;
 
   return (
-    <div className="relative h-full w-full p-6 flex flex-col justify-between">
+    <div className="relative h-full w-full p-6 flex flex-col">
       {!stacked && (
         <>
           <div
@@ -220,7 +239,16 @@ function FrontFace({
         </>
       )}
 
-      <div className="flex flex-col gap-4 mt-10">
+      {!stacked && (
+        <span
+          className="absolute bottom-5 right-5 w-9 h-9 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center pointer-events-none"
+          aria-hidden
+        >
+          <span className="material-symbols-outlined text-[18px]">touch_app</span>
+        </span>
+      )}
+
+      <div className="flex flex-col gap-4 mt-8">
         <div className="flex flex-wrap items-center gap-2">
           {topic && (
             <span className="text-[10px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
@@ -235,42 +263,50 @@ function FrontFace({
             </span>
           )}
         </div>
-        <p className="text-[28px] font-black text-gray-900 leading-[1.1] tracking-tight">
+        <p className="text-[28px] font-black text-gray-900 leading-[1.05] tracking-tight">
           {displayTitle}
         </p>
-      </div>
-
-      <div className="flex items-center justify-center gap-2 text-gray-400 select-none pointer-events-none">
-        <span className="material-symbols-outlined text-base">touch_app</span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
-          Тап — перевернуть
-        </span>
       </div>
     </div>
   );
 }
 
 function BackFace({ card }: { card: InsightCardWithRelations }) {
-  const body = card.body || card.context_text;
+  const body = card.body || card.context_text || "";
+  const quote = card.quote || "";
+  const total = body.length + quote.length;
+
+  // Auto-size: short content → bigger text; long content → smaller.
+  const bodySize =
+    total > 520 ? "text-[13px] leading-snug" :
+    total > 320 ? "text-sm leading-relaxed" :
+    total > 160 ? "text-base leading-relaxed" :
+    "text-[19px] leading-snug";
+
+  const quoteSize =
+    total > 520 ? "text-[11px]" :
+    total > 320 ? "text-xs" :
+    "text-sm";
+
   return (
-    <div className="h-full w-full p-6 flex flex-col gap-4 overflow-y-auto">
-      <div className="flex items-center gap-2 text-gray-400">
+    <div className="h-full w-full p-6 flex flex-col gap-3">
+      <div className="flex items-center gap-2 text-gray-400 flex-shrink-0">
         <span className="material-symbols-outlined text-base">flip_to_front</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
           Разбор
         </span>
       </div>
       {body && (
-        <p className="text-base text-gray-800 leading-relaxed whitespace-pre-line">
+        <p className={`text-gray-800 whitespace-pre-line ${bodySize}`}>
           {body}
         </p>
       )}
-      {card.quote && (
-        <p className="text-sm text-gray-600 italic border-l-2 border-amber-400 pl-3 mt-auto">
-          «{card.quote}»
+      {quote && (
+        <p className={`text-gray-600 italic border-l-2 border-amber-400 pl-3 mt-auto ${quoteSize}`}>
+          «{quote}»
         </p>
       )}
-      {!body && !card.quote && (
+      {!body && !quote && (
         <p className="text-sm text-gray-500">Описание не добавлено.</p>
       )}
     </div>
