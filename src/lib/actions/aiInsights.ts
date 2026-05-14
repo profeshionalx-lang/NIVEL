@@ -112,19 +112,25 @@ export async function deleteAiInsightCard(
 }
 
 const VALID_TAGS = new Set(["техника", "тактика", "физика", "ментал"]);
+const VALID_SIDES = new Set(["защита", "атака"]);
 
 export async function updateAiInsightCard(
   cardId: string,
-  patch: { title: string; body: string; tag: string }
+  patch: { title: string; body: string; tag: string; side?: string | null }
 ): Promise<{ success: true } | { error: string }> {
   if (!patch.title.trim()) return { error: "Заголовок обязателен" };
   if (patch.title.trim().length > 80) return { error: "Заголовок не более 80 знаков" };
   if (!patch.body.trim()) return { error: "Описание обязательно" };
   if (patch.body.trim().length > 400) return { error: "Описание не более 400 знаков" };
   if (!VALID_TAGS.has(patch.tag)) return { error: `Недопустимая тема: ${patch.tag}` };
+  if (patch.side && !VALID_SIDES.has(patch.side)) {
+    return { error: `Недопустимая сторона: ${patch.side}` };
+  }
 
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
+
+  const tags = patch.side ? [patch.tag, patch.side] : [patch.tag];
 
   const { supabase, sessionId } = ctx;
   const { error } = await supabase
@@ -132,7 +138,7 @@ export async function updateAiInsightCard(
     .update({
       title: patch.title.trim(),
       body: patch.body.trim(),
-      tags: [patch.tag],
+      tags,
       front_text: patch.title.trim(),
       context_text: patch.body.trim(),
     })

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { decideInsightCard } from "@/lib/actions/insightCards";
 import type { InsightCardWithRelations } from "@/lib/types";
@@ -10,17 +10,34 @@ interface Props {
 }
 
 const SWIPE_THRESHOLD = 110;
+const TAP_THRESHOLD = 8;
 
 export default function InsightTinder({ cards }: Props) {
   const router = useRouter();
   const [queue, setQueue] = useState(cards);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
   const [exiting, setExiting] = useState<"left" | "right" | null>(null);
+  const [flipped, setFlipped] = useState(false);
+  const [intro, setIntro] = useState(false);
   const [, startTransition] = useTransition();
   const startRef = useRef<{ x: number; y: number } | null>(null);
+  const introPlayedRef = useRef(false);
+  const total = cards.length;
 
   const top = queue[0];
   const next = queue[1];
+  const currentIndex = total - queue.length + 1;
+  const topId = top?.id;
+
+  // Play hint flip only on first card the user sees
+  useEffect(() => {
+    setFlipped(false);
+    if (!topId || introPlayedRef.current) return;
+    introPlayedRef.current = true;
+    setIntro(true);
+    const t = setTimeout(() => setIntro(false), 1900);
+    return () => clearTimeout(t);
+  }, [topId]);
 
   if (!top) {
     return (
@@ -71,7 +88,13 @@ export default function InsightTinder({ cards }: Props) {
     }
     if (drag.x > SWIPE_THRESHOLD) commit("taken");
     else if (drag.x < -SWIPE_THRESHOLD) commit("skipped");
-    else setDrag(null);
+    else if (Math.abs(drag.x) < TAP_THRESHOLD && Math.abs(drag.y) < TAP_THRESHOLD) {
+      setIntro(false);
+      setFlipped((f) => !f);
+      setDrag(null);
+    } else {
+      setDrag(null);
+    }
     startRef.current = null;
   }
 
@@ -80,9 +103,27 @@ export default function InsightTinder({ cards }: Props) {
   const opacity = exiting ? 0 : 1 - Math.min(Math.abs(dx) / 400, 0.4);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <p className="text-center text-xs font-black uppercase tracking-[0.25em] text-on-surface-variant">
+        <span className="text-primary">{currentIndex}</span>
+        <span className="opacity-60"> / {total}</span>
+      </p>
+
       <div className="tinder-stack">
-        {next && <CardFace card={next} stacked />}
+        {next && (
+          <div
+            className="tinder-card"
+            style={{ transform: "scale(0.94) translateY(-12px)", opacity: 0.4 }}
+          >
+            <div className="insight-flip">
+              <div className="insight-flip-inner">
+                <div className="insight-flip-face">
+                  <FrontFace card={next} dx={0} stacked />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div
           className={`tinder-card ${drag ? "dragging" : ""} ${
             exiting === "right" ? "swipe-right" : exiting === "left" ? "swipe-left" : ""
@@ -98,11 +139,24 @@ export default function InsightTinder({ cards }: Props) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <CardFace card={top} dx={dx} />
+          <div className="insight-flip">
+            <div
+              className={`insight-flip-inner ${flipped ? "flipped" : ""} ${
+                intro && !flipped ? "intro" : ""
+              }`}
+            >
+              <div className="insight-flip-face">
+                <FrontFace card={top} dx={dx} />
+              </div>
+              <div className="insight-flip-face insight-flip-back">
+                <BackFace card={top} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-6">
+      <div className="flex items-center justify-center gap-6 pt-2">
         <button
           onClick={() => commit("skipped")}
           aria-label="Пропустить"
@@ -120,74 +174,105 @@ export default function InsightTinder({ cards }: Props) {
           </span>
         </button>
       </div>
-
-      <p className="text-center text-xs uppercase tracking-widest text-on-surface-variant">
-        осталось: {queue.length}
-      </p>
     </div>
   );
 }
 
-function CardFace({
+function sideMeta(side: string | null | undefined) {
+  if (side === "защита" || side === "defense") {
+    return { label: "Защита", className: "bg-sky-100 text-sky-700" };
+  }
+  if (side === "атака" || side === "attack") {
+    return { label: "Атака", className: "bg-rose-100 text-rose-700" };
+  }
+  return null;
+}
+
+function FrontFace({
   card,
+  dx,
   stacked,
-  dx = 0,
 }: {
   card: InsightCardWithRelations;
+  dx: number;
   stacked?: boolean;
-  dx?: number;
 }) {
+  const topic = card.tags?.[0] ?? null;
+  const side = sideMeta(card.tags?.[1] ?? null);
+  const displayTitle = card.title || card.front_text;
+
   return (
-    <div
-      className={`absolute inset-0 rounded-3xl p-6 flex flex-col justify-between bg-surface-card border border-border-dim ${
-        stacked ? "scale-[0.94] -translate-y-3 opacity-60" : ""
-      }`}
-    >
+    <div className="relative h-full w-full p-6 flex flex-col justify-between">
       {!stacked && (
         <>
           <div
-            className="absolute top-6 left-6 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-primary text-on-primary"
+            className="absolute top-5 left-5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-primary text-on-primary z-10"
             style={{ opacity: Math.max(0, Math.min(1, dx / 80)) }}
           >
             Взять
           </div>
           <div
-            className="absolute top-6 right-6 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-error text-white"
+            className="absolute top-5 right-5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-rose-500 text-white z-10"
             style={{ opacity: Math.max(0, Math.min(1, -dx / 80)) }}
           >
             Пропустить
           </div>
         </>
       )}
-      <div className="flex flex-col gap-3 mt-12">
+
+      <div className="flex flex-col gap-4 mt-10">
         <div className="flex flex-wrap items-center gap-2">
-          {card.category && (
-            <span className="text-xs uppercase tracking-widest text-secondary font-bold">
-              {card.category.name}
+          {topic && (
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
+              {topic}
             </span>
           )}
-          {card.tags && card.tags.length > 0 && (
-            <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">
-              {card.tags[0]}
+          {side && (
+            <span
+              className={`text-[10px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full ${side.className}`}
+            >
+              {side.label}
             </span>
           )}
         </div>
-        <p className="text-2xl font-black text-on-surface leading-tight">
-          {card.title || card.front_text}
+        <p className="text-[28px] font-black text-gray-900 leading-[1.1] tracking-tight">
+          {displayTitle}
         </p>
       </div>
-      <div className="flex flex-col gap-2">
-        {(card.body || card.context_text) && (
-          <p className="text-sm text-on-surface-variant leading-relaxed">
-            {card.body || card.context_text}
-          </p>
-        )}
-        {card.quote && (
-          <p className="text-xs text-on-surface-variant italic border-l-2 border-primary/40 pl-2">
-            «{card.quote}»
-          </p>
-        )}
+
+      <div className="flex items-center justify-center gap-2 text-gray-400 select-none pointer-events-none">
+        <span className="material-symbols-outlined text-base">touch_app</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+          Тап — перевернуть
+        </span>
       </div>
+    </div>
+  );
+}
+
+function BackFace({ card }: { card: InsightCardWithRelations }) {
+  const body = card.body || card.context_text;
+  return (
+    <div className="h-full w-full p-6 flex flex-col gap-4 overflow-y-auto">
+      <div className="flex items-center gap-2 text-gray-400">
+        <span className="material-symbols-outlined text-base">flip_to_front</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+          Разбор
+        </span>
+      </div>
+      {body && (
+        <p className="text-base text-gray-800 leading-relaxed whitespace-pre-line">
+          {body}
+        </p>
+      )}
+      {card.quote && (
+        <p className="text-sm text-gray-600 italic border-l-2 border-amber-400 pl-3 mt-auto">
+          «{card.quote}»
+        </p>
+      )}
+      {!body && !card.quote && (
+        <p className="text-sm text-gray-500">Описание не добавлено.</p>
+      )}
     </div>
   );
 }
