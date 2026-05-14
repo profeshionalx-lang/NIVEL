@@ -35,7 +35,7 @@ export default function InsightTinder({ cards }: Props) {
     if (!topId || introPlayedRef.current) return;
     introPlayedRef.current = true;
     setIntro(true);
-    const t = setTimeout(() => setIntro(false), 2100);
+    const t = setTimeout(() => setIntro(false), 2400);
     return () => clearTimeout(t);
   }, [topId]);
 
@@ -113,24 +113,26 @@ export default function InsightTinder({ cards }: Props) {
       </div>
 
       <div className="tinder-stack">
-        <div
-          className="tinder-card pointer-events-none"
-          style={{ transform: "scale(0.86) translateY(-22px)", opacity: 0.22 }}
-        >
-          <div className="absolute inset-0 rounded-3xl bg-white/40 shadow-[0_24px_50px_rgba(0,0,0,0.35)]" />
-        </div>
+        {queue.length > 2 && (
+          <div
+            className="tinder-card pointer-events-none"
+            style={{
+              transform: "translateY(-34px) rotate(4deg) scale(0.92)",
+              opacity: 0.32,
+            }}
+          >
+            <div className="absolute inset-0 rounded-3xl bg-white/70 shadow-[0_18px_40px_rgba(0,0,0,0.3)]" />
+          </div>
+        )}
         {next && (
           <div
             className="tinder-card pointer-events-none"
-            style={{ transform: "scale(0.93) translateY(-11px)", opacity: 0.55 }}
+            style={{
+              transform: "translateY(-18px) rotate(-3deg) scale(0.96)",
+              opacity: 0.55,
+            }}
           >
-            <div className="insight-flip">
-              <div className="insight-flip-inner">
-                <div className="insight-flip-face">
-                  <FrontFace card={next} dx={0} stacked />
-                </div>
-              </div>
-            </div>
+            <div className="absolute inset-0 rounded-3xl bg-white/85 shadow-[0_20px_44px_rgba(0,0,0,0.35)]" />
           </div>
         )}
         <div
@@ -276,21 +278,21 @@ function BackFace({ card }: { card: InsightCardWithRelations }) {
   const quote = card.quote || "";
   const total = body.length + quote.length;
 
-  // Auto-size: short content → bigger text; long content → smaller.
+  // Auto-size: short content → bigger text; long content → smaller. Overall сдвинуто на размер вниз.
   const bodySize =
-    total > 520 ? "text-[13px] leading-snug" :
-    total > 320 ? "text-sm leading-relaxed" :
-    total > 160 ? "text-base leading-relaxed" :
-    "text-[19px] leading-snug";
+    total > 520 ? "text-[11px] leading-snug" :
+    total > 320 ? "text-[12px] leading-snug" :
+    total > 160 ? "text-[13px] leading-relaxed" :
+    "text-[15px] leading-relaxed";
 
   const quoteSize =
-    total > 520 ? "text-[11px]" :
-    total > 320 ? "text-xs" :
-    "text-sm";
+    total > 520 ? "text-[10px]" :
+    total > 320 ? "text-[11px]" :
+    "text-xs";
 
   return (
-    <div className="h-full w-full p-6 flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-gray-400 flex-shrink-0">
+    <div className="h-full w-full p-5 flex flex-col">
+      <div className="flex items-center gap-2 text-gray-400 mb-3 flex-shrink-0">
         <span className="material-symbols-outlined text-base">flip_to_front</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
           Разбор
@@ -302,7 +304,7 @@ function BackFace({ card }: { card: InsightCardWithRelations }) {
         </p>
       )}
       {quote && (
-        <p className={`text-gray-600 italic border-l-2 border-amber-400 pl-3 mt-auto ${quoteSize}`}>
+        <p className={`text-gray-500 italic border-l-2 border-amber-400 pl-3 mt-5 ${quoteSize}`}>
           «{quote}»
         </p>
       )}
