@@ -6,6 +6,7 @@ import { updateAiInsightCard } from "@/lib/actions/aiInsights";
 import type { InsightCard } from "@/lib/types";
 
 const TAGS = ["техника", "тактика", "физика", "ментал"] as const;
+const SIDES = ["защита", "атака"] as const;
 
 interface Props {
   card: InsightCard;
@@ -17,12 +18,17 @@ export function EditAiCardModal({ card, onClose }: Props) {
   const [title, setTitle] = useState(card.title || card.front_text);
   const [body, setBody] = useState(card.body || card.context_text || "");
   const [tag, setTag] = useState<string>(card.tags?.[0] ?? "техника");
+  const initialSide = (card.tags?.[1] as typeof SIDES[number] | undefined) ?? "атака";
+  const [side, setSide] = useState<typeof SIDES[number]>(
+    SIDES.includes(initialSide) ? initialSide : "атака"
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const isValid = title.trim().length > 0 && title.trim().length <= 80 &&
     body.trim().length > 0 && body.trim().length <= 400 &&
-    TAGS.includes(tag as typeof TAGS[number]);
+    TAGS.includes(tag as typeof TAGS[number]) &&
+    SIDES.includes(side);
 
   function handleSave() {
     if (!isValid) return;
@@ -32,6 +38,7 @@ export function EditAiCardModal({ card, onClose }: Props) {
         title: title.trim(),
         body: body.trim(),
         tag,
+        side,
       });
       if ("error" in result) {
         setError(result.error);
@@ -101,6 +108,28 @@ export function EditAiCardModal({ card, onClose }: Props) {
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+            Сторона
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {SIDES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSide(s)}
+                className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-widest min-h-[44px] ${
+                  side === s
+                    ? "kinetic-gradient text-on-primary"
+                    : "bg-surface-elevated text-on-surface-variant border border-border-dim"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
 
         {card.quote && (
