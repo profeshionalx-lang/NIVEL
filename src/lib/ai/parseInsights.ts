@@ -1,4 +1,4 @@
-export type InsightTag = "техника" | "тактика" | "физика" | "ментал";
+export type InsightTag = "техника" | "тактика" | "физика" | "менталка";
 
 export interface InsightCardDraft {
   title: string;
@@ -11,7 +11,7 @@ export type ParseResult =
   | { ok: true; cards: InsightCardDraft[] }
   | { ok: false; error: string; line?: number };
 
-const VALID_TAGS = new Set<InsightTag>(["техника", "тактика", "физика", "ментал"]);
+const VALID_TAGS = new Set<InsightTag>(["техника", "тактика", "физика", "менталка"]);
 
 const FIELD_KEYS = ["тема", "заголовок", "описание", "цитата"] as const;
 type FieldKey = (typeof FIELD_KEYS)[number];
@@ -106,7 +106,7 @@ export function parseInsightsMarkdown(input: string): ParseResult {
     if (!VALID_TAGS.has(tag)) {
       return {
         ok: false,
-        error: `Карточка ${cardNum}: неизвестная тема «${fields.тема}». Допустимые: техника, тактика, физика, ментал`,
+        error: `Карточка ${cardNum}: неизвестная тема «${fields.тема}». Допустимые: техника, тактика, физика, менталка`,
         line: startLine,
       };
     }

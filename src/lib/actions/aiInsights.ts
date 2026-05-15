@@ -111,7 +111,7 @@ export async function deleteAiInsightCard(
   return { success: true };
 }
 
-const VALID_TAGS = new Set(["техника", "тактика", "физика", "ментал"]);
+const VALID_TAGS = new Set(["техника", "тактика", "физика", "менталка"]);
 const VALID_SIDES = new Set(["защита", "атака"]);
 
 export async function updateAiInsightCard(
