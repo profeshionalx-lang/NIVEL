@@ -362,14 +362,14 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm">
                           {(() => {
-                            const d = new Date(session.created_at);
+                            const d = new Date(session.scheduled_at ?? session.created_at);
                             const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: "long" }).format(d);
                             const time = new Intl.DateTimeFormat(dateLocale, { hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
                             return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${time}`;
                           })()}
                         </p>
                         <p className="text-[11px] text-on-surface-variant">
-                          {new Date(session.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long" })}
+                          {new Date(session.scheduled_at ?? session.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long" })}
                           {session.status === "completed" && ` · ${t(locale, "common.completed")}`}
                         </p>
                       </div>

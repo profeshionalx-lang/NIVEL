@@ -31,6 +31,7 @@ export interface DashboardSession {
   session_number: number;
   status: string;
   created_at: string;
+  scheduled_at: string | null;
   pending: number;
 }
 
@@ -224,6 +225,7 @@ export async function loadDashboardData(
       session_number: s.session_number as number,
       status: s.status as string,
       created_at: s.created_at as string,
+      scheduled_at: (s.scheduled_at as string) ?? null,
       pending: pendingCounts.get(s.id as string) ?? 0,
     })
   );
