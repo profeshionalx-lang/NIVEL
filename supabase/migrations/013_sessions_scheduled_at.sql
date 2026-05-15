@@ -1,0 +1,2 @@
+ALTER TABLE public.sessions
+  ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;

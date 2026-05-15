@@ -116,7 +116,7 @@ export async function loadDashboardData(
       .from("sessions")
       .select("*, goals!inner(user_id)")
       .eq("goals.user_id", userId)
-      .order("created_at", { ascending: false })
+      .order("scheduled_at", { ascending: false, nullsFirst: false })
       .limit(20),
     supabase
       .from("insight_cards")
