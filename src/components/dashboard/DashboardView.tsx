@@ -156,17 +156,14 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
               .sort((a, b) => a.date - b.date)
               .slice(0, 5);
 
+            if (allItems.length === 0) return null;
+
             return (
               <section>
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-3 px-1">
                   {t(locale, "dashboard.upcoming")}
                 </h3>
-                {allItems.length === 0 ? (
-                  <p className="text-on-surface-variant text-sm bg-surface-card rounded-2xl p-4">
-                    {t(locale, "dashboard.upcomingEmpty")}
-                  </p>
-                ) : (
-                  <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {allItems.map((item) => {
                       if (item.kind === "session") {
                         const dateStr = item.scheduled_at
@@ -230,8 +227,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                         </Link>
                       );
                     })}
-                  </div>
-                )}
+                </div>
               </section>
             );
           })()}
