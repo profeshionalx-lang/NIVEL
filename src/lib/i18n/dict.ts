@@ -55,7 +55,6 @@ const ru = {
   "dashboard.sessionHistory": "Тренировки",
   "dashboard.session": "Сессия",
   "dashboard.nextSession": "Следующая сессия",
-  "dashboard.exercises": "Упражнения",
 
   // Insights / vault
   "insights.title": "Инсайты",
@@ -96,7 +95,6 @@ const ru = {
   "sessions.status.planned": "Запланирована",
   "sessions.status.completed": "Завершена",
   "sessions.notes": "Заметки",
-  "sessions.exercises": "Упражнения",
   "sessions.insights": "Инсайты",
   "sessions.markComplete": "Отметить как завершённую",
 
@@ -213,7 +211,6 @@ const en: Record<keyof typeof ru, string> = {
   "dashboard.sessionHistory": "Trainings",
   "dashboard.session": "Session",
   "dashboard.nextSession": "Next session",
-  "dashboard.exercises": "Exercises",
 
   "insights.title": "Insight vault",
   "insights.empty": "No insights yet. They appear after sessions with your coach.",
@@ -250,7 +247,6 @@ const en: Record<keyof typeof ru, string> = {
   "sessions.status.planned": "Planned",
   "sessions.status.completed": "Completed",
   "sessions.notes": "Notes",
-  "sessions.exercises": "Exercises",
   "sessions.insights": "Insights",
   "sessions.markComplete": "Mark complete",
 
