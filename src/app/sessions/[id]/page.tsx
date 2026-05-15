@@ -28,7 +28,6 @@ export default async function SessionDetailPage({
   const isTrainer = user.role === "trainer" && !previewAsStudent;
   const locale = await getLocale();
   const isRu = locale === "ru";
-  const nameCol = isRu ? "name_ru" : "name_en";
   const dateLocale = isRu ? "ru-RU" : "en-US";
 
   const { data: session } = await supabase
@@ -38,36 +37,6 @@ export default async function SessionDetailPage({
     .single();
 
   if (!session) redirect("/dashboard");
-
-  const { data: sessionExercises } = await supabase
-    .from("session_exercises")
-    .select("*, exercises(name_ru, name_en), session_exercise_skills(skill_id, skills(name_ru, name_en))")
-    .eq("session_id", id)
-    .order("sort_order");
-
-  const exercises = (sessionExercises || []).map(
-    (se: Record<string, unknown>) => {
-      const exercise = se.exercises as Record<string, unknown>;
-      const skillLinks = (se.session_exercise_skills as Array<Record<string, unknown>>) || [];
-      return {
-        id: se.id as number,
-        name: (exercise?.[nameCol] as string) || "",
-        skills: skillLinks.map((sl) => {
-          const skill = sl.skills as Record<string, unknown>;
-          return {
-            id: sl.skill_id as number,
-            name: (skill?.[nameCol] as string) || "",
-          };
-        }),
-      };
-    }
-  );
-
-  const allSkills = [
-    ...new Map(
-      exercises.flatMap((e) => e.skills).map((s) => [s.id, s])
-    ).values(),
-  ];
 
   const { data: transcript } = await supabase
     .from("transcripts")
@@ -124,57 +93,6 @@ export default async function SessionDetailPage({
             })}
           </p>
         </div>
-
-        <section className="bg-surface-card rounded-3xl p-5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
-            {isRu ? "Упражнения" : "Exercises"}
-          </p>
-          <div className="space-y-3">
-            {exercises.map((exercise) => (
-              <div key={exercise.id} className="space-y-2">
-                <div className="flex items-center gap-3 text-sm text-on-surface">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60 flex-shrink-0" />
-                  {exercise.name}
-                </div>
-                {exercise.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pl-4">
-                    {exercise.skills.map((skill) => (
-                      <span
-                        key={skill.id}
-                        className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wide"
-                      >
-                        +{skill.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {exercises.length === 0 && (
-              <p className="text-on-surface-variant text-sm">
-                {isRu ? "Упражнения ещё не добавлены" : "No exercises added yet"}
-              </p>
-            )}
-          </div>
-        </section>
-
-        {allSkills.length > 0 && (
-          <section className="bg-surface-high rounded-3xl p-5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3">
-              {isRu ? "Прокачка навыков" : "Skill gains"}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {allSkills.map((skill) => (
-                <span
-                  key={skill.id}
-                  className="text-xs font-black px-3 py-1.5 rounded-lg bg-primary/10 text-primary"
-                >
-                  {skill.name} +1
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
 
         {isTrainer && (
           <section>

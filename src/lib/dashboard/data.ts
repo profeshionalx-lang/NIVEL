@@ -38,7 +38,6 @@ export interface DashboardNextSession {
   id: string;
   session_number: number;
   scheduled_at: string | null;
-  exercises: string[];
 }
 
 export interface DashboardProfile {
@@ -126,9 +125,7 @@ export async function loadDashboardData(
       .is("student_decision", null),
     supabase
       .from("sessions")
-      .select(
-        `*, goals!inner(user_id), session_exercises(id, exercises(${nameCol}))`
-      )
+      .select("*, goals!inner(user_id)")
       .eq("goals.user_id", userId)
       .eq("status", "planned")
       .order("scheduled_at", { ascending: true, nullsFirst: false })
@@ -240,9 +237,6 @@ export async function loadDashboardData(
         id: nextSessionRow.id as string,
         session_number: nextSessionRow.session_number as number,
         scheduled_at: (nextSessionRow.scheduled_at as string) ?? null,
-        exercises: ((nextSessionRow.session_exercises as Array<Record<string, unknown>>) || [])
-          .map((se) => (se.exercises as Record<string, unknown>)?.[nameCol] as string)
-          .filter(Boolean),
       }
     : null;
 
