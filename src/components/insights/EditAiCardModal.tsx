@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateAiInsightCard } from "@/lib/actions/aiInsights";
 import type { InsightCard } from "@/lib/types";
 
-const TAGS = ["техника", "тактика", "физика", "ментал"] as const;
+const TAGS = ["техника", "тактика", "физика", "менталка"] as const;
 const SIDES = ["защита", "атака"] as const;
 
 interface Props {
