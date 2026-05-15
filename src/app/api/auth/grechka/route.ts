@@ -2,11 +2,18 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 
-export async function GET() {
-  const state = randomBytes(16).toString("hex");
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const claim = searchParams.get("claim");
+
+  // CSRF nonce stored in cookie; claim token rides along inside `state` itself,
+  // because the OAuth `state` round-trips reliably through Гречка while a
+  // separate cookie can be dropped by in-app browsers / long redirect chains.
+  const csrf = randomBytes(16).toString("hex");
+  const state = claim ? `${csrf}~${claim}` : csrf;
 
   const cookieStore = await cookies();
-  cookieStore.set("__grechka_state", state, {
+  cookieStore.set("__grechka_state", csrf, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import TrainerCardEditor from "@/components/insights/TrainerCardEditor";
+import BackButton from "@/components/navigation/BackButton";
 import type { InsightCard, ProblemCategory, Problem } from "@/lib/types";
 
 export default async function TrainerSessionInsightsPage({
@@ -37,9 +38,7 @@ export default async function TrainerSessionInsightsPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href={`/sessions/${id}`} className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref={`/sessions/${id}`} />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           Session {session.session_number} cards
         </span>

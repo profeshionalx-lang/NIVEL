@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
+import BackButton from "@/components/navigation/BackButton";
 
 export default async function LibraryPage() {
   const user = await getSession();
@@ -22,9 +23,7 @@ export default async function LibraryPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href="/dashboard" className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref="/dashboard" />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           Library
         </span>

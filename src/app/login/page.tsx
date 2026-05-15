@@ -1,10 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid_state: "Сессия истекла, попробуйте ещё раз.",
+  auth_failed: "Не удалось войти. Попробуйте снова.",
+  claim_invalid_token: "Ссылка-приглашение недействительна.",
+  claim_expired: "Срок действия приглашения истёк.",
+  claim_already_claimed: "Это приглашение уже использовано.",
+  claim_email_collision: "Email уже привязан к другому профилю.",
+  claim_uid_collision: "Этот Grechka-аккаунт уже привязан к другому профилю.",
+  claim_firebase_invalid: "Ошибка проверки токена Firebase.",
+};
+
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,6 +46,8 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const displayError = error ?? (urlError ? (ERROR_MESSAGES[urlError] ?? urlError) : null);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -84,8 +101,8 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {error && (
-          <p className="text-error text-sm">{error}</p>
+        {displayError && (
+          <p className="text-error text-sm">{displayError}</p>
         )}
 
         <p className="text-on-surface-variant text-xs">
@@ -93,5 +110,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

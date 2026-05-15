@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { Profile } from "@/lib/types";
-import type { Locale } from "@/lib/i18n/dict";
+import { t, type Locale } from "@/lib/i18n";
 import LogoutButton from "./LogoutButton";
 
 interface TopBarProps {
@@ -41,8 +42,20 @@ export default function TopBar({ profile, locale }: TopBarProps) {
         </span>
       </div>
 
-      {/* Right: Logout */}
-      <LogoutButton locale={locale} />
+      {/* Right: Students (trainer) + Logout */}
+      <div className="flex items-center gap-2">
+        {profile.role === "trainer" && (
+          <Link
+            href="/trainer/students"
+            aria-label={t(locale, "trainer.students")}
+            title={t(locale, "trainer.students")}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant active:bg-surface-card transition-colors"
+          >
+            <span className="material-symbols-outlined text-[22px]">group</span>
+          </Link>
+        )}
+        <LogoutButton locale={locale} />
+      </div>
     </header>
   );
 }

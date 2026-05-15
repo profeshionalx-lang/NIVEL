@@ -5,7 +5,8 @@ export async function proxy(request: NextRequest) {
 
   const isPublic =
     pathname === "/login" ||
-    pathname.startsWith("/api/auth/");
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/invite/");
 
   const session = request.cookies.get("__session")?.value;
 
@@ -16,7 +17,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Logged in — redirect away from login
+  // Logged in — redirect away from login (but allow invite re-entry).
   if (pathname === "/" || pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
