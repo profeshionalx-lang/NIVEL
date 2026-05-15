@@ -144,7 +144,7 @@ export async function updateStudentProfile(
 
 export type StudentInvite = {
   token: string;
-  status: "pending" | "claimed" | "revoked";
+  status: "none" | "pending" | "claimed" | "revoked";
   claimed_at: string | null;
 };
 
@@ -166,7 +166,7 @@ export async function getStudentInvite(
     return { token: data.claim_token ?? "", status: "claimed", claimed_at: data.claimed_at };
   }
   if (!data.claim_token) {
-    return null;
+    return { token: "", status: "none", claimed_at: null };
   }
   return { token: data.claim_token, status: "pending", claimed_at: null };
 }

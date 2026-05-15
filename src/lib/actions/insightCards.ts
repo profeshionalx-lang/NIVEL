@@ -107,6 +107,7 @@ export async function updateInsightCard(
     frontText?: string;
     contextText?: string | null;
     problemId?: number | null;
+    tags?: string[] | null;
   }
 ): Promise<Result> {
   const auth = await requireTrainer();
@@ -121,6 +122,7 @@ export async function updateInsightCard(
     update.problem_id = patch.problemId;
     update.category_id = await resolveCategoryFromProblem(supabase, patch.problemId);
   }
+  if (patch.tags !== undefined) update.tags = patch.tags;
 
   const { data, error } = await supabase
     .from("insight_cards")

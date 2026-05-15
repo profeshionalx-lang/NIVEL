@@ -7,7 +7,7 @@ export default async function InviteBlock({ studentId }: { studentId: string }) 
   if (!invite) return null;
 
   const baseUrl = process.env.NEXT_PUBLIC_NIVEL_URL ?? "http://localhost:3000";
-  const claimUrl = `${baseUrl}/claim/${invite.token}`;
+  const claimUrl = invite.token ? `${baseUrl}/claim/${invite.token}` : "";
 
   return (
     <InviteBlockClient
