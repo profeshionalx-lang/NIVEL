@@ -323,15 +323,15 @@ function BackFace({ card }: { card: InsightCardWithRelations }) {
   const total = body.length + quote.length;
 
   const bodySize =
-    total > 520 ? "text-[11px] leading-snug" :
-    total > 320 ? "text-[12px] leading-snug" :
-    total > 160 ? "text-[13px] leading-relaxed" :
-    "text-[15px] leading-relaxed";
+    total > 520 ? "text-[13px] leading-snug" :
+    total > 320 ? "text-[14px] leading-snug" :
+    total > 160 ? "text-[15px] leading-relaxed" :
+    "text-[17px] leading-relaxed";
 
   const quoteSize =
-    total > 520 ? "text-[10px]" :
-    total > 320 ? "text-[11px]" :
-    "text-xs";
+    total > 520 ? "text-[12px]" :
+    total > 320 ? "text-[13px]" :
+    "text-sm";
 
   return (
     <div className="h-full w-full p-5 flex flex-col">
