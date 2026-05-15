@@ -123,13 +123,19 @@ function CardRow({
   const [front, setFront] = useState(card.front_text);
   const [context, setContext] = useState(card.context_text ?? "");
   const [problemId, setProblemId] = useState<number | "">(card.problem_id ?? "");
+  const [side, setSide] = useState<"" | "защита" | "атака">(
+    (card.tags?.[1] as "" | "защита" | "атака") ?? ""
+  );
 
   function save() {
+    const topic = card.tags?.[0] ?? "техника";
+    const newTags = side ? [topic, side] : [topic];
     startTransition(async () => {
       await updateInsightCard(card.id, {
         frontText: front,
         contextText: context || null,
         problemId: problemId === "" ? null : Number(problemId),
+        tags: newTags,
       });
       setEditing(false);
       onChanged();
@@ -209,6 +215,15 @@ function CardRow({
                 {p.name}
               </option>
             ))}
+          </select>
+          <select
+            value={side}
+            onChange={(e) => setSide(e.target.value as "" | "защита" | "атака")}
+            className="w-full bg-surface-elevated rounded-xl p-2 text-sm text-on-surface border border-border-dim"
+          >
+            <option value="">Сторона: не указана</option>
+            <option value="защита">Защита</option>
+            <option value="атака">Атака</option>
           </select>
           <div className="flex gap-2">
             <button

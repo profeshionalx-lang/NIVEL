@@ -8,7 +8,7 @@ import { regenerateInvite, revokeInvite } from "@/lib/actions/students";
 interface Props {
   studentId: string;
   claimUrl: string;
-  status: "pending" | "claimed" | "revoked";
+  status: "none" | "pending" | "claimed" | "revoked";
   claimedAt: string | null;
 }
 
@@ -42,6 +42,7 @@ export default function InviteBlockClient({ studentId, claimUrl, status, claimed
   }
 
   const badge = {
+    none: { text: "Not sent", className: "bg-surface-elevated text-on-surface-variant" },
     pending: { text: "Pending claim", className: "bg-secondary/20 text-secondary" },
     claimed: { text: "Claimed", className: "bg-primary/20 text-primary" },
     revoked: { text: "Revoked", className: "bg-error/20 text-error" },
@@ -57,6 +58,15 @@ export default function InviteBlockClient({ studentId, claimUrl, status, claimed
       </div>
       {status === "claimed" && claimedAt && (
         <p className="text-xs text-on-surface-variant">Claimed {new Date(claimedAt).toLocaleString()}</p>
+      )}
+      {status === "none" && (
+        <button
+          onClick={handleRegenerate}
+          disabled={isPending}
+          className="w-full py-2.5 rounded-xl text-xs font-bold kinetic-gradient text-on-primary disabled:opacity-40"
+        >
+          {isPending ? "Generating…" : "Generate invite link"}
+        </button>
       )}
       {status === "pending" && (
         <>
