@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { InsightCardWithRelations } from "@/lib/types";
 import UseAtMatchModal, {
   type UpcomingMatchOption,
@@ -13,8 +13,34 @@ interface Props {
   locale?: Locale;
 }
 
+const FLIP_HINT_KEY = "nivel:vault-flip-hint-seen";
+
 export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Props) {
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
+
+  const firstCardId = cards[0]?.id;
+
+  useEffect(() => {
+    if (!firstCardId) return;
+    if (localStorage.getItem(FLIP_HINT_KEY)) return;
+
+    const flipOn = setTimeout(() => {
+      setFlipped(new Set([firstCardId]));
+    }, 500);
+    const flipOff = setTimeout(() => {
+      setFlipped((prev) => {
+        const next = new Set(prev);
+        next.delete(firstCardId);
+        return next;
+      });
+      localStorage.setItem(FLIP_HINT_KEY, "1");
+    }, 1900);
+
+    return () => {
+      clearTimeout(flipOn);
+      clearTimeout(flipOff);
+    };
+  }, [firstCardId]);
 
   if (cards.length === 0) {
     return (
