@@ -122,8 +122,8 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                 kind: "session" as const,
                 id: s.id,
                 session_number: s.session_number,
-                scheduled_at: null,
-                date: new Date(s.created_at).getTime(),
+                scheduled_at: s.scheduled_at,
+                date: new Date(s.scheduled_at ?? s.created_at).getTime(),
               }));
 
             // Also include nextSession if it has a scheduled_at
