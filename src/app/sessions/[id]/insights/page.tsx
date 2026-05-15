@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import InsightTinder from "@/components/insights/InsightTinder";
+import BackButton from "@/components/navigation/BackButton";
 import type { InsightCardWithRelations } from "@/lib/types";
 
 export default async function SessionInsightsPage({
@@ -10,13 +11,20 @@ export default async function SessionInsightsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ include?: string }>;
+  searchParams: Promise<{ include?: string; as?: string; from?: string }>;
 }) {
   const user = await getSession();
   if (!user) redirect("/login");
 
   const { id } = await params;
-  const { include } = await searchParams;
+  const { include, as, from } = await searchParams;
+  const previewAsStudent = user.role === "trainer" && as === "student";
+
+  const backHref = previewAsStudent
+    ? `/sessions/${id}?as=student`
+    : from === "dashboard"
+    ? "/dashboard"
+    : `/sessions/${id}`;
   const supabase = await createClient();
 
   let query = supabase
@@ -29,7 +37,7 @@ export default async function SessionInsightsPage({
     )
     .eq("session_id", id)
     .eq("trainer_status", "approved")
-    .order("created_at");
+    .order("position");
 
   if (include === "skipped") {
     query = query.in("student_decision", ["skipped"]).not("student_decision", "is", null);
@@ -44,16 +52,14 @@ export default async function SessionInsightsPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href={`/sessions/${id}`} className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton fallbackHref={backHref} />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           Insights
         </span>
         <div className="w-10" />
       </header>
 
-      <main className="px-5 pt-6 pb-36 max-w-[430px] mx-auto">
+      <main className="px-5 pt-4 pb-8 max-w-[430px] mx-auto">
         <InsightTinder cards={cards} />
       </main>
     </div>

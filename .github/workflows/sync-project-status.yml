@@ -1,0 +1,111 @@
+name: Sync NIVEL Project Status
+
+on:
+  issues:
+    types: [labeled, unlabeled, closed, reopened]
+  pull_request:
+    types: [opened, closed, reopened, labeled, unlabeled]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECTS_TOKEN }}
+          script: |
+            const PROJECT_ID = 'PVT_kwHODnR_Ys4BVz_N';
+            const STATUS_FIELD_ID = 'PVTSSF_lAHODnR_Ys4BVz_NzhRNBMQ';
+            const STATUS = {
+              Backlog:    'f75ad846',
+              Ready:      '61e4505c',
+              InProgress: '47fc9ee4',
+              InReview:   'df73e18b',
+              Done:       '98236657',
+            };
+
+            const item = context.payload.issue || context.payload.pull_request;
+            if (!item) {
+              core.info('No issue or PR in payload, skipping.');
+              return;
+            }
+
+            const labels = (item.labels || []).map(l => l.name);
+            const state = item.state;
+
+            let targetStatus = null;
+            if (state === 'closed') {
+              targetStatus = STATUS.Done;
+            } else if (labels.includes('in_review')) {
+              targetStatus = STATUS.InReview;
+            } else if (labels.includes('in-progress')) {
+              targetStatus = STATUS.InProgress;
+            } else if (labels.includes('ready-for-agent')) {
+              targetStatus = STATUS.Ready;
+            } else {
+              targetStatus = STATUS.Backlog;
+            }
+
+            core.info(`Item #${item.number} → status ${Object.keys(STATUS).find(k => STATUS[k] === targetStatus)}`);
+
+            // Paginated fetch of all project items, find matching issue/PR by number
+            let cursor = null;
+            let projectItemId = null;
+            while (true) {
+              const result = await github.graphql(`
+                query($projectId: ID!, $cursor: String) {
+                  node(id: $projectId) {
+                    ... on ProjectV2 {
+                      items(first: 100, after: $cursor) {
+                        pageInfo { hasNextPage endCursor }
+                        nodes {
+                          id
+                          content {
+                            ... on Issue { number repository { name } }
+                            ... on PullRequest { number repository { name } }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `, { projectId: PROJECT_ID, cursor });
+
+              const nodes = result.node.items.nodes;
+              const match = nodes.find(n =>
+                n.content
+                && n.content.number === item.number
+                && n.content.repository?.name === context.repo.repo
+              );
+
+              if (match) {
+                projectItemId = match.id;
+                break;
+              }
+
+              if (!result.node.items.pageInfo.hasNextPage) break;
+              cursor = result.node.items.pageInfo.endCursor;
+            }
+
+            if (!projectItemId) {
+              core.info(`Item #${item.number} not in project, skipping.`);
+              return;
+            }
+
+            await github.graphql(`
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) { projectV2Item { id } }
+              }
+            `, {
+              projectId: PROJECT_ID,
+              itemId: projectItemId,
+              fieldId: STATUS_FIELD_ID,
+              optionId: targetStatus,
+            });
+
+            core.info(`✓ Updated #${item.number} status field.`);

@@ -240,3 +240,71 @@ export async function setTrainerReviewCompleted(
 
   return { success: true };
 }
+
+export async function createSessionForStudent(
+  studentId: string,
+  goalId: string,
+  payload: {
+    scheduledAt?: string | null;
+    completedAt?: string | null;
+    trainerNotes?: string | null;
+    status?: "planned" | "completed";
+  }
+): Promise<{ success: true; sessionId: string } | { success: false; error: string }> {
+  try {
+    const user = await getSession();
+    if (!user) return { success: false, error: "Not authenticated" };
+    if (user.role !== "trainer") return { success: false, error: "Forbidden" };
+
+    const supabase = await createClient();
+
+    // Verify the goal belongs to this student
+    const { data: goal } = await supabase
+      .from("goals")
+      .select("id, user_id")
+      .eq("id", goalId)
+      .single();
+    if (!goal || goal.user_id !== studentId) {
+      return { success: false, error: "Goal not found for student" };
+    }
+
+    // Next session number for this goal
+    const { count } = await supabase
+      .from("sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("goal_id", goalId);
+    const sessionNumber = (count ?? 0) + 1;
+
+    const status = payload.status ?? "planned";
+
+    const insert: Record<string, unknown> = {
+      goal_id: goalId,
+      session_number: sessionNumber,
+      status,
+      trainer_notes: payload.trainerNotes?.trim() || null,
+    };
+    if (payload.scheduledAt) insert.scheduled_at = payload.scheduledAt;
+    if (status === "completed") {
+      insert.completed_at = payload.completedAt ?? new Date().toISOString();
+    }
+
+    const { data: session, error } = await supabase
+      .from("sessions")
+      .insert(insert)
+      .select("id")
+      .single();
+
+    if (error || !session) {
+      return { success: false, error: error?.message ?? "Failed to create session" };
+    }
+
+    revalidatePath(`/trainer/students/${studentId}`);
+    revalidatePath("/dashboard");
+    return { success: true, sessionId: session.id };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "An unexpected error occurred",
+    };
+  }
+}

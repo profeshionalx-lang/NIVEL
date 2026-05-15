@@ -40,6 +40,7 @@ async function resolveCategoryFromProblem(
   return data?.category_id ?? null;
 }
 
+/** @deprecated Cards are created via AI paste flow only (Epic 5). No UI calls this. */
 export async function createInsightCard(
   sessionId: string,
   payload: {
@@ -66,6 +67,15 @@ export async function createInsightCard(
     .user_id;
   const categoryId = await resolveCategoryFromProblem(supabase, payload.problemId ?? null);
 
+  const { data: lastCard } = await supabase
+    .from("insight_cards")
+    .select("position")
+    .eq("session_id", sessionId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextPosition = (lastCard?.position ?? 0) + 1;
+
   const { data, error } = await supabase
     .from("insight_cards")
     .insert({
@@ -78,6 +88,7 @@ export async function createInsightCard(
       context_text: payload.contextText?.trim() || null,
       source: "manual",
       trainer_status: "draft",
+      position: nextPosition,
     })
     .select("id")
     .single();
@@ -168,6 +179,44 @@ export async function deleteInsightCard(cardId: string): Promise<Result> {
   return { success: true };
 }
 
+export async function reorderInsightCards(
+  sessionId: string,
+  orderedIds: string[]
+): Promise<Result> {
+  const auth = await requireTrainer();
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase } = auth;
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from("insight_cards")
+    .select("id")
+    .eq("session_id", sessionId);
+
+  if (fetchErr) return { success: false, error: fetchErr.message };
+
+  const existingIds = new Set((existing ?? []).map((c) => c.id));
+  if (
+    orderedIds.length !== existingIds.size ||
+    !orderedIds.every((id) => existingIds.has(id))
+  ) {
+    return { success: false, error: "Card list is out of sync" };
+  }
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update({ position: i + 1 })
+      .eq("id", orderedIds[i])
+      .eq("session_id", sessionId);
+    if (error) return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/trainer/sessions/${sessionId}/insights`);
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath(`/sessions/${sessionId}/insights`);
+  return { success: true };
+}
+
 export async function decideInsightCard(
   cardId: string,
   decision: InsightStudentDecision,
@@ -236,7 +285,8 @@ export async function getVaultCards(
     )
     .eq("student_id", user.id)
     .eq("student_decision", "taken")
-    .order("decided_at", { ascending: false });
+    .order("decided_at", { ascending: false })
+    .order("position", { ascending: true });
 
   if (filters.categoryId) query = query.eq("category_id", filters.categoryId);
   if (filters.problemId) query = query.eq("problem_id", filters.problemId);

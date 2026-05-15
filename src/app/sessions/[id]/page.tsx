@@ -4,21 +4,30 @@ import { getSession } from "@/lib/auth/session";
 import { getLocale } from "@/lib/i18n";
 import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
+import { AudioUploader } from "@/components/sessions/AudioUploader";
+import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
+import { DraftCardsList } from "@/components/insights/DraftCardsList";
+import { ApprovedInsightCard } from "@/components/insights/ApprovedInsightCard";
+import BackButton from "@/components/navigation/BackButton";
+import { DownloadTranscriptButton } from "./transcript/DownloadTranscriptButton";
 
 export default async function SessionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ as?: string }>;
 }) {
   const { id } = await params;
+  const { as } = await searchParams;
   const user = await getSession();
   if (!user) redirect("/login");
 
   const supabase = await createClient();
-  const isTrainer = user.role === "trainer";
+  const previewAsStudent = user.role === "trainer" && as === "student";
+  const isTrainer = user.role === "trainer" && !previewAsStudent;
   const locale = await getLocale();
   const isRu = locale === "ru";
-  const nameCol = isRu ? "name_ru" : "name_en";
   const dateLocale = isRu ? "ru-RU" : "en-US";
 
   const { data: session } = await supabase
@@ -29,43 +38,20 @@ export default async function SessionDetailPage({
 
   if (!session) redirect("/dashboard");
 
-  const { data: sessionExercises } = await supabase
-    .from("session_exercises")
-    .select("*, exercises(name_ru, name_en), session_exercise_skills(skill_id, skills(name_ru, name_en))")
+  const { data: transcript } = await supabase
+    .from("transcripts")
+    .select("status, raw_text")
     .eq("session_id", id)
-    .order("sort_order");
-
-  const exercises = (sessionExercises || []).map(
-    (se: Record<string, unknown>) => {
-      const exercise = se.exercises as Record<string, unknown>;
-      const skillLinks = (se.session_exercise_skills as Array<Record<string, unknown>>) || [];
-      return {
-        id: se.id as number,
-        name: (exercise?.[nameCol] as string) || "",
-        skills: skillLinks.map((sl) => {
-          const skill = sl.skills as Record<string, unknown>;
-          return {
-            id: sl.skill_id as number,
-            name: (skill?.[nameCol] as string) || "",
-          };
-        }),
-      };
-    }
-  );
-
-  const allSkills = [
-    ...new Map(
-      exercises.flatMap((e) => e.skills).map((s) => [s.id, s])
-    ).values(),
-  ];
+    .maybeSingle();
 
   const { data: cards } = await supabase
     .from("insight_cards")
     .select("*")
     .eq("session_id", id)
-    .order("created_at");
+    .order("position");
 
   const allCards = (cards ?? []) as InsightCard[];
+  const draftCards = allCards.filter((c) => c.trainer_status === "draft");
   const approvedCards = allCards.filter((c) => c.trainer_status === "approved");
   const pendingForStudent = approvedCards.filter(
     (c) => c.student_decision === null
@@ -76,9 +62,13 @@ export default async function SessionDetailPage({
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
-        <Link href="/dashboard" className="text-on-surface-variant">
-          <span className="material-symbols-outlined">arrow_back</span>
-        </Link>
+        <BackButton
+          fallbackHref={
+            previewAsStudent && session.goals?.user_id
+              ? `/trainer/students/${session.goals.user_id}/preview`
+              : "/dashboard"
+          }
+        />
         <span className="text-lg font-black text-primary uppercase italic tracking-tight">
           {isRu ? "Сессия" : "Session"} {session.session_number}
         </span>
@@ -104,54 +94,44 @@ export default async function SessionDetailPage({
           </p>
         </div>
 
-        <section className="bg-surface-card rounded-3xl p-5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
-            {isRu ? "Упражнения" : "Exercises"}
-          </p>
-          <div className="space-y-3">
-            {exercises.map((exercise) => (
-              <div key={exercise.id} className="space-y-2">
-                <div className="flex items-center gap-3 text-sm text-on-surface">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary opacity-60 flex-shrink-0" />
-                  {exercise.name}
-                </div>
-                {exercise.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pl-4">
-                    {exercise.skills.map((skill) => (
-                      <span
-                        key={skill.id}
-                        className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase tracking-wide"
-                      >
-                        +{skill.name}
-                      </span>
-                    ))}
+        {isTrainer && (
+          <section>
+            {transcript ? (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                  {isRu ? "Аудио тренировки" : "Session audio"}
+                </p>
+                {transcript.status === "ready" ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim">
+                    <span className="material-symbols-outlined text-primary">description</span>
+                    <p className="flex-1 text-sm font-bold text-on-surface">
+                      {isRu ? "Транскрипт готов" : "Transcript ready"}
+                    </p>
+                    <DownloadTranscriptButton sessionId={id} rawText={transcript.raw_text} />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim">
+                    <span className="material-symbols-outlined text-on-surface-variant">
+                      {transcript.status === "processing" ? "hourglass_top" : "error"}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-on-surface">
+                        {transcript.status === "processing"
+                          ? isRu ? "Транскрипция…" : "Transcribing…"
+                          : isRu ? "Ошибка транскрипции" : "Transcription failed"}
+                      </p>
+                      {transcript.status === "processing" && (
+                        <p className="text-xs text-on-surface-variant mt-0.5">
+                          {isRu ? "Обычно занимает 15–30 сек" : "Usually takes 15–30 sec"}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-            ))}
-            {exercises.length === 0 && (
-              <p className="text-on-surface-variant text-sm">
-                {isRu ? "Упражнения ещё не добавлены" : "No exercises added yet"}
-              </p>
+            ) : (
+              <AudioUploader sessionId={id} />
             )}
-          </div>
-        </section>
-
-        {allSkills.length > 0 && (
-          <section className="bg-surface-high rounded-3xl p-5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-3">
-              {isRu ? "Прокачка навыков" : "Skill gains"}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {allSkills.map((skill) => (
-                <span
-                  key={skill.id}
-                  className="text-xs font-black px-3 py-1.5 rounded-lg bg-primary/10 text-primary"
-                >
-                  {skill.name} +1
-                </span>
-              ))}
-            </div>
           </section>
         )}
 
@@ -161,21 +141,33 @@ export default async function SessionDetailPage({
           </p>
 
           {isTrainer && (
-            <Link
-              href={`/trainer/sessions/${id}/insights`}
-              className="block rounded-2xl bg-surface-card p-4 border border-border-dim"
-            >
-              <p className="text-sm font-bold text-on-surface">
-                {allCards.length === 0
-                  ? isRu ? "Добавить карточки" : "Add insight cards"
-                  : `${isRu ? "Карточки" : "Cards"} (${allCards.length})`}
+            <PasteInsightsButton sessionId={id} />
+          )}
+
+          {isTrainer && draftCards.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+                {isRu ? `Черновики (${draftCards.length})` : `Drafts (${draftCards.length})`}
               </p>
-              <p className="text-xs text-on-surface-variant mt-1">
-                {session.trainer_review_completed
-                  ? isRu ? "Разбор завершён" : "Review marked as finished"
-                  : isRu ? "Разбор в процессе" : "Review still in progress"}
+              <DraftCardsList cards={draftCards} isTrainer={isTrainer} />
+            </div>
+          )}
+
+          {isTrainer && approvedCards.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                {isRu ? `Approved (${approvedCards.length})` : `Approved (${approvedCards.length})`}
               </p>
-            </Link>
+              {approvedCards.map((c) => (
+                <ApprovedInsightCard key={c.id} card={c} />
+              ))}
+            </div>
+          )}
+
+          {isTrainer && draftCards.length === 0 && approvedCards.length === 0 && (
+            <p className="text-sm text-on-surface-variant">
+              {isRu ? "Карточек пока нет — вставьте инсайты выше." : "No cards yet — paste insights above."}
+            </p>
           )}
 
           {!isTrainer && approvedCards.length === 0 && (
@@ -186,7 +178,7 @@ export default async function SessionDetailPage({
 
           {!isTrainer && pendingForStudent.length > 0 && (
             <Link
-              href={`/sessions/${id}/insights`}
+              href={`/sessions/${id}/insights${previewAsStudent ? "?as=student" : ""}`}
               className="block rounded-2xl kinetic-gradient text-on-primary p-4 glow-primary"
             >
               <p className="font-black text-base">
@@ -215,7 +207,7 @@ export default async function SessionDetailPage({
                   className="rounded-2xl bg-surface-card p-3 border-l-2 border-primary"
                 >
                   <p className="text-sm text-on-surface">
-                    {c.student_edited_text || c.front_text}
+                    {c.student_edited_text || c.title || c.front_text}
                   </p>
                 </div>
               ))}
@@ -230,7 +222,7 @@ export default async function SessionDetailPage({
                   : `Skipped (${skippedCards.length}) — review again any time`}
               </p>
               <Link
-                href={`/sessions/${id}/insights?include=skipped`}
+                href={`/sessions/${id}/insights?include=skipped${previewAsStudent ? "&as=student" : ""}`}
                 className="block text-xs text-secondary font-bold uppercase tracking-wider"
               >
                 {isRu ? "Открыть пропущенные →" : "Re-open skipped →"}

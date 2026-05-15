@@ -68,7 +68,7 @@ export interface Session {
   created_at: string;
 }
 
-export type InsightCardSource = "manual" | "ai";
+export type InsightCardSource = "manual" | "ai" | "ai-paste";
 export type InsightTrainerStatus = "draft" | "approved" | "rejected";
 export type InsightStudentDecision = "taken" | "skipped";
 
@@ -81,10 +81,15 @@ export interface InsightCard {
   category_id: number | null;
   front_text: string;
   context_text: string | null;
+  title: string | null;
+  body: string | null;
+  quote: string | null;
+  tags: string[] | null;
   source: InsightCardSource;
   trainer_status: InsightTrainerStatus;
   student_decision: InsightStudentDecision | null;
   student_edited_text: string | null;
+  position: number;
   created_at: string;
   decided_at: string | null;
 }
