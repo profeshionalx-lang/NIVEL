@@ -124,16 +124,29 @@ export async function updateInsightCard(
   }
   if (patch.tags !== undefined) update.tags = patch.tags;
 
-  const { data, error } = await supabase
+  const { data: card, error: fetchErr } = await supabase
     .from("insight_cards")
-    .update(update)
+    .select("session_id, template_id")
     .eq("id", cardId)
-    .select("session_id")
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (fetchErr || !card) return { success: false, error: fetchErr?.message ?? "Card not found" };
 
-  revalidatePath(`/trainer/sessions/${data.session_id}/insights`);
+  if (card.template_id) {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update(update)
+      .eq("template_id", card.template_id);
+    if (error) return { success: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update(update)
+      .eq("id", cardId);
+    if (error) return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/trainer/sessions/${card.session_id}/insights`);
   return { success: true };
 }
 
@@ -143,18 +156,32 @@ export async function setTrainerCardStatus(
 ): Promise<Result> {
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase } = auth;
 
-  const { data, error } = await auth.supabase
+  const { data: card, error: fetchErr } = await supabase
     .from("insight_cards")
-    .update({ trainer_status: status })
+    .select("session_id, template_id")
     .eq("id", cardId)
-    .select("session_id")
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (fetchErr || !card) return { success: false, error: fetchErr?.message ?? "Card not found" };
 
-  revalidatePath(`/trainer/sessions/${data.session_id}/insights`);
-  revalidatePath(`/sessions/${data.session_id}`);
+  if (card.template_id) {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update({ trainer_status: status })
+      .eq("template_id", card.template_id);
+    if (error) return { success: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update({ trainer_status: status })
+      .eq("id", cardId);
+    if (error) return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/trainer/sessions/${card.session_id}/insights`);
+  revalidatePath(`/sessions/${card.session_id}`);
   return { success: true };
 }
 
