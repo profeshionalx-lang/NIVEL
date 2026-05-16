@@ -7,7 +7,7 @@ import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
 import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
 import { DraftCardsList } from "@/components/insights/DraftCardsList";
-import { ApprovedInsightCard } from "@/components/insights/ApprovedInsightCard";
+import { ApprovedCardsReorderable } from "@/components/insights/ApprovedCardsReorderable";
 import BackButton from "@/components/navigation/BackButton";
 import { DownloadTranscriptButton } from "./transcript/DownloadTranscriptButton";
 
@@ -158,9 +158,7 @@ export default async function SessionDetailPage({
               <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
                 {isRu ? `Approved (${approvedCards.length})` : `Approved (${approvedCards.length})`}
               </p>
-              {approvedCards.map((c) => (
-                <ApprovedInsightCard key={c.id} card={c} />
-              ))}
+              <ApprovedCardsReorderable sessionId={id} cards={approvedCards} />
             </div>
           )}
 
