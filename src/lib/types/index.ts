@@ -92,6 +92,7 @@ export interface InsightCard {
   position: number;
   created_at: string;
   decided_at: string | null;
+  template_id: string | null;
 }
 
 export interface InsightCardWithRelations extends InsightCard {
