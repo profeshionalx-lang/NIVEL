@@ -173,6 +173,29 @@ export interface MasterPlanSection {
   items: MasterPlanItem[];
 }
 
+export interface CardTemplate {
+  id: string;
+  template_id: string | null;
+  title: string | null;
+  body: string | null;
+  quote: string | null;
+  tags: string[] | null;
+  trainer_status: InsightTrainerStatus;
+  created_at: string;
+  student_count: number;
+  taken_count: number;
+  skipped_count: number;
+  pending_count: number;
+}
+
+export interface InsightCollection {
+  id: string;
+  trainer_id: string;
+  name: string;
+  created_at: string;
+  card_count?: number;
+}
+
 export interface MasterPlan {
   id: string;
   student_id: string;

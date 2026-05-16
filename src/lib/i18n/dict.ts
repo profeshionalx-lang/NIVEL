@@ -33,6 +33,7 @@ const ru = {
   "nav.home": "Главная",
   "nav.insights": "Инсайты",
   "nav.matches": "Матчи",
+  "nav.cards": "Карточки",
   "nav.logout": "Выйти",
 
   // Dashboard
@@ -190,6 +191,7 @@ const en: Record<keyof typeof ru, string> = {
   "nav.home": "Home",
   "nav.insights": "Insights",
   "nav.matches": "Matches",
+  "nav.cards": "Cards",
   "nav.logout": "Sign out",
 
   "dashboard.welcome": "Welcome,",
