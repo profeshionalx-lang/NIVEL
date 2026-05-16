@@ -7,16 +7,16 @@ import { ApplyCardSheet } from "./ApplyCardSheet";
 import type { InsightCard } from "@/lib/types";
 
 const TAG_COLORS: Record<string, string> = {
-  техника: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-  тактика: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  физика: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-  менталка: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  техника: "text-blue-600 bg-blue-50 border-blue-200",
+  тактика: "text-amber-600 bg-amber-50 border-amber-200",
+  физика: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  менталка: "text-purple-600 bg-purple-50 border-purple-200",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  approved: "text-primary bg-primary/10 border-primary/20",
-  draft: "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  rejected: "text-red-400 bg-red-500/10 border-red-500/20",
+  approved: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  draft: "text-amber-600 bg-amber-50 border-amber-200",
+  rejected: "text-red-600 bg-red-50 border-red-200",
 };
 const STATUS_LABELS: Record<string, string> = {
   approved: "Approved",
@@ -82,7 +82,7 @@ export function LibraryCardItem({
 
   return (
     <>
-      <div className="group flex flex-col rounded-2xl bg-surface-card border border-border-dim hover:border-border transition-all duration-150 hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)] overflow-hidden">
+      <div className="group flex flex-col rounded-2xl bg-white border border-gray-200/80 hover:border-gray-300 transition-all duration-150 hover:shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden">
         {/* Card body */}
         <div className="flex-1 p-5 space-y-3">
           {/* Tags row */}
@@ -93,7 +93,7 @@ export function LibraryCardItem({
               </span>
             )}
             {sideTag && (
-              <span className="text-[10px] font-black uppercase tracking-widest border border-border-dim rounded-full px-2 py-0.5 text-on-surface-variant bg-surface-elevated">
+              <span className="text-[10px] font-black uppercase tracking-widest border border-gray-200 rounded-full px-2 py-0.5 text-gray-500 bg-gray-50">
                 {sideTag}
               </span>
             )}
@@ -103,47 +103,47 @@ export function LibraryCardItem({
           </div>
 
           {/* Title */}
-          <p className="text-sm font-bold text-on-surface leading-snug">
+          <p className="text-sm font-bold text-gray-900 leading-snug">
             {template.title ?? "—"}
           </p>
 
           {/* Body preview */}
           {template.body && (
-            <p className="text-xs text-on-surface-variant leading-relaxed line-clamp-3">
+            <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">
               {template.body}
             </p>
           )}
 
           {/* Quote */}
           {template.quote && (
-            <p className="text-[11px] text-on-surface-variant italic border-l-2 border-primary/30 pl-3 line-clamp-2">
+            <p className="text-[11px] text-gray-400 italic border-l-2 border-gray-200 pl-3 line-clamp-2">
               «{template.quote}»
             </p>
           )}
         </div>
 
         {/* Stats + actions footer */}
-        <div className="border-t border-border-dim px-5 py-3 flex items-center gap-4">
+        <div className="border-t border-gray-100 bg-gray-50 px-5 py-3 flex items-center gap-4">
           {/* Stats */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <span className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+            <span className="flex items-center gap-1 text-[11px] text-gray-400">
               <span className="material-symbols-outlined text-[14px]">group</span>
               {template.student_count}
             </span>
             {template.taken_count > 0 && (
-              <span className="flex items-center gap-1 text-[11px] text-primary">
+              <span className="flex items-center gap-1 text-[11px] text-emerald-600">
                 <span className="material-symbols-outlined text-[14px]">check_circle</span>
                 {template.taken_count}
               </span>
             )}
             {template.skipped_count > 0 && (
-              <span className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+              <span className="flex items-center gap-1 text-[11px] text-gray-400">
                 <span className="material-symbols-outlined text-[14px]">skip_next</span>
                 {template.skipped_count}
               </span>
             )}
             {template.pending_count > 0 && (
-              <span className="flex items-center gap-1 text-[11px] text-amber-400">
+              <span className="flex items-center gap-1 text-[11px] text-amber-500">
                 <span className="material-symbols-outlined text-[14px]">schedule</span>
                 {template.pending_count}
               </span>
@@ -156,14 +156,14 @@ export function LibraryCardItem({
               <div className="relative">
                 <button
                   onClick={() => setCollectionsOpen((v) => !v)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-elevated transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                   aria-label="Добавить в коллекцию"
                 >
                   <span className="material-symbols-outlined text-[16px]">bookmark_border</span>
                 </button>
                 {collectionsOpen && (
-                  <div className="absolute bottom-10 right-0 z-20 w-56 rounded-2xl bg-surface-elevated border border-border shadow-2xl p-2 space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant px-2 py-1">
+                  <div className="absolute bottom-10 right-0 z-20 w-56 rounded-2xl bg-white border border-gray-200 shadow-2xl p-2 space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-2 py-1">
                       Коллекции
                     </p>
                     {collections.map((col) => {
@@ -177,12 +177,12 @@ export function LibraryCardItem({
                               : onAddToCollection(col.id, tid);
                             setCollectionsOpen(false);
                           }}
-                          className="w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-surface-card text-left min-h-[36px]"
+                          className="w-full flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-gray-50 text-left min-h-[36px]"
                         >
-                          <span className={`material-symbols-outlined text-[16px] ${inCollection ? "text-primary fill-icon" : "text-on-surface-variant"}`}>
+                          <span className={`material-symbols-outlined text-[16px] ${inCollection ? "text-primary fill-icon" : "text-gray-400"}`}>
                             bookmark
                           </span>
-                          <span className="text-sm text-on-surface truncate">{col.name}</span>
+                          <span className="text-sm text-gray-800 truncate">{col.name}</span>
                         </button>
                       );
                     })}
@@ -192,7 +192,7 @@ export function LibraryCardItem({
             )}
             <button
               onClick={() => setEditOpen(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-elevated transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
               aria-label="Редактировать"
             >
               <span className="material-symbols-outlined text-[16px]">edit</span>
