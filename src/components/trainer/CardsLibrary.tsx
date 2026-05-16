@@ -16,18 +16,11 @@ type Tab = "cards" | "collections";
 
 const TAGS = ["техника", "тактика", "физика", "менталка"] as const;
 
-const TAG_DOT: Record<string, string> = {
-  техника: "bg-blue-500",
-  тактика: "bg-amber-500",
-  физика: "bg-emerald-500",
-  менталка: "bg-purple-500",
-};
-
-const STATUS_OPTIONS: { value: InsightTrainerStatus | "all"; label: string; dot?: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: "approved", label: "Approved", dot: "bg-emerald-500" },
-  { value: "draft", label: "Draft", dot: "bg-amber-500" },
-  { value: "rejected", label: "Rejected", dot: "bg-red-500" },
+const STATUS_OPTIONS: { value: InsightTrainerStatus | "all"; label: string }[] = [
+  { value: "all", label: "Все статусы" },
+  { value: "approved", label: "Approved" },
+  { value: "draft", label: "Draft" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 interface Student {
@@ -254,11 +247,11 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
         <div className="flex flex-1 max-w-screen-2xl mx-auto w-full">
           {/* ─────────── Sidebar (desktop) ─────────── */}
           <aside className="hidden md:flex flex-col w-[220px] shrink-0 border-r border-border-dim sticky top-14 self-start h-[calc(100vh-3.5rem)] overflow-y-auto py-6 px-3">
-            <SidebarSection title="By Topic">
+            <SidebarSection title="Тема">
               <SidebarItem
                 active={!tagFilter}
                 onClick={() => setTagFilter(null)}
-                label="All topics"
+                label="Все темы"
                 count={templates.length}
               />
               {TAGS.map((tag) => (
@@ -268,13 +261,12 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                   onClick={() => setTagFilter(tag === tagFilter ? null : tag)}
                   label={tag}
                   count={tagCounts[tag] ?? 0}
-                  dot={TAG_DOT[tag]}
                   capitalize
                 />
               ))}
             </SidebarSection>
 
-            <SidebarSection title="By Status">
+            <SidebarSection title="Статус">
               {STATUS_OPTIONS.map((opt) => (
                 <SidebarItem
                   key={opt.value}
@@ -282,17 +274,16 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                   onClick={() => setStatusFilter(opt.value)}
                   label={opt.label}
                   count={statusCounts[opt.value] ?? 0}
-                  dot={opt.dot}
                 />
               ))}
             </SidebarSection>
 
             {students.length > 0 && (
-              <SidebarSection title="Students">
+              <SidebarSection title="Ученики">
                 <SidebarItem
                   active={!studentFilter}
                   onClick={() => setStudentFilter(null)}
-                  label="All students"
+                  label="Все ученики"
                   count={students.length}
                 />
                 <div className="max-h-[280px] overflow-y-auto">
@@ -339,14 +330,13 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
 
             {/* Mobile filter chips */}
             <div className="md:hidden flex gap-2 px-4 pt-3 pb-1 overflow-x-auto scrollbar-hide">
-              <MobileChip active={!tagFilter} onClick={() => setTagFilter(null)} label="All" />
+              <MobileChip active={!tagFilter} onClick={() => setTagFilter(null)} label="Все" />
               {TAGS.map((tag) => (
                 <MobileChip
                   key={tag}
                   active={tagFilter === tag}
                   onClick={() => setTagFilter(tag === tagFilter ? null : tag)}
                   label={tag}
-                  dot={TAG_DOT[tag]}
                 />
               ))}
             </div>
@@ -357,7 +347,6 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                   active={statusFilter === opt.value}
                   onClick={() => setStatusFilter(opt.value)}
                   label={opt.label}
-                  dot={opt.dot}
                 />
               ))}
             </div>
@@ -683,34 +672,27 @@ function SidebarItem({
   onClick,
   label,
   count,
-  dot,
   capitalize,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   count?: number;
-  dot?: string;
   capitalize?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+      className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150 ${
         active
-          ? "bg-primary/10 text-primary"
-          : "text-on-surface-variant hover:text-on-surface hover:bg-surface-elevated/60"
+          ? "bg-surface-card border border-border font-semibold text-on-surface"
+          : "font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-elevated/40"
       }`}
     >
-      {dot && <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />}
-      <span className={`truncate flex-1 text-left ${capitalize ? "capitalize" : ""}`}>{label}</span>
+      <span className={`truncate text-left ${capitalize ? "capitalize" : ""}`}>{label}</span>
       {typeof count === "number" && (
-        <span
-          className={`text-[11px] tabular-nums font-semibold ${
-            active ? "text-primary" : "text-on-surface-variant/70"
-          }`}
-        >
+        <span className={`text-[11px] tabular-nums ml-2 shrink-0 ${active ? "text-on-surface" : "text-on-surface-variant/60"}`}>
           {count}
         </span>
       )}
@@ -722,24 +704,21 @@ function MobileChip({
   active,
   onClick,
   label,
-  dot,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
-  dot?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-[12px] font-semibold whitespace-nowrap transition-colors ${
+      className={`shrink-0 inline-flex items-center px-3 h-8 rounded-md text-[12px] font-semibold whitespace-nowrap transition-colors ${
         active
           ? "bg-primary text-on-primary"
           : "bg-surface-elevated/60 text-on-surface-variant border border-border-dim"
       }`}
     >
-      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
       <span className="capitalize">{label}</span>
     </button>
   );

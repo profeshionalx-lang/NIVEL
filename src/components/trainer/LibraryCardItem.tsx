@@ -5,18 +5,17 @@ import type { CardTemplate, InsightCollection, InsightCard } from "@/lib/types";
 import { EditAiCardModal } from "@/components/insights/EditAiCardModal";
 import { ApplyCardSheet } from "./ApplyCardSheet";
 
-// Tag color palette — soft, distinguishable, accessible on white
-const TAG_COLORS: Record<string, { dot: string; bg: string; text: string; border: string }> = {
-  техника: { dot: "bg-blue-500", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
-  тактика: { dot: "bg-amber-500", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
-  физика: { dot: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
-  менталка: { dot: "bg-purple-500", bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
+const TAG_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  техника: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
+  тактика: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+  физика: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+  менталка: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
 };
 
-const STATUS_META: Record<string, { dot: string; text: string; bg: string; label: string }> = {
-  approved: { dot: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50", label: "Approved" },
-  draft: { dot: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50", label: "Draft" },
-  rejected: { dot: "bg-red-500", text: "text-red-700", bg: "bg-red-50", label: "Rejected" },
+const STATUS_META: Record<string, { text: string; label: string }> = {
+  approved: { text: "text-emerald-600", label: "Approved" },
+  draft: { text: "text-amber-600", label: "Draft" },
+  rejected: { text: "text-red-500", label: "Rejected" },
 };
 
 interface Student {
@@ -58,7 +57,6 @@ export function LibraryCardItem({
   }, [collectionsOpen]);
 
   const mainTag = template.tags?.[0];
-  const sideTag = template.tags?.[1];
   const tagStyle = mainTag ? TAG_COLORS[mainTag] : undefined;
   const statusStyle = STATUS_META[template.trainer_status];
 
@@ -99,72 +97,30 @@ export function LibraryCardItem({
           <div className="flex items-center gap-2">
             {mainTag && tagStyle && (
               <span
-                className={`inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1 ${tagStyle.bg} ${tagStyle.text} border ${tagStyle.border}`}
+                className={`inline-flex items-center text-[11px] font-semibold rounded-md px-2 py-0.5 ${tagStyle.bg} ${tagStyle.text} border ${tagStyle.border} capitalize`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${tagStyle.dot}`} />
-                <span className="capitalize">{mainTag}</span>
-              </span>
-            )}
-            {sideTag && (
-              <span className="inline-flex items-center text-[11px] font-medium text-gray-500 rounded-full px-2 py-1 bg-gray-50 border border-gray-100 capitalize">
-                {sideTag}
+                {mainTag}
               </span>
             )}
             {statusStyle && (
-              <span
-                className={`ml-auto inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-full px-2 py-0.5 ${statusStyle.bg} ${statusStyle.text}`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+              <span className={`ml-auto text-[11px] font-semibold ${statusStyle.text}`}>
                 {statusStyle.label}
               </span>
             )}
           </div>
 
           {/* Title */}
-          <h3 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-2">
+          <h3 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-3">
             {template.title ?? "—"}
           </h3>
-
-          {/* Body */}
-          {template.body && (
-            <p className="text-[13px] text-gray-500 leading-relaxed line-clamp-3">
-              {template.body}
-            </p>
-          )}
-
-          {/* Quote */}
-          {template.quote && (
-            <blockquote className="text-[12px] text-gray-600 italic border-l-2 border-gray-200 pl-3 line-clamp-2 leading-relaxed">
-              «{template.quote}»
-            </blockquote>
-          )}
         </div>
 
         {/* ── Footer ── */}
         <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5 flex items-center gap-3">
-          {/* Stats */}
-          <div className="flex items-center gap-3 flex-1 min-w-0 text-[12px] text-gray-500">
-            <span className="inline-flex items-center gap-1" title="Учеников">
-              <span className="material-symbols-outlined text-[15px] text-gray-400">group</span>
-              <span className="font-medium tabular-nums">{template.student_count}</span>
-            </span>
-            {template.taken_count > 0 && (
-              <span className="inline-flex items-center gap-1 text-emerald-600" title="Принято">
-                <span className="material-symbols-outlined text-[15px]">check</span>
-                <span className="font-medium tabular-nums">{template.taken_count}</span>
-              </span>
-            )}
-            {template.skipped_count > 0 && (
-              <span className="inline-flex items-center gap-1" title="Пропущено">
-                <span className="material-symbols-outlined text-[15px] text-gray-400">arrow_forward</span>
-                <span className="font-medium tabular-nums">{template.skipped_count}</span>
-              </span>
-            )}
-            {template.pending_count > 0 && (
-              <span className="inline-flex items-center gap-1 text-amber-600" title="Ожидает">
-                <span className="material-symbols-outlined text-[15px]">schedule</span>
-                <span className="font-medium tabular-nums">{template.pending_count}</span>
-              </span>
+          {/* Student count */}
+          <div className="flex items-center flex-1 min-w-0 text-[12px] text-gray-400">
+            {template.student_count > 0 && (
+              <span className="tabular-nums">{template.student_count} {template.student_count === 1 ? "ученик" : "учеников"}</span>
             )}
           </div>
 
