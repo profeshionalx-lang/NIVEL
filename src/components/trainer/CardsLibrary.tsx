@@ -154,9 +154,9 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* ─────────── Top header ─────────── */}
-      <header className="sticky top-0 z-30 glass-nav border-b border-border-dim">
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
         <div className="max-w-screen-2xl mx-auto px-4 md:px-6">
           <div className="flex items-center gap-4 h-14">
             {/* Logo */}
@@ -175,7 +175,7 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
             </div>
 
             {/* Segmented tabs */}
-            <div className="hidden md:flex items-center bg-surface-elevated/60 rounded-lg p-0.5 ml-2">
+            <div className="hidden md:flex items-center bg-gray-100 rounded-lg p-0.5 ml-2">
               {(["cards", "collections"] as Tab[]).map((t) => (
                 <button
                   key={t}
@@ -183,14 +183,14 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                   onClick={() => setTab(t)}
                   className={`relative px-3 py-1.5 rounded-md text-[12px] font-semibold transition-all duration-200 ${
                     tab === t
-                      ? "bg-surface-card text-on-surface shadow-sm"
-                      : "text-on-surface-variant hover:text-on-surface"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   {t === "cards" ? "Cards" : "Collections"}
                   <span
                     className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 rounded-[5px] text-[10px] font-bold tabular-nums ${
-                      tab === t ? "bg-primary/15 text-primary" : "bg-surface-elevated text-on-surface-variant"
+                      tab === t ? "bg-gray-100 text-gray-600" : "bg-gray-200 text-gray-500"
                     }`}
                   >
                     {t === "cards" ? templates.length : collections.length}
@@ -202,20 +202,20 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
             {/* Search */}
             <div className="ml-auto flex items-center gap-2">
               <div className="relative hidden md:block w-64 lg:w-80">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px] pointer-events-none">
                   search
                 </span>
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search cards…"
-                  className="w-full bg-surface-elevated/60 rounded-lg pl-9 pr-3 h-9 text-[13px] text-on-surface placeholder:text-on-surface-variant/60 border border-transparent focus:border-primary/40 focus:bg-surface-card focus:outline-none transition-colors"
+                  className="w-full bg-gray-100 rounded-lg pl-9 pr-3 h-9 text-[13px] text-gray-800 placeholder:text-gray-400 border border-transparent focus:border-gray-300 focus:bg-white focus:outline-none transition-colors"
                 />
                 {search && (
                   <button
                     type="button"
                     onClick={() => setSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                     aria-label="Очистить поиск"
                   >
                     <span className="material-symbols-outlined text-[16px]">close</span>
@@ -246,7 +246,7 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
       {tab === "cards" ? (
         <div className="flex flex-1 max-w-screen-2xl mx-auto w-full">
           {/* ─────────── Sidebar (desktop) ─────────── */}
-          <aside className="hidden md:flex flex-col w-[220px] shrink-0 border-r border-border-dim sticky top-14 self-start h-[calc(100vh-3.5rem)] overflow-y-auto py-6 px-3">
+          <aside className="hidden md:flex flex-col w-[220px] shrink-0 border-r border-gray-100 bg-white sticky top-14 self-start h-[calc(100vh-3.5rem)] overflow-y-auto py-6 px-3">
             <SidebarSection title="Тема">
               <SidebarItem
                 active={!tagFilter}
@@ -352,18 +352,18 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
             </div>
 
             {/* Summary bar */}
-            <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-border-dim">
+            <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-gray-100 bg-white">
               <div className="flex items-center gap-2">
-                <p className="text-[13px] text-on-surface">
+                <p className="text-[13px] text-gray-700">
                   <span className="font-semibold tabular-nums">{filtered.length}</span>{" "}
-                  <span className="text-on-surface-variant">
+                  <span className="text-gray-400">
                     {filtered.length === templates.length
                       ? "cards"
                       : `of ${templates.length} cards`}
                   </span>
                 </p>
                 {hasFilters && (
-                  <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-semibold">
+                  <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[11px] font-semibold">
                     <span className="material-symbols-outlined text-[14px]">filter_alt</span>
                     Filtered
                   </span>
@@ -405,7 +405,7 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                   }
                 />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filtered.map((template) => (
                     <LibraryCardItem
                       key={template.template_id ?? template.id}
@@ -686,13 +686,13 @@ function SidebarItem({
       onClick={onClick}
       className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150 ${
         active
-          ? "bg-surface-card border border-border font-semibold text-on-surface"
-          : "font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-elevated/40"
+          ? "bg-gray-900 font-semibold text-white"
+          : "font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100"
       }`}
     >
       <span className={`truncate text-left ${capitalize ? "capitalize" : ""}`}>{label}</span>
       {typeof count === "number" && (
-        <span className={`text-[11px] tabular-nums ml-2 shrink-0 ${active ? "text-on-surface" : "text-on-surface-variant/60"}`}>
+        <span className={`text-[11px] tabular-nums ml-2 shrink-0 ${active ? "text-white/70" : "text-gray-400"}`}>
           {count}
         </span>
       )}

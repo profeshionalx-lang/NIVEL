@@ -88,114 +88,104 @@ export function LibraryCardItem({
 
   return (
     <>
-      <article
-        className="group relative flex flex-col rounded-2xl bg-white border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-0.5 hover:border-gray-300 transition-all duration-200 overflow-hidden"
-      >
-        {/* ── Card body ── */}
-        <div className="flex-1 p-5 space-y-3">
-          {/* Top row: tag + status */}
-          <div className="flex items-center gap-2">
-            {mainTag && tagStyle && (
-              <span
-                className={`inline-flex items-center text-[11px] font-semibold rounded-md px-2 py-0.5 ${tagStyle.bg} ${tagStyle.text} border ${tagStyle.border} capitalize`}
-              >
-                {mainTag}
-              </span>
-            )}
-            {statusStyle && (
-              <span className={`ml-auto text-[11px] font-semibold ${statusStyle.text}`}>
-                {statusStyle.label}
-              </span>
-            )}
+      <article className="group relative flex flex-col rounded-2xl bg-white border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden min-h-[240px]">
+        {/* ── Top: tag + menu ── */}
+        <div className="flex items-start justify-between px-5 pt-5 pb-2">
+          <div className="flex-1 min-w-0 pr-2">
+            <p className="text-[11px] font-medium text-gray-400 mb-1.5 capitalize">
+              {mainTag ?? statusStyle?.label ?? "—"}
+            </p>
+            <h3 className="text-[16px] font-bold text-gray-900 leading-snug line-clamp-2">
+              {template.title ?? "—"}
+            </h3>
           </div>
 
-          {/* Title */}
-          <h3 className="text-[15px] font-bold text-gray-900 leading-snug line-clamp-3">
-            {template.title ?? "—"}
-          </h3>
-        </div>
+          {/* "..." menu */}
+          <div className="relative" ref={popoverRef}>
+            <button
+              type="button"
+              onClick={() => setCollectionsOpen((v) => !v)}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+              aria-label="Действия с карточкой"
+              aria-expanded={collectionsOpen}
+            >
+              <span className="material-symbols-outlined text-[18px]">more_horiz</span>
+            </button>
 
-        {/* ── Footer ── */}
-        <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5 flex items-center gap-3">
-          {/* Student count */}
-          <div className="flex items-center flex-1 min-w-0 text-[12px] text-gray-400">
-            {template.student_count > 0 && (
-              <span className="tabular-nums">{template.student_count} {template.student_count === 1 ? "ученик" : "учеников"}</span>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-0.5">
-            {collections.length > 0 && (
-              <div className="relative" ref={popoverRef}>
-                <button
-                  type="button"
-                  onClick={() => setCollectionsOpen((v) => !v)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                    inAnyCollection
-                      ? "text-gray-700 bg-gray-100 hover:bg-gray-200"
-                      : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                  }`}
-                  aria-label="Добавить в коллекцию"
-                  aria-expanded={collectionsOpen}
-                >
-                  <span className={`material-symbols-outlined text-[17px] ${inAnyCollection ? "fill-icon" : ""}`}>
-                    bookmark
-                  </span>
-                </button>
-                {collectionsOpen && (
-                  <div className="absolute bottom-10 right-0 z-30 w-60 rounded-xl bg-white border border-gray-200 shadow-2xl p-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-2.5 py-1.5">
-                      Коллекции
-                    </p>
-                    <div className="max-h-64 overflow-y-auto">
-                      {collections.map((col) => {
-                        const inCollection = col.template_ids.includes(tid);
-                        return (
-                          <button
-                            key={col.id}
-                            type="button"
-                            onClick={() => {
-                              if (inCollection) onRemoveFromCollection(col.id, tid);
-                              else onAddToCollection(col.id, tid);
-                              setCollectionsOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-gray-50 text-left transition-colors"
+            {collectionsOpen && (
+              <div className="absolute top-8 right-0 z-30 w-60 rounded-2xl bg-white border border-gray-200 shadow-2xl p-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-2.5 py-1.5">
+                  Коллекции
+                </p>
+                {collections.length === 0 ? (
+                  <p className="text-[12px] text-gray-400 px-2.5 py-2">Нет коллекций</p>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto">
+                    {collections.map((col) => {
+                      const inCollection = col.template_ids.includes(tid);
+                      return (
+                        <button
+                          key={col.id}
+                          type="button"
+                          onClick={() => {
+                            if (inCollection) onRemoveFromCollection(col.id, tid);
+                            else onAddToCollection(col.id, tid);
+                            setCollectionsOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-gray-50 text-left transition-colors"
+                        >
+                          <span
+                            className={`material-symbols-outlined text-[16px] ${
+                              inCollection ? "text-gray-900 fill-icon" : "text-gray-300"
+                            }`}
                           >
-                            <span
-                              className={`material-symbols-outlined text-[16px] ${
-                                inCollection ? "text-gray-900 fill-icon" : "text-gray-300"
-                              }`}
-                            >
-                              {inCollection ? "check_circle" : "radio_button_unchecked"}
-                            </span>
-                            <span className="text-[13px] text-gray-800 truncate flex-1">{col.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            {inCollection ? "check_circle" : "radio_button_unchecked"}
+                          </span>
+                          <span className="text-[13px] text-gray-800 truncate flex-1">{col.name}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-              aria-label="Редактировать"
-            >
-              <span className="material-symbols-outlined text-[16px]">edit</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setApplyOpen(true)}
-              className="ml-1 inline-flex items-center gap-1 h-8 px-3 rounded-lg kinetic-gradient text-on-primary text-[12px] font-bold hover:shadow-md transition-all duration-200"
-              aria-label="Применить к ученику"
-            >
-              Assign
-              <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
-            </button>
           </div>
+        </div>
+
+        {/* ── Body content ── */}
+        <div className="flex-1 px-5 pb-4">
+          {template.body ? (
+            <p className="text-[13px] text-gray-400 leading-relaxed line-clamp-4">
+              {template.body}
+            </p>
+          ) : (
+            <p className="text-[13px] text-gray-200 italic">Нет описания...</p>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="px-5 pb-5 flex items-end justify-between">
+          {/* Left: assign */}
+          <button
+            type="button"
+            onClick={() => setApplyOpen(true)}
+            className="text-[12px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
+            aria-label="Применить к ученику"
+          >
+            {template.student_count > 0
+              ? `${template.student_count} ${template.student_count === 1 ? "ученик" : "учеников"}`
+              : "Assign..."}
+          </button>
+
+          {/* Right: dark circle edit button */}
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center hover:bg-gray-700 active:scale-95 transition-all"
+            aria-label="Редактировать"
+          >
+            <span className="material-symbols-outlined text-white text-[18px]">edit</span>
+          </button>
         </div>
       </article>
 
