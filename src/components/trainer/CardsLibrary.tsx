@@ -686,13 +686,13 @@ function SidebarItem({
       onClick={onClick}
       className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150 ${
         active
-          ? "bg-gray-900 font-semibold text-white"
-          : "font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+          ? "bg-gray-100 font-semibold text-gray-900"
+          : "font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50"
       }`}
     >
       <span className={`truncate text-left ${capitalize ? "capitalize" : ""}`}>{label}</span>
       {typeof count === "number" && (
-        <span className={`text-[11px] tabular-nums ml-2 shrink-0 ${active ? "text-white/70" : "text-gray-400"}`}>
+        <span className={`text-[11px] tabular-nums ml-2 shrink-0 ${active ? "text-gray-500" : "text-gray-400"}`}>
           {count}
         </span>
       )}
