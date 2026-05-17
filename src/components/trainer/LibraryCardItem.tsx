@@ -5,13 +5,6 @@ import type { CardTemplate, InsightCollection, InsightCard } from "@/lib/types";
 import { EditAiCardModal } from "@/components/insights/EditAiCardModal";
 import { ApplyCardSheet } from "./ApplyCardSheet";
 
-const TAG_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  техника: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
-  тактика: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
-  физика: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
-  менталка: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
-};
-
 const STATUS_META: Record<string, { text: string; label: string }> = {
   approved: { text: "text-emerald-600", label: "Approved" },
   draft: { text: "text-amber-600", label: "Draft" },
@@ -42,9 +35,9 @@ export function LibraryCardItem({
   const [editOpen, setEditOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [flipped, setFlipped] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Close popover on outside click
   useEffect(() => {
     if (!collectionsOpen) return;
     function onDown(e: MouseEvent) {
@@ -57,11 +50,19 @@ export function LibraryCardItem({
   }, [collectionsOpen]);
 
   const mainTag = template.tags?.[0];
-  const tagStyle = mainTag ? TAG_COLORS[mainTag] : undefined;
   const statusStyle = STATUS_META[template.trainer_status];
-
   const tid = template.template_id ?? template.id;
   const inAnyCollection = collections.some((c) => c.template_ids.includes(tid));
+
+  const body = template.body ?? "";
+  const quote = template.quote ?? "";
+  const total = body.length + quote.length;
+  const bodySize =
+    total > 520 ? "text-[12px] leading-snug" :
+    total > 320 ? "text-[13px] leading-snug" :
+    total > 160 ? "text-[14px] leading-relaxed" :
+    "text-[15px] leading-relaxed";
+  const quoteSize = total > 320 ? "text-[11px]" : "text-[12px]";
 
   const pseudoCard: InsightCard = {
     id: template.id,
@@ -88,104 +89,160 @@ export function LibraryCardItem({
 
   return (
     <>
-      <article className="group relative flex flex-col rounded-2xl bg-white border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden min-h-[240px]">
-        {/* ── Top: tag + menu ── */}
-        <div className="flex items-start justify-between px-5 pt-5 pb-2">
-          <div className="flex-1 min-w-0 pr-2">
-            <p className="text-[11px] font-medium text-gray-400 mb-1.5 capitalize">
-              {mainTag ?? statusStyle?.label ?? "—"}
-            </p>
-            <h3 className="text-[16px] font-bold text-gray-900 leading-snug line-clamp-2">
-              {template.title ?? "—"}
-            </h3>
-          </div>
-
-          {/* "..." menu */}
-          <div className="relative" ref={popoverRef}>
-            <button
-              type="button"
-              onClick={() => setCollectionsOpen((v) => !v)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
-              aria-label="Действия с карточкой"
-              aria-expanded={collectionsOpen}
+      {/* Fixed-height flip card */}
+      <article className="relative h-[280px]">
+        {/* perspective wrapper */}
+        <div className="absolute inset-0" style={{ perspective: "1400px" }}>
+          {/* flip inner */}
+          <div
+            className="absolute inset-0"
+            style={{
+              transformStyle: "preserve-3d",
+              transition: "transform 0.55s cubic-bezier(0.2, 1, 0.3, 1)",
+              transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+            }}
+          >
+            {/* ── Front face ── */}
+            <div
+              className="absolute inset-0 rounded-2xl bg-white border border-gray-100 hover:border-gray-200 hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
+              style={{ backfaceVisibility: "hidden" }}
+              onClick={() => setFlipped(true)}
             >
-              <span className="material-symbols-outlined text-[18px]">more_horiz</span>
-            </button>
+              <div className="h-full p-5 flex flex-col">
+                {/* Top: tag + "…" menu */}
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-[11px] font-medium text-gray-400 capitalize">
+                    {mainTag ?? statusStyle?.label ?? "—"}
+                  </p>
 
-            {collectionsOpen && (
-              <div className="absolute top-8 right-0 z-30 w-60 rounded-2xl bg-white border border-gray-200 shadow-2xl p-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-2.5 py-1.5">
-                  Коллекции
-                </p>
-                {collections.length === 0 ? (
-                  <p className="text-[12px] text-gray-400 px-2.5 py-2">Нет коллекций</p>
-                ) : (
-                  <div className="max-h-64 overflow-y-auto">
-                    {collections.map((col) => {
-                      const inCollection = col.template_ids.includes(tid);
-                      return (
-                        <button
-                          key={col.id}
-                          type="button"
-                          onClick={() => {
-                            if (inCollection) onRemoveFromCollection(col.id, tid);
-                            else onAddToCollection(col.id, tid);
-                            setCollectionsOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-gray-50 text-left transition-colors"
-                        >
-                          <span
-                            className={`material-symbols-outlined text-[16px] ${
-                              inCollection ? "text-gray-900 fill-icon" : "text-gray-300"
-                            }`}
-                          >
-                            {inCollection ? "check_circle" : "radio_button_unchecked"}
-                          </span>
-                          <span className="text-[13px] text-gray-800 truncate flex-1">{col.name}</span>
-                        </button>
-                      );
-                    })}
+                  <div className="relative -mt-0.5 -mr-1" ref={popoverRef}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCollectionsOpen((v) => !v);
+                      }}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+                        inAnyCollection
+                          ? "text-gray-700 bg-gray-100"
+                          : "text-gray-300 hover:text-gray-600 hover:bg-gray-100"
+                      }`}
+                      aria-label="Коллекции"
+                      aria-expanded={collectionsOpen}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">more_horiz</span>
+                    </button>
+
+                    {collectionsOpen && (
+                      <div className="absolute top-8 right-0 z-30 w-60 rounded-2xl bg-white border border-gray-200 shadow-2xl p-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 px-2.5 py-1.5">
+                          Коллекции
+                        </p>
+                        {collections.length === 0 ? (
+                          <p className="text-[12px] text-gray-400 px-2.5 py-2">Нет коллекций</p>
+                        ) : (
+                          <div className="max-h-56 overflow-y-auto">
+                            {collections.map((col) => {
+                              const inCol = col.template_ids.includes(tid);
+                              return (
+                                <button
+                                  key={col.id}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (inCol) onRemoveFromCollection(col.id, tid);
+                                    else onAddToCollection(col.id, tid);
+                                    setCollectionsOpen(false);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-gray-50 text-left transition-colors"
+                                >
+                                  <span
+                                    className={`material-symbols-outlined text-[16px] ${
+                                      inCol ? "text-gray-900 fill-icon" : "text-gray-300"
+                                    }`}
+                                  >
+                                    {inCol ? "check_circle" : "radio_button_unchecked"}
+                                  </span>
+                                  <span className="text-[13px] text-gray-800 truncate flex-1">
+                                    {col.name}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Title */}
+                <h3 className="flex-1 text-[22px] font-black text-gray-900 leading-tight tracking-tight line-clamp-3">
+                  {template.title ?? "—"}
+                </h3>
+
+                {/* Bottom: assign + edit */}
+                <div className="flex items-end justify-between mt-4">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setApplyOpen(true);
+                    }}
+                    className="text-[12px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
+                  >
+                    {template.student_count > 0
+                      ? `${template.student_count} ${template.student_count === 1 ? "ученик" : "учеников"}`
+                      : "Assign..."}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditOpen(true);
+                    }}
+                    className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center hover:bg-gray-700 active:scale-95 transition-all"
+                    aria-label="Редактировать"
+                  >
+                    <span className="material-symbols-outlined text-white text-[18px]">edit</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Back face ── */}
+            <div
+              className="absolute inset-0 rounded-2xl bg-white border border-gray-100 overflow-hidden cursor-pointer"
+              style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+              onClick={() => setFlipped(false)}
+            >
+              <div className="h-full p-5 flex flex-col">
+                <div className="flex items-center gap-2 text-gray-400 mb-3 shrink-0">
+                  <span className="material-symbols-outlined text-base">flip_to_front</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Разбор</span>
+                </div>
+
+                {body ? (
+                  <p className={`text-gray-800 whitespace-pre-line ${bodySize}`}>{body}</p>
+                ) : null}
+
+                <div className="flex-1" />
+
+                {quote ? (
+                  <p
+                    className={`text-gray-500 italic border-l-2 border-amber-400 pl-3 mt-3 shrink-0 ${quoteSize}`}
+                  >
+                    «{quote}»
+                  </p>
+                ) : null}
+
+                {!body && !quote && (
+                  <p className="text-[13px] text-gray-400">Описание не добавлено.</p>
                 )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
-
-        {/* ── Body content ── */}
-        <div className="flex-1 px-5 pb-4">
-          {template.body ? (
-            <p className="text-[13px] text-gray-400 leading-relaxed line-clamp-4">
-              {template.body}
-            </p>
-          ) : (
-            <p className="text-[13px] text-gray-200 italic">Нет описания...</p>
-          )}
-        </div>
-
-        {/* ── Footer ── */}
-        <div className="px-5 pb-5 flex items-end justify-between">
-          {/* Left: assign */}
-          <button
-            type="button"
-            onClick={() => setApplyOpen(true)}
-            className="text-[12px] font-semibold text-gray-400 hover:text-gray-700 transition-colors"
-            aria-label="Применить к ученику"
-          >
-            {template.student_count > 0
-              ? `${template.student_count} ${template.student_count === 1 ? "ученик" : "учеников"}`
-              : "Assign..."}
-          </button>
-
-          {/* Right: dark circle edit button */}
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center hover:bg-gray-700 active:scale-95 transition-all"
-            aria-label="Редактировать"
-          >
-            <span className="material-symbols-outlined text-white text-[18px]">edit</span>
-          </button>
         </div>
       </article>
 
