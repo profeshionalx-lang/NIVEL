@@ -40,6 +40,13 @@ const tabs: Tab[] = [
     match: (p) => p.startsWith("/matches"),
     roles: ["student", "trainer"],
   },
+  {
+    labelKey: "nav.cards",
+    icon: "auto_stories",
+    href: "/trainer/cards",
+    match: (p) => p.startsWith("/trainer/cards"),
+    roles: ["trainer"],
+  },
 ];
 
 export default function BottomNav({ role, locale }: BottomNavProps) {

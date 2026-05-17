@@ -9,6 +9,14 @@ import type {
   InsightStudentDecision,
 } from "@/lib/types";
 
+export interface StudentSessionOption {
+  id: string;
+  session_number: number;
+  trainer_notes: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+}
+
 type Result<T = void> =
   | (T extends void ? { success: true } : { success: true } & T)
   | { success: false; error: string };
@@ -124,16 +132,29 @@ export async function updateInsightCard(
   }
   if (patch.tags !== undefined) update.tags = patch.tags;
 
-  const { data, error } = await supabase
+  const { data: card, error: fetchErr } = await supabase
     .from("insight_cards")
-    .update(update)
+    .select("session_id, template_id")
     .eq("id", cardId)
-    .select("session_id")
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (fetchErr || !card) return { success: false, error: fetchErr?.message ?? "Card not found" };
 
-  revalidatePath(`/trainer/sessions/${data.session_id}/insights`);
+  if (card.template_id) {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update(update)
+      .eq("template_id", card.template_id);
+    if (error) return { success: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update(update)
+      .eq("id", cardId);
+    if (error) return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/trainer/sessions/${card.session_id}/insights`);
   return { success: true };
 }
 
@@ -143,18 +164,32 @@ export async function setTrainerCardStatus(
 ): Promise<Result> {
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase } = auth;
 
-  const { data, error } = await auth.supabase
+  const { data: card, error: fetchErr } = await supabase
     .from("insight_cards")
-    .update({ trainer_status: status })
+    .select("session_id, template_id")
     .eq("id", cardId)
-    .select("session_id")
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (fetchErr || !card) return { success: false, error: fetchErr?.message ?? "Card not found" };
 
-  revalidatePath(`/trainer/sessions/${data.session_id}/insights`);
-  revalidatePath(`/sessions/${data.session_id}`);
+  if (card.template_id) {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update({ trainer_status: status })
+      .eq("template_id", card.template_id);
+    if (error) return { success: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("insight_cards")
+      .update({ trainer_status: status })
+      .eq("id", cardId);
+    if (error) return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/trainer/sessions/${card.session_id}/insights`);
+  revalidatePath(`/sessions/${card.session_id}`);
   return { success: true };
 }
 
@@ -299,4 +334,167 @@ export async function getVaultCards(
     return [];
   }
   return (data ?? []) as unknown as InsightCardWithRelations[];
+}
+
+export async function getStudentSessions(
+  studentId: string
+): Promise<StudentSessionOption[]> {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") return [];
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("sessions")
+    .select("id, session_number, trainer_notes, scheduled_at, created_at, goals!inner(user_id)")
+    .eq("goals.user_id", studentId)
+    .order("scheduled_at", { ascending: false, nullsFirst: false });
+
+  return ((data ?? []) as unknown as (StudentSessionOption & { goals: { user_id: string } })[]).map(
+    ({ goals: _g, ...s }) => s
+  );
+}
+
+export async function applyTemplateToStudent(
+  templateId: string,
+  sessionId: string
+): Promise<Result<{ id: string }>> {
+  const auth = await requireTrainer();
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase, userId } = auth;
+
+  // Get representative card for this template
+  const { data: template, error: tErr } = await supabase
+    .from("insight_cards")
+    .select("*")
+    .eq("template_id", templateId)
+    .limit(1)
+    .single();
+  if (tErr || !template) return { success: false, error: "Template not found" };
+
+  // Get student from session
+  const { data: session, error: sErr } = await supabase
+    .from("sessions")
+    .select("id, goals!inner(user_id)")
+    .eq("id", sessionId)
+    .single();
+  if (sErr || !session) return { success: false, error: "Session not found" };
+
+  const studentId = (session as unknown as { goals: { user_id: string } }).goals.user_id;
+
+  // Check card not already applied to this student
+  const { count } = await supabase
+    .from("insight_cards")
+    .select("id", { count: "exact", head: true })
+    .eq("template_id", templateId)
+    .eq("student_id", studentId);
+  if (count && count > 0) return { success: false, error: "Карточка уже есть у этого ученика" };
+
+  const { data: lastCard } = await supabase
+    .from("insight_cards")
+    .select("position")
+    .eq("session_id", sessionId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data: newCard, error: insertErr } = await supabase
+    .from("insight_cards")
+    .insert({
+      session_id: sessionId,
+      student_id: studentId,
+      trainer_id: userId,
+      template_id: templateId,
+      title: template.title,
+      body: template.body,
+      quote: template.quote,
+      tags: template.tags,
+      front_text: template.front_text,
+      context_text: template.context_text,
+      problem_id: template.problem_id,
+      category_id: template.category_id,
+      source: "ai-paste",
+      trainer_status: "approved",
+      position: (lastCard?.position ?? 0) + 1,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr || !newCard) return { success: false, error: insertErr?.message ?? "Failed" };
+
+  revalidatePath(`/sessions/${sessionId}`);
+  return { success: true, id: newCard.id };
+}
+
+export async function createCollection(name: string): Promise<Result<{ id: string }>> {
+  const auth = await requireTrainer();
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase, userId } = auth;
+
+  const { data, error } = await supabase
+    .from("insight_collections")
+    .insert({ trainer_id: userId, name: name.trim() })
+    .select("id")
+    .single();
+
+  if (error || !data) return { success: false, error: error?.message ?? "Failed" };
+  revalidatePath("/trainer/cards");
+  return { success: true, id: data.id };
+}
+
+export async function addCardToCollection(
+  collectionId: string,
+  templateId: string
+): Promise<Result> {
+  const auth = await requireTrainer();
+  if (!auth.ok) return { success: false, error: auth.error };
+
+  const { error } = await auth.supabase
+    .from("insight_collection_cards")
+    .upsert({ collection_id: collectionId, template_id: templateId, position: 0 });
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/trainer/cards");
+  return { success: true };
+}
+
+export async function removeCardFromCollection(
+  collectionId: string,
+  templateId: string
+): Promise<Result> {
+  const auth = await requireTrainer();
+  if (!auth.ok) return { success: false, error: auth.error };
+
+  const { error } = await auth.supabase
+    .from("insight_collection_cards")
+    .delete()
+    .eq("collection_id", collectionId)
+    .eq("template_id", templateId);
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/trainer/cards");
+  return { success: true };
+}
+
+export async function applyCollectionToStudent(
+  collectionId: string,
+  sessionId: string
+): Promise<Result<{ applied: number }>> {
+  const auth = await requireTrainer();
+  if (!auth.ok) return { success: false, error: auth.error };
+  const { supabase, userId } = auth;
+
+  const { data: items } = await supabase
+    .from("insight_collection_cards")
+    .select("template_id")
+    .eq("collection_id", collectionId)
+    .order("position");
+
+  let applied = 0;
+  for (const item of items ?? []) {
+    const result = await applyTemplateToStudent(item.template_id, sessionId);
+    if (result.success) applied++;
+  }
+
+  revalidatePath(`/sessions/${sessionId}`);
+  return { success: true, applied };
 }

@@ -36,6 +36,34 @@ export async function pasteInsightsFromClaude(
     return { error: error.message };
   }
 
+  // Assign template_id to newly created cards.
+  // Reuse existing template_id if a card with the same title+body already exists,
+  // otherwise generate a new one. This ensures cards pasted across multiple students
+  // automatically share the same template_id.
+  const { data: newCards } = await supabase
+    .from("insight_cards")
+    .select("id, title, body")
+    .eq("session_id", sessionId)
+    .is("template_id", null);
+
+  for (const card of newCards ?? []) {
+    let tid: string;
+    if (card.title && card.body) {
+      const { data: existing } = await supabase
+        .from("insight_cards")
+        .select("template_id")
+        .eq("title", card.title)
+        .eq("body", card.body)
+        .not("template_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      tid = existing?.template_id ?? crypto.randomUUID();
+    } else {
+      tid = crypto.randomUUID();
+    }
+    await supabase.from("insight_cards").update({ template_id: tid }).eq("id", card.id);
+  }
+
   revalidatePath(`/sessions/${sessionId}`);
   return { success: true, count: (data as number) ?? parsed.cards.length };
 }
@@ -48,13 +76,17 @@ async function requireTrainerOwnsCard(cardId: string) {
 
   const { data: card } = await supabase
     .from("insight_cards")
-    .select("id, session_id, trainer_id")
+    .select("id, session_id, trainer_id, template_id")
     .eq("id", cardId)
     .single();
 
   if (!card || card.trainer_id !== user.id) return null;
 
-  return { supabase, sessionId: card.session_id as string };
+  return {
+    supabase,
+    sessionId: card.session_id as string,
+    templateId: card.template_id as string | null,
+  };
 }
 
 export async function approveInsightCard(
@@ -63,11 +95,11 @@ export async function approveInsightCard(
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
 
-  const { supabase, sessionId } = ctx;
-  const { error } = await supabase
-    .from("insight_cards")
-    .update({ trainer_status: "approved" })
-    .eq("id", cardId);
+  const { supabase, sessionId, templateId } = ctx;
+  const filter = templateId
+    ? supabase.from("insight_cards").update({ trainer_status: "approved" }).eq("template_id", templateId)
+    : supabase.from("insight_cards").update({ trainer_status: "approved" }).eq("id", cardId);
+  const { error } = await filter;
 
   if (error) return { error: error.message };
 
@@ -81,11 +113,11 @@ export async function rejectInsightCard(
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
 
-  const { supabase, sessionId } = ctx;
-  const { error } = await supabase
-    .from("insight_cards")
-    .update({ trainer_status: "rejected" })
-    .eq("id", cardId);
+  const { supabase, sessionId, templateId } = ctx;
+  const filter = templateId
+    ? supabase.from("insight_cards").update({ trainer_status: "rejected" }).eq("template_id", templateId)
+    : supabase.from("insight_cards").update({ trainer_status: "rejected" }).eq("id", cardId);
+  const { error } = await filter;
 
   if (error) return { error: error.message };
 
@@ -132,17 +164,19 @@ export async function updateAiInsightCard(
 
   const tags = patch.side ? [patch.tag, patch.side] : [patch.tag];
 
-  const { supabase, sessionId } = ctx;
-  const { error } = await supabase
-    .from("insight_cards")
-    .update({
-      title: patch.title.trim(),
-      body: patch.body.trim(),
-      tags,
-      front_text: patch.title.trim(),
-      context_text: patch.body.trim(),
-    })
-    .eq("id", cardId);
+  const { supabase, sessionId, templateId } = ctx;
+  const contentPatch = {
+    title: patch.title.trim(),
+    body: patch.body.trim(),
+    tags,
+    front_text: patch.title.trim(),
+    context_text: patch.body.trim(),
+  };
+
+  const filter = templateId
+    ? supabase.from("insight_cards").update(contentPatch).eq("template_id", templateId)
+    : supabase.from("insight_cards").update(contentPatch).eq("id", cardId);
+  const { error } = await filter;
 
   if (error) return { error: error.message };
 

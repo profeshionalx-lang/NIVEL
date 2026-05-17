@@ -92,6 +92,7 @@ export interface InsightCard {
   position: number;
   created_at: string;
   decided_at: string | null;
+  template_id: string | null;
 }
 
 export interface InsightCardWithRelations extends InsightCard {
@@ -170,6 +171,29 @@ export interface MasterPlanSection {
   category: MasterPlanCategory;
   sort_order: number;
   items: MasterPlanItem[];
+}
+
+export interface CardTemplate {
+  id: string;
+  template_id: string | null;
+  title: string | null;
+  body: string | null;
+  quote: string | null;
+  tags: string[] | null;
+  trainer_status: InsightTrainerStatus;
+  created_at: string;
+  student_count: number;
+  taken_count: number;
+  skipped_count: number;
+  pending_count: number;
+}
+
+export interface InsightCollection {
+  id: string;
+  trainer_id: string;
+  name: string;
+  created_at: string;
+  card_count?: number;
 }
 
 export interface MasterPlan {
