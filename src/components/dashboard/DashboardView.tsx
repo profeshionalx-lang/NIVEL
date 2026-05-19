@@ -356,7 +356,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                         {session.session_number}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">
+                        <p className="font-semibold text-sm" suppressHydrationWarning>
                           {(() => {
                             const d = new Date(session.scheduled_at ?? session.created_at);
                             const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: "long" }).format(d);
@@ -364,7 +364,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                             return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${time}`;
                           })()}
                         </p>
-                        <p className="text-[11px] text-on-surface-variant">
+                        <p className="text-[11px] text-on-surface-variant" suppressHydrationWarning>
                           {new Date(session.scheduled_at ?? session.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long" })}
                           {session.status === "completed" && ` · ${t(locale, "common.completed")}`}
                         </p>
