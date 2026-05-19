@@ -16,12 +16,14 @@ export interface DashboardGoal {
   problems: { id: number; name: string; category_name: string }[];
   total_sessions: number;
   completed_sessions: number;
+  is_new: boolean;
 }
 
 export interface DashboardSkill {
   skill_id: number;
   skill_name: string;
   points: number;
+  points_seen: number | null;
   level: number;
   points_in_level: number;
 }
@@ -195,6 +197,7 @@ export async function loadDashboardData(
       problems,
       total_sessions: totalByGoal.get(id) ?? 0,
       completed_sessions: completedByGoal.get(id) ?? 0,
+      is_new: goal.seen_at == null,
     };
   });
 
@@ -207,6 +210,7 @@ export async function loadDashboardData(
         skill_id: sp.skill_id as number,
         skill_name: (skill?.[nameCol] as string) || "",
         points,
+        points_seen: (sp.points_seen as number | null) ?? null,
         level,
         points_in_level,
       };
