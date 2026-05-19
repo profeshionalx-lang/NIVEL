@@ -26,7 +26,8 @@ export default function InlineSessionCreator({ studentId, goals }: Props) {
       return;
     }
     startTransition(async () => {
-      const iso = date ? new Date(date).toISOString() : null;
+      // datetime-local has no timezone — append Z to treat the entered time as UTC literally
+      const iso = date ? `${date}:00.000Z` : null;
       const res = await createSessionForStudent(studentId, goalId, {
         scheduledAt: iso,
         completedAt: completed ? iso ?? new Date().toISOString() : null,

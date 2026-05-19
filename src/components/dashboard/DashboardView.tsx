@@ -167,7 +167,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                     {allItems.map((item) => {
                       if (item.kind === "session") {
                         const dateStr = item.scheduled_at
-                          ? new Date(item.scheduled_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+                          ? new Date(item.scheduled_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
                           : null;
                         return (
                           <Link
@@ -356,16 +356,16 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                         {session.session_number}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm" suppressHydrationWarning>
+                        <p className="font-semibold text-sm">
                           {(() => {
                             const d = new Date(session.scheduled_at ?? session.created_at);
-                            const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: "long" }).format(d);
-                            const time = new Intl.DateTimeFormat(dateLocale, { hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+                            const weekday = new Intl.DateTimeFormat(dateLocale, { weekday: "long", timeZone: "UTC" }).format(d);
+                            const time = new Intl.DateTimeFormat(dateLocale, { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(d);
                             return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${time}`;
                           })()}
                         </p>
-                        <p className="text-[11px] text-on-surface-variant" suppressHydrationWarning>
-                          {new Date(session.scheduled_at ?? session.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long" })}
+                        <p className="text-[11px] text-on-surface-variant">
+                          {new Date(session.scheduled_at ?? session.created_at).toLocaleDateString(dateLocale, { day: "numeric", month: "long", timeZone: "UTC" })}
                           {session.status === "completed" && ` · ${t(locale, "common.completed")}`}
                         </p>
                       </div>
