@@ -285,7 +285,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className="w-2 h-2 rounded-full bg-primary" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                        {goal.total_sessions}/{goal.session_count} {t(locale, "dashboard.sessions")}
+                        {t(locale, "dashboard.goal")}
                       </span>
                     </div>
                     {goal.problems.length > 0
