@@ -48,7 +48,18 @@ export function ApprovedCardsReorderable({ sessionId, cards }: Props) {
             </button>
           </div>
           <div className="flex-1 min-w-0">
-            <ApprovedInsightCard card={card} />
+            <ApprovedInsightCard
+              card={card}
+              onSaved={(patch) => {
+                setOrder((prev) =>
+                  prev.map((c) =>
+                    c.id === card.id
+                      ? { ...c, title: patch.title, body: patch.body, front_text: patch.title, context_text: patch.body, tags: patch.tags }
+                      : c
+                  )
+                );
+              }}
+            />
           </div>
         </div>
       ))}

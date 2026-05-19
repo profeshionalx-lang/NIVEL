@@ -9,9 +9,10 @@ import type { InsightCard } from "@/lib/types";
 
 interface Props {
   card: InsightCard;
+  onSaved?: (patch: { title: string; body: string; tags: string[] }) => void;
 }
 
-export function ApprovedInsightCard({ card }: Props) {
+export function ApprovedInsightCard({ card, onSaved }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -27,9 +28,11 @@ export function ApprovedInsightCard({ card }: Props) {
     };
   }, [open]);
 
-  const displayText = card.title || card.front_text;
-  const displayBody = card.body || card.context_text;
-  const tag = card.tags?.[0] ?? null;
+  const [localPatch, setLocalPatch] = useState<{ title: string; body: string; tags: string[] } | null>(null);
+
+  const displayText = localPatch?.title ?? card.title ?? card.front_text;
+  const displayBody = localPatch?.body ?? card.body ?? card.context_text;
+  const tag = (localPatch?.tags ?? card.tags)?.[0] ?? null;
 
   function handleDelete() {
     startTransition(async () => {
@@ -174,7 +177,14 @@ export function ApprovedInsightCard({ card }: Props) {
       {sheet}
 
       {editing && (
-        <EditAiCardModal card={card} onClose={() => setEditing(false)} />
+        <EditAiCardModal
+          card={card}
+          onClose={() => setEditing(false)}
+          onSaved={(patch) => {
+            setLocalPatch(patch);
+            onSaved?.(patch);
+          }}
+        />
       )}
     </>
   );

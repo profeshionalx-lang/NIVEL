@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { updateAiInsightCard } from "@/lib/actions/aiInsights";
 import type { InsightCard } from "@/lib/types";
 
@@ -11,10 +10,10 @@ const SIDES = ["защита", "атака"] as const;
 interface Props {
   card: InsightCard;
   onClose: () => void;
+  onSaved?: (patch: { title: string; body: string; tags: string[] }) => void;
 }
 
-export function EditAiCardModal({ card, onClose }: Props) {
-  const router = useRouter();
+export function EditAiCardModal({ card, onClose, onSaved }: Props) {
   const [title, setTitle] = useState(card.title || card.front_text);
   const [body, setBody] = useState(card.body || card.context_text || "");
   const [tag, setTag] = useState<string>(card.tags?.[0] ?? "техника");
@@ -43,7 +42,8 @@ export function EditAiCardModal({ card, onClose }: Props) {
       if ("error" in result) {
         setError(result.error);
       } else {
-        router.refresh();
+        const tags = [tag, side];
+        onSaved?.({ title: title.trim(), body: body.trim(), tags });
         onClose();
       }
     });

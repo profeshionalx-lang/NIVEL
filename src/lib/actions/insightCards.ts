@@ -227,15 +227,13 @@ export async function reorderInsightCards(
   const { data: existing, error: fetchErr } = await supabase
     .from("insight_cards")
     .select("id")
-    .eq("session_id", sessionId);
+    .eq("session_id", sessionId)
+    .in("id", orderedIds);
 
   if (fetchErr) return { success: false, error: fetchErr.message };
 
   const existingIds = new Set((existing ?? []).map((c) => c.id));
-  if (
-    orderedIds.length !== existingIds.size ||
-    !orderedIds.every((id) => existingIds.has(id))
-  ) {
+  if (!orderedIds.every((id) => existingIds.has(id))) {
     return { success: false, error: "Card list is out of sync" };
   }
 
