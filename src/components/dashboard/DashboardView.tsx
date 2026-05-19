@@ -9,6 +9,8 @@ import InlineSessionCreator from "@/components/dashboard/edit/InlineSessionCreat
 import InlineProfileHeader from "@/components/dashboard/edit/InlineProfileHeader";
 import MasterPlanEditor from "@/components/masterPlan/MasterPlanEditor";
 import PlaytomicConnectBlock from "@/components/playtomic/PlaytomicConnectBlock";
+import SkillProgressSection from "@/components/dashboard/SkillProgressSection";
+import MarkSeenEffect from "@/components/dashboard/MarkSeenEffect";
 
 export interface DashboardViewEditable {
   studentId: string;
@@ -50,6 +52,9 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
 
   return (
     <div className="space-y-6">
+      {/* Mark dashboard data as seen — real student viewing their own dashboard only */}
+      {!isTrainer && !previewMode && <MarkSeenEffect userId={profile.id} />}
+
       {/* Header */}
       {isTrainer ? (
         <InlineProfileHeader profile={profile} />
@@ -280,49 +285,61 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
               </p>
             ) : (
               <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
-                {goals.map((goal) => (
-                  <div key={goal.id} className="flex-shrink-0 w-52 bg-surface-card rounded-2xl p-4" style={{ borderTop: "2px solid #cafd00" }}>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                        {t(locale, "dashboard.goal")}
-                      </span>
+                {goals.map((goal) => {
+                  const isNewGoal = goal.is_new;
+                  return (
+                    <div key={goal.id} className="flex-shrink-0 w-52 bg-surface-card rounded-2xl p-4" style={{ borderTop: "2px solid #cafd00" }}>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                          {t(locale, "dashboard.goal")}
+                        </span>
+                        {isNewGoal && (
+                          <span
+                            className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-widest leading-none"
+                            style={{ backgroundColor: "#cafd00", color: "#0a0a0a", transform: "rotate(2deg)" }}
+                          >
+                            NEW
+                          </span>
+                        )}
+                      </div>
+                      {goal.problems.length > 0
+                        ? goal.problems.map((p) => (
+                            <p key={p.id} className="text-sm font-semibold leading-snug text-on-surface mb-1">
+                              {p.name.length > 50 ? p.name.slice(0, 50) + "..." : p.name}
+                            </p>
+                          ))
+                        : goal.custom_problem
+                        ? <p className="text-sm font-semibold leading-snug text-on-surface mb-1">{goal.custom_problem}</p>
+                        : null}
                     </div>
-                    {goal.problems.length > 0
-                      ? goal.problems.map((p) => (
-                          <p key={p.id} className="text-sm font-semibold leading-snug text-on-surface mb-1">
-                            {p.name.length > 50 ? p.name.slice(0, 50) + "..." : p.name}
-                          </p>
-                        ))
-                      : goal.custom_problem
-                      ? <p className="text-sm font-semibold leading-snug text-on-surface mb-1">{goal.custom_problem}</p>
-                      : null}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
 
           {/* Skills */}
-          {skillProgress.length > 0 && (
-            <section className="bg-surface-high rounded-3xl p-6">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-5">
-                {t(locale, "dashboard.skillProgression")}
-              </h3>
-              <div className="space-y-5">
-                {skillProgress.map((sp, i) => (
-                  <ProgressBar
-                    key={sp.skill_id}
-                    label={sp.skill_name}
-                    value={sp.points_in_level}
-                    max={10}
-                    variant={i % 2 === 0 ? "secondary" : "primary"}
-                    sublabel={`${sp.points_in_level}/10 · Lv.${sp.level}`}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+          {skillProgress.length > 0 && (() => {
+            const deltas: Record<number, number> = {};
+            const newIds: number[] = [];
+            for (const sp of skillProgress) {
+              if (sp.points_seen === null) {
+                newIds.push(sp.skill_id);
+              } else {
+                const delta = Math.max(0, sp.points - sp.points_seen);
+                if (delta > 0) deltas[sp.skill_id] = delta;
+              }
+            }
+            return (
+              <SkillProgressSection
+                skills={skillProgress}
+                deltas={deltas}
+                newIds={newIds}
+                label={t(locale, "dashboard.skillProgression")}
+              />
+            );
+          })()}
 
           {/* Sessions list */}
           <section>
