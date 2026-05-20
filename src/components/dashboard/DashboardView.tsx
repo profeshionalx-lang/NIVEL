@@ -297,7 +297,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                         {isNewGoal && (
                           <span
                             className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-widest leading-none"
-                            style={{ backgroundColor: "#cafd00", color: "#0a0a0a", transform: "rotate(2deg)" }}
+                            style={{ backgroundColor: "#cafd00", color: "#0a0a0a" }}
                           >
                             NEW
                           </span>

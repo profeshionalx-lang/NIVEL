@@ -80,13 +80,15 @@ export default function SkillProgressSection({ skills, deltas, newIds, label }: 
         </div>
       )}
 
-      {rest.length > 0 && !showAll && (
+      {rest.length > 0 && (
         <button
-          onClick={() => setShowAll(true)}
+          onClick={() => setShowAll((v) => !v)}
           className="mt-5 w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-on-surface-variant"
         >
-          <span className="material-symbols-outlined text-sm">expand_more</span>
-          Все скиллы ({rest.length})
+          <span className="material-symbols-outlined text-sm">
+            {showAll ? "expand_less" : "expand_more"}
+          </span>
+          {showAll ? "Скрыть" : `Все скиллы (${rest.length})`}
         </button>
       )}
     </section>
