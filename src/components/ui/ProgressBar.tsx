@@ -67,25 +67,23 @@ export default function ProgressBar({
 
       {/* Bar */}
       <div className="h-1.5 w-full rounded-full bg-surface-elevated relative overflow-hidden">
-        {/* Dimmed delta — full reach (0 → percentage), reduced opacity.
-            The track clip handles rounding; the solid base on top draws over
-            the "old" portion, so the seam is exactly the base's right edge. */}
+        {/* Dimmed delta layer — full width, peeking out to the right of the solid base */}
         {hasDelta && (
           <div
             className={`absolute inset-y-0 left-0 h-full transition-all duration-500 ${barClasses[variant]}`}
             style={{
               width: `${percentage}%`,
               opacity: 0.35,
+              borderRadius: "0 9999px 9999px 0",
             }}
           />
         )}
-        {/* Solid base — "old" progress, drawn on top of the dimmed layer.
-            No per-side radius needed: it stops mid-bar with a clean straight
-            edge, and the track's overflow-hidden rounds the outer ends. */}
+        {/* Solid base — drawn on top, right end is flat so the dimmed cap shows */}
         <div
           className={`absolute inset-y-0 left-0 h-full transition-all duration-500 ${barClasses[variant]}`}
           style={{
             width: `${hasDelta ? prevPercentage : percentage}%`,
+            borderRadius: hasDelta ? 0 : "0 9999px 9999px 0",
           }}
         />
       </div>
