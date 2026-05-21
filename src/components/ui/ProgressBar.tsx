@@ -41,7 +41,7 @@ export default function ProgressBar({
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs font-black uppercase tracking-wider text-on-surface">
           {label}
-          {isNew && !hasDelta && (
+          {isNew && (
             <span
               className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-widest leading-none"
               style={{ backgroundColor: "#cafd00", color: "#0a0a0a" }}

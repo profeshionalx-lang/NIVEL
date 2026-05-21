@@ -326,6 +326,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
             for (const sp of skillProgress) {
               if (sp.points_seen === null) {
                 newIds.push(sp.skill_id);
+                if (sp.points > 0) deltas[sp.skill_id] = sp.points;
               } else {
                 const delta = Math.max(0, sp.points - sp.points_seen);
                 if (delta > 0) deltas[sp.skill_id] = delta;
