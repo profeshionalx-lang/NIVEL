@@ -12,6 +12,8 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
   менталка: { bg: "bg-purple-50", text: "text-purple-700" },
 };
 
+const FLIP_HINT_KEY = "nivel:library-flip-hint-seen";
+
 const SIDE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   защита:  { bg: "bg-sky-50", text: "text-sky-700", label: "Защита" },
   defense: { bg: "bg-sky-50", text: "text-sky-700", label: "Защита" },
@@ -46,6 +48,7 @@ interface Props {
   collections: (InsightCollection & { template_ids: string[] })[];
   onAddToCollection: (collectionId: string, templateId: string) => void;
   onRemoveFromCollection: (collectionId: string, templateId: string) => void;
+  isHintCard?: boolean;
 }
 
 export function LibraryCardItem({
@@ -54,12 +57,24 @@ export function LibraryCardItem({
   collections,
   onAddToCollection,
   onRemoveFromCollection,
+  isHintCard,
 }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [applyOpen, setApplyOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isHintCard) return;
+    if (localStorage.getItem(FLIP_HINT_KEY)) return;
+    const on  = setTimeout(() => setFlipped(true),  600);
+    const off = setTimeout(() => {
+      setFlipped(false);
+      localStorage.setItem(FLIP_HINT_KEY, "1");
+    }, 2100);
+    return () => { clearTimeout(on); clearTimeout(off); };
+  }, [isHintCard]);
 
   useEffect(() => {
     if (!collectionsOpen) return;

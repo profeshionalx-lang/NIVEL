@@ -406,7 +406,7 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filtered.map((template) => (
+                  {filtered.map((template, idx) => (
                     <LibraryCardItem
                       key={template.template_id ?? template.id}
                       template={template}
@@ -414,6 +414,7 @@ export function CardsLibrary({ templates, students, collections: initialCollecti
                       collections={collections}
                       onAddToCollection={handleAddToCollection}
                       onRemoveFromCollection={handleRemoveFromCollection}
+                      isHintCard={idx === 0}
                     />
                   ))}
                 </div>
