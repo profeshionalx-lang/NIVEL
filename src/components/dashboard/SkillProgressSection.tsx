@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import ProgressBar from "@/components/ui/ProgressBar";
 
 interface Skill {
@@ -15,9 +15,10 @@ interface Props {
   deltas: Record<number, number>;
   newIds: number[];
   label: string;
+  addButton?: ReactNode;
 }
 
-export default function SkillProgressSection({ skills, deltas, newIds, label }: Props) {
+export default function SkillProgressSection({ skills, deltas, newIds, label, addButton }: Props) {
   const [showAll, setShowAll] = useState(false);
 
   const updated = skills.filter((s) => deltas[s.skill_id] || newIds.includes(s.skill_id));
@@ -25,9 +26,16 @@ export default function SkillProgressSection({ skills, deltas, newIds, label }: 
 
   return (
     <section className="bg-surface-high rounded-3xl p-6">
-      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-5">
-        {label}
-      </h3>
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant">
+          {label}
+        </h3>
+        {addButton}
+      </div>
+
+      {skills.length === 0 && (
+        <p className="text-sm text-on-surface-variant">Скилы ещё не добавлены.</p>
+      )}
 
       {/* Updated skills — always visible */}
       <div className="space-y-5">

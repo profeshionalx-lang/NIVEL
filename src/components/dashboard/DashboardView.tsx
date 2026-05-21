@@ -11,6 +11,7 @@ import MasterPlanEditor from "@/components/masterPlan/MasterPlanEditor";
 import PlaytomicConnectBlock from "@/components/playtomic/PlaytomicConnectBlock";
 import SkillProgressSection from "@/components/dashboard/SkillProgressSection";
 import MarkSeenEffect from "@/components/dashboard/MarkSeenEffect";
+import InlineSkillAdder from "@/components/dashboard/edit/InlineSkillAdder";
 
 export interface DashboardViewEditable {
   studentId: string;
@@ -22,6 +23,7 @@ interface Props {
   locale: Locale;
   editable?: DashboardViewEditable | false;
   previewMode?: boolean;
+  allSkills?: { id: number; name: string }[];
 }
 
 function pluralizeInsights(locale: Locale, n: number): string {
@@ -38,7 +40,7 @@ function pluralizeInsights(locale: Locale, n: number): string {
     : t(locale, "dashboard.insightsToReview");
 }
 
-export default function DashboardView({ data, locale, editable, previewMode }: Props) {
+export default function DashboardView({ data, locale, editable, previewMode, allSkills }: Props) {
   const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
   const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId, upcomingMatches } = data;
   const isTrainer = !!editable && !previewMode;
@@ -320,7 +322,7 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
           </section>
 
           {/* Skills */}
-          {skillProgress.length > 0 && (() => {
+          {(skillProgress.length > 0 || (isTrainer && editable)) && (() => {
             const deltas: Record<number, number> = {};
             const newIds: number[] = [];
             for (const sp of skillProgress) {
@@ -338,6 +340,13 @@ export default function DashboardView({ data, locale, editable, previewMode }: P
                 deltas={deltas}
                 newIds={newIds}
                 label={t(locale, "dashboard.skillProgression")}
+                addButton={isTrainer && editable && allSkills ? (
+                  <InlineSkillAdder
+                    studentId={editable.studentId}
+                    allSkills={allSkills}
+                    existingSkills={skillProgress.map((sp) => ({ skill_id: sp.skill_id, points: sp.points }))}
+                  />
+                ) : undefined}
               />
             );
           })()}
