@@ -72,6 +72,8 @@ SUPABASE_SERVICE_ROLE_KEY      — server-only, bypasses RLS
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_SUPABASE_URL
 GROQ_API_KEY                   — STT через Groq Whisper (https://console.groq.com)
+OPENROUTER_API_KEY             — LLM-анализ транскриптов (https://openrouter.ai)
+INSIGHTS_MODEL                 — модель анализа; пусто = дефолт-константа (z-ai/glm-4.5-air:free)
 ```
 
 ---

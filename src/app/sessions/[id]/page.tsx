@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
 import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
+import { InsightsAnalysisStatus } from "@/components/sessions/InsightsAnalysisStatus";
 import { DraftCardsList } from "@/components/insights/DraftCardsList";
 import { ApprovedCardsReorderable } from "@/components/insights/ApprovedCardsReorderable";
 import BackButton from "@/components/navigation/BackButton";
@@ -40,7 +41,7 @@ export default async function SessionDetailPage({
 
   const { data: transcript } = await supabase
     .from("transcripts")
-    .select("status, raw_text")
+    .select("status, raw_text, analysis_status, analysis_error")
     .eq("session_id", id)
     .maybeSingle();
 
@@ -139,6 +140,15 @@ export default async function SessionDetailPage({
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
             {isRu ? "Карточки" : "Insights"}
           </p>
+
+          {isTrainer && transcript && (
+            <InsightsAnalysisStatus
+              sessionId={id}
+              transcriptStatus={transcript.status}
+              initialAnalysisStatus={transcript.analysis_status ?? "idle"}
+              initialAnalysisError={transcript.analysis_error ?? null}
+            />
+          )}
 
           {isTrainer && (
             <PasteInsightsButton sessionId={id} />

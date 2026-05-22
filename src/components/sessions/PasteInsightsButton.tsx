@@ -3,42 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { pasteInsightsFromClaude } from "@/lib/actions/aiInsights";
-
-const FORMAT_EXAMPLE = `## Карточка 1
-- Тема: техника
-- Заголовок: Поздний замах при бандеха
-- Описание: Начинай замах когда мяч ещё летит — на 0.5 сек раньше.
-- Цитата: "ты опять поздно взял"
-
-## Карточка 2
-- Тема: тактика
-- Заголовок: Держи позицию у сетки
-- Описание: После удара смещайся к сетке, не оставайся у задней линии.
-- Цитата: «не стой сзади, иди вперёд»`;
-
-const PROMPT_TEMPLATE = `Ты помогаешь тренеру по паделю. Прочитай транскрипт тренировки во вложении и выдели практические инсайты для ученика.
-
-ВЫВЕДИ РЕЗУЛЬТАТ СТРОГО В ЭТОМ ФОРМАТЕ (никаких таблиц, нумерации, bold-выделений):
-
-## Карточка 1
-- Тема: техника
-- Заголовок: <короткий совет, до 80 знаков>
-- Описание: <конкретное действие, до 400 знаков>
-- Цитата: "<дословная фраза из транскрипта>"
-
-## Карточка 2
-- Тема: тактика
-- Заголовок: ...
-- Описание: ...
-- Цитата: "..."
-
-ПРАВИЛА:
-- Тема обязательно одна из: техника, тактика, физика, менталка (строчные буквы)
-- Минимум 5, максимум 15 карточек
-- В каждой карточке цитата — дословная фраза из транскрипта (без неё инсайт невалиден)
-- Только actionable советы, не пересказ
-- Никакого markdown-форматирования внутри полей (**bold**, *italic* и т.п.)
-- Никаких таблиц, нумерованных списков, заголовков # или ###`;
+import { INSIGHTS_PROMPT, INSIGHTS_FORMAT_EXAMPLE } from "@/lib/ai/insightsPrompt";
 
 export function PasteInsightsButton({ sessionId }: { sessionId: string }) {
   const router = useRouter();
@@ -50,13 +15,13 @@ export function PasteInsightsButton({ sessionId }: { sessionId: string }) {
 
   async function copyPrompt() {
     try {
-      await navigator.clipboard.writeText(PROMPT_TEMPLATE);
+      await navigator.clipboard.writeText(INSIGHTS_PROMPT);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const ta = document.createElement("textarea");
-      ta.value = PROMPT_TEMPLATE;
+      ta.value = INSIGHTS_PROMPT;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand("copy");
@@ -147,7 +112,7 @@ export function PasteInsightsButton({ sessionId }: { sessionId: string }) {
             <details className="text-xs text-on-surface-variant">
               <summary className="cursor-pointer font-bold select-none">Ожидаемый формат</summary>
               <pre className="mt-2 bg-surface-elevated rounded-xl p-3 text-[10px] leading-relaxed overflow-x-auto whitespace-pre-wrap break-words font-mono border border-border-dim">
-                {FORMAT_EXAMPLE}
+                {INSIGHTS_FORMAT_EXAMPLE}
               </pre>
             </details>
 

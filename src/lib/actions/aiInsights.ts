@@ -1,30 +1,30 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
-import { parseInsightsMarkdown } from "@/lib/ai/parseInsights";
+import { parseInsightsMarkdown, type InsightCardDraft } from "@/lib/ai/parseInsights";
 import { requireTrainerOwnsSession } from "@/lib/auth/ownership";
+import { generateInsightsRaw } from "@/lib/ai/openrouter";
 
-export async function pasteInsightsFromClaude(
+/**
+ * Сохраняет распарсенные draft-карточки через RPC replace_ai_draft_cards
+ * и назначает template_id новым карточкам. Общий код для ручной вставки
+ * (pasteInsightsFromClaude) и автоанализа (generateAiInsights).
+ */
+async function saveAiDraftCards(
+  supabase: SupabaseClient,
   sessionId: string,
-  markdown: string
-): Promise<{ success: true; count: number } | { error: string; line?: number }> {
-  const ctx = await requireTrainerOwnsSession(sessionId);
-  if (!ctx) return { error: "Сессия не найдена или нет доступа" };
-
-  const parsed = parseInsightsMarkdown(markdown);
-  if (!parsed.ok) {
-    return { error: parsed.error, line: parsed.line };
-  }
-
-  const { supabase, studentId, trainerId } = ctx;
-
+  studentId: string,
+  trainerId: string,
+  cards: InsightCardDraft[]
+): Promise<{ count: number } | { error: string }> {
   const { data, error } = await supabase.rpc("replace_ai_draft_cards", {
     p_session_id: sessionId,
     p_student_id: studentId,
     p_trainer_id: trainerId,
-    p_cards: parsed.cards.map((c) => ({
+    p_cards: cards.map((c) => ({
       title: c.title,
       body: c.body,
       quote: c.quote,
@@ -38,7 +38,7 @@ export async function pasteInsightsFromClaude(
 
   // Assign template_id to newly created cards.
   // Reuse existing template_id if a card with the same title+body already exists,
-  // otherwise generate a new one. This ensures cards pasted across multiple students
+  // otherwise generate a new one. This ensures cards created across multiple students
   // automatically share the same template_id.
   const { data: newCards } = await supabase
     .from("insight_cards")
@@ -64,8 +64,95 @@ export async function pasteInsightsFromClaude(
     await supabase.from("insight_cards").update({ template_id: tid }).eq("id", card.id);
   }
 
+  return { count: (data as number) ?? cards.length };
+}
+
+export async function pasteInsightsFromClaude(
+  sessionId: string,
+  markdown: string
+): Promise<{ success: true; count: number } | { error: string; line?: number }> {
+  const ctx = await requireTrainerOwnsSession(sessionId);
+  if (!ctx) return { error: "Сессия не найдена или нет доступа" };
+
+  const parsed = parseInsightsMarkdown(markdown);
+  if (!parsed.ok) {
+    return { error: parsed.error, line: parsed.line };
+  }
+
+  const { supabase, studentId, trainerId } = ctx;
+  const result = await saveAiDraftCards(supabase, sessionId, studentId, trainerId, parsed.cards);
+  if ("error" in result) {
+    return { error: result.error };
+  }
+
   revalidatePath(`/sessions/${sessionId}`);
-  return { success: true, count: (data as number) ?? parsed.cards.length };
+  return { success: true, count: result.count };
+}
+
+/**
+ * Автоматический анализ транскрипта через LLM: грузит готовый транскрипт,
+ * прогоняет через OpenRouter, парсит ответ и создаёт draft-карточки.
+ * Вызывается автоматически из UI после транскрипции и вручную кнопкой
+ * «Перегенерировать». Статус анализа пишется в transcripts.analysis_status.
+ */
+export async function generateAiInsights(
+  sessionId: string
+): Promise<{ success: true; count: number } | { error: string }> {
+  const ctx = await requireTrainerOwnsSession(sessionId);
+  if (!ctx) return { error: "Сессия не найдена или нет доступа" };
+
+  const { supabase, studentId, trainerId } = ctx;
+
+  const { data: transcript } = await supabase
+    .from("transcripts")
+    .select("status, raw_text, analysis_status")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+
+  if (!transcript || transcript.status !== "ready" || !transcript.raw_text?.trim()) {
+    return { error: "Транскрипт не готов" };
+  }
+
+  // Идемпотентность: не запускаем второй раз, если анализ уже идёт.
+  if (transcript.analysis_status === "processing") {
+    return { error: "Анализ уже выполняется" };
+  }
+
+  await supabase
+    .from("transcripts")
+    .update({ analysis_status: "processing", analysis_error: null })
+    .eq("session_id", sessionId);
+
+  try {
+    const raw = await generateInsightsRaw(transcript.raw_text);
+
+    const parsed = parseInsightsMarkdown(raw);
+    if (!parsed.ok) {
+      throw new Error(`LLM вернул невалидный формат: ${parsed.error}`);
+    }
+
+    const result = await saveAiDraftCards(supabase, sessionId, studentId, trainerId, parsed.cards);
+    if ("error" in result) {
+      throw new Error(result.error);
+    }
+
+    await supabase
+      .from("transcripts")
+      .update({ analysis_status: "ready", analysis_error: null })
+      .eq("session_id", sessionId);
+
+    revalidatePath(`/sessions/${sessionId}`);
+    revalidatePath(`/sessions/${sessionId}/transcript`);
+    return { success: true, count: result.count };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await supabase
+      .from("transcripts")
+      .update({ analysis_status: "failed", analysis_error: message })
+      .eq("session_id", sessionId);
+    revalidatePath(`/sessions/${sessionId}`);
+    return { error: message };
+  }
 }
 
 async function requireTrainerOwnsCard(cardId: string) {
