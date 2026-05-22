@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition, useCallback } from "react";
+import { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { generateAiInsights } from "@/lib/actions/aiInsights";
 import { getTranscriptStatus } from "@/lib/actions/audio";
@@ -14,9 +14,9 @@ interface Props {
 }
 
 /**
- * Состояние автоматического LLM-анализа транскрипта.
- * Когда транскрипт готов, а анализ ещё не запускался — триггерит его сам.
- * Поллит результат и подтягивает свежие карточки через router.refresh().
+ * Статус LLM-анализа транскрипта.
+ * Анализ запускается внешним pm2-процессом (scripts/analyze-pending.mjs),
+ * компонент только поллит результат и показывает статус / кнопку перегенерации.
  */
 export function InsightsAnalysisStatus({
   sessionId,
@@ -25,20 +25,14 @@ export function InsightsAnalysisStatus({
   initialAnalysisError,
 }: Props) {
   const router = useRouter();
-  // Если анализ ещё не запускался, а транскрипт готов — он будет запущен
-  // автотриггером ниже, поэтому сразу показываем "processing".
-  const willAutoTrigger =
-    transcriptStatus === "ready" && initialAnalysisStatus === "idle";
-  const [status, setStatus] = useState(
-    willAutoTrigger ? "processing" : initialAnalysisStatus
-  );
+  const [status, setStatus] = useState(initialAnalysisStatus);
   const [error, setError] = useState<string | null>(initialAnalysisError);
   const [, startTransition] = useTransition();
-  const triggered = useRef(false);
 
-  // Запускает анализ на сервере и отражает результат в локальном состоянии.
-  const performAnalysis = useCallback(() => {
-    triggered.current = true;
+  // Ручной перезапуск через кнопки «Повторить» / «Перегенерировать».
+  const restartAnalysis = useCallback(() => {
+    setStatus("processing");
+    setError(null);
     startTransition(async () => {
       const result = await generateAiInsights(sessionId);
       if ("error" in result) {
@@ -52,23 +46,9 @@ export function InsightsAnalysisStatus({
     });
   }, [sessionId, router]);
 
-  // Ручной перезапуск (кнопки «Повторить» / «Перегенерировать»).
-  const restartAnalysis = useCallback(() => {
-    setStatus("processing");
-    setError(null);
-    performAnalysis();
-  }, [performAnalysis]);
-
-  // Автотриггер: транскрипт готов, анализ ещё ни разу не запускался.
+  // Поллинг: подхватываем результат от pm2-анализатора.
   useEffect(() => {
-    if (triggered.current) return;
-    if (willAutoTrigger) performAnalysis();
-  }, [willAutoTrigger, performAnalysis]);
-
-  // Поллинг: подхватываем результат, если анализ запущен в другой вкладке
-  // или продолжается на сервере после перезагрузки страницы.
-  useEffect(() => {
-    if (status !== "processing") return;
+    if (status !== "processing" && status !== "idle") return;
     const intervalId = setInterval(async () => {
       const result = await getTranscriptStatus(sessionId);
       if (!result) return;
@@ -85,6 +65,8 @@ export function InsightsAnalysisStatus({
   if (transcriptStatus !== "ready") return null;
 
   if (status === "idle" || status === "processing") {
+    const label = status === "idle" ? "Анализ в очереди…" : "ИИ анализирует транскрипт…";
+    const sub   = status === "idle" ? "Появится в течение 5 минут" : "Карточки появятся автоматически";
     return (
       <div className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim">
         <span
@@ -94,10 +76,8 @@ export function InsightsAnalysisStatus({
           autorenew
         </span>
         <div className="flex-1">
-          <p className="text-sm font-bold text-on-surface">ИИ анализирует транскрипт…</p>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Карточки появятся автоматически
-          </p>
+          <p className="text-sm font-bold text-on-surface">{label}</p>
+          <p className="text-xs text-on-surface-variant mt-0.5">{sub}</p>
         </div>
       </div>
     );
