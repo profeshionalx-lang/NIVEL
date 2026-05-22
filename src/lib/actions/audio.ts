@@ -78,6 +78,10 @@ export async function transcribeSession(
         duration_seconds: verboseJson.duration != null ? Math.round(verboseJson.duration) : null,
         status: "ready",
         error_message: null,
+        // Анализ запускается отдельным шагом (generateAiInsights), который
+        // триггерит UI после того как увидит status='ready'. См. план Фазы 1.
+        analysis_status: "idle",
+        analysis_error: null,
       })
       .eq("session_id", sessionId);
 
@@ -101,19 +105,29 @@ export async function transcribeSession(
   }
 }
 
-export async function getTranscriptStatus(
-  sessionId: string
-): Promise<{ status: string; error_message: string | null } | null> {
+export async function getTranscriptStatus(sessionId: string): Promise<{
+  status: string;
+  error_message: string | null;
+  analysis_status: string;
+  analysis_error: string | null;
+} | null> {
   const ctx = await requireTrainerOwnsSession(sessionId);
   if (!ctx) return null;
 
   const { data } = await ctx.supabase
     .from("transcripts")
-    .select("status, error_message")
+    .select("status, error_message, analysis_status, analysis_error")
     .eq("session_id", sessionId)
     .maybeSingle();
 
-  return data ? { status: data.status, error_message: data.error_message } : null;
+  return data
+    ? {
+        status: data.status,
+        error_message: data.error_message,
+        analysis_status: data.analysis_status ?? "idle",
+        analysis_error: data.analysis_error ?? null,
+      }
+    : null;
 }
 
 export async function resetTranscript(sessionId: string): Promise<void> {
