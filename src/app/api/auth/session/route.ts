@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSession, claimSession } from "@/lib/auth/session";
+import { createSession, claimSession, ClaimError } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +11,10 @@ export async function POST(request: Request) {
       : await createSession(idToken);
     return NextResponse.json({ ok: true, user });
   } catch (err) {
+    if (err instanceof ClaimError) {
+      return NextResponse.json({ error: `claim_${err.code}` }, { status: 422 });
+    }
     console.error("Session creation failed:", err);
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "auth_failed" }, { status: 401 });
   }
 }

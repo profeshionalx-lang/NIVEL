@@ -12,7 +12,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   claim_expired: "Срок действия приглашения истёк.",
   claim_already_claimed: "Это приглашение уже использовано.",
   claim_email_collision: "Email уже привязан к другому профилю.",
-  claim_uid_collision: "Этот Grechka-аккаунт уже привязан к другому профилю.",
+  claim_uid_collision: "Этот аккаунт Google уже привязан к другому профилю. Возможно, вы уже зарегистрированы — попробуйте войти без ссылки-приглашения.",
   claim_firebase_invalid: "Ошибка проверки токена Firebase.",
 };
 
@@ -52,7 +52,12 @@ function LoginContent() {
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error("Session creation failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const code: string = data.error ?? "auth_failed";
+        setError(ERROR_MESSAGES[code] ?? "Ошибка входа");
+        return;
+      }
       window.location.href = "/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка входа");
