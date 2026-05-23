@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
@@ -54,21 +55,7 @@ export default async function InvitePage({ params }: PageProps) {
     );
   }
 
-  return (
-    <main className="mx-auto max-w-md p-8 text-center">
-      <h1 className="text-2xl font-semibold mb-2">
-        Привет{state.fullName ? `, ${state.fullName}` : ""}!
-      </h1>
-      <p className="text-neutral-600 mb-6">
-        Ваш тренер уже создал для вас профиль в Nivel. Войдите через Гречку,
-        чтобы привязать его к вашему аккаунту.
-      </p>
-      <a
-        href={`/api/auth/grechka?claim=${encodeURIComponent(state.token)}`}
-        className="inline-block rounded-md bg-black text-white px-6 py-3 font-medium"
-      >
-        Войти через Гречку
-      </a>
-    </main>
-  );
+  const qs = new URLSearchParams({ claim: state.token });
+  if (state.fullName) qs.set("name", state.fullName);
+  redirect(`/login?${qs.toString()}`);
 }
