@@ -1,3 +1,5 @@
+export const maxDuration = 300;
+
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
