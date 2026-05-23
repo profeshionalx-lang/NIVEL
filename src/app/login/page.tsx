@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
@@ -19,7 +19,17 @@ const ERROR_MESSAGES: Record<string, string> = {
 function LoginContent() {
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
-  const claimToken = searchParams.get("claim");
+
+  // Читаем claim из URL один раз и сразу убираем из адресной строки
+  const claimRef = useRef(searchParams.get("claim"));
+  const claimToken = claimRef.current;
+  useEffect(() => {
+    if (claimToken) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("claim");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [claimToken]);
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
