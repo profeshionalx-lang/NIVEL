@@ -1,5 +1,7 @@
 "use server";
 
+export const maxDuration = 300;
+
 import { postprocessTranscript } from "@/lib/stt/postprocess";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";

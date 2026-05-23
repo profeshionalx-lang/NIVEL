@@ -8,7 +8,7 @@ function requireGroqKey(): string {
 
 const GROQ_API_KEY = requireGroqKey();
 
-const GROQ_TIMEOUT_MS = 120_000;
+const GROQ_TIMEOUT_MS = 280_000;
 
 export async function transcribeAudio(
   audioBuffer: Buffer,
