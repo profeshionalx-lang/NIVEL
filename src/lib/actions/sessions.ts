@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { notifyNewInsights } from "@/lib/telegram/notify";
 
 export async function createSession(
   goalId: string,
@@ -225,12 +226,32 @@ export async function setTrainerReviewCompleted(
     return { success: false, error: "Only trainers can finish review" };
   }
 
+  const { data: prev } = await supabase
+    .from("sessions")
+    .select("trainer_review_completed, goal_id, goals!inner(user_id)")
+    .eq("id", sessionId)
+    .single();
+
   const { error } = await supabase
     .from("sessions")
     .update({ trainer_review_completed: completed })
     .eq("id", sessionId);
 
   if (error) return { success: false, error: error.message };
+
+  if (completed === true && prev?.trainer_review_completed !== true) {
+    const studentId = (prev as { goals?: { user_id?: string } | null } | null)?.goals?.user_id;
+    if (studentId) {
+      const { count } = await supabase
+        .from("insight_cards")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("trainer_status", "approved");
+      if ((count ?? 0) > 0) {
+        await notifyNewInsights(studentId, sessionId, count ?? 0);
+      }
+    }
+  }
 
   await maybeCompleteSession(sessionId);
 
