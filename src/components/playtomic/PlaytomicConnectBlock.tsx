@@ -18,9 +18,9 @@ export default function PlaytomicConnectBlock({ currentUserId }: Props) {
   const [isPending, startTransition] = useTransition();
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
-  // Already connected — hide the block entirely (status moved to /matches & profile settings)
-  if (currentUserId) return null;
+  if (currentUserId || dismissed) return null;
 
   function handleConnect() {
     setError(null);
@@ -35,13 +35,22 @@ export default function PlaytomicConnectBlock({ currentUserId }: Props) {
 
   return (
     <div className="bg-surface-card rounded-2xl p-4 space-y-3">
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-1">
-          Подключи Playtomic
-        </p>
-        <p className="text-xs text-on-surface-variant">
-          Вставь ссылку на свой профиль, чтобы видеть предстоящие матчи.
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-1">
+            Подключи Playtomic
+          </p>
+          <p className="text-xs text-on-surface-variant">
+            Вставь ссылку на свой профиль, чтобы видеть предстоящие матчи.
+          </p>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-on-surface-variant hover:text-on-surface transition-colors shrink-0 -mt-0.5"
+          aria-label="Закрыть"
+        >
+          <span className="material-symbols-outlined text-lg">close</span>
+        </button>
       </div>
 
       <input
