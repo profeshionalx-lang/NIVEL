@@ -3,7 +3,62 @@
 import { useRef, useState } from "react";
 import { requestAudioUploadUrl, transcribeSession } from "@/lib/actions/audio";
 
-type UploadState = "idle" | "uploading" | "processing" | "done" | "error";
+type UploadState = "idle" | "compressing" | "uploading" | "processing" | "done" | "error";
+
+const AUDIO_EXTS = new Set(["m4a", "mp3", "wav", "ogg", "webm", "mp4", "aac", "opus"]);
+
+async function compressAudio(file: File): Promise<File> {
+  const { Mp3Encoder } = await import("@breezystack/lamejs");
+
+  const arrayBuffer = await file.arrayBuffer();
+  const audioCtx = new AudioContext();
+  let decoded: AudioBuffer;
+  try {
+    decoded = await audioCtx.decodeAudioData(arrayBuffer);
+  } finally {
+    await audioCtx.close();
+  }
+
+  const targetRate = 16000;
+  let offlineCtx: OfflineAudioContext;
+  try {
+    offlineCtx = new OfflineAudioContext(
+      1,
+      Math.ceil(decoded.duration * targetRate),
+      targetRate
+    );
+  } catch {
+    // Safari < 14.5 не поддерживает произвольный sampleRate
+    offlineCtx = new OfflineAudioContext(
+      1,
+      Math.ceil(decoded.duration * decoded.sampleRate),
+      decoded.sampleRate
+    );
+  }
+  const src = offlineCtx.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offlineCtx.destination);
+  src.start();
+  const rendered = await offlineCtx.startRendering();
+
+  const pcm = rendered.getChannelData(0);
+  const int16 = new Int16Array(pcm.length);
+  for (let i = 0; i < pcm.length; i++) {
+    int16[i] = Math.max(-32768, Math.min(32767, pcm[i] * 32767));
+  }
+
+  const encoder = new Mp3Encoder(1, rendered.sampleRate, 16);
+  const blockSize = 1152;
+  const chunks: Uint8Array[] = [];
+  for (let i = 0; i < int16.length; i += blockSize) {
+    const buf = encoder.encodeBuffer(int16.subarray(i, i + blockSize));
+    if (buf.length > 0) chunks.push(new Uint8Array(buf));
+  }
+  const tail = encoder.flush();
+  if (tail.length > 0) chunks.push(new Uint8Array(tail));
+
+  return new File(chunks.map((c) => c.buffer as ArrayBuffer), "audio.mp3", { type: "audio/mpeg" });
+}
 
 export function AudioUploader({ sessionId }: { sessionId: string }) {
   const [state, setState] = useState<UploadState>("idle");
@@ -12,23 +67,36 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith("audio/")) {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!file.type.startsWith("audio/") && !AUDIO_EXTS.has(ext)) {
       setErrorMsg("Только аудио-файлы (m4a, mp3, wav…)");
       setState("error");
       return;
     }
-    if (file.size > 100 * 1024 * 1024) {
-      setErrorMsg("Файл слишком большой — максимум 100 MB");
+    if (file.size > 150 * 1024 * 1024) {
+      setErrorMsg("Файл слишком большой — максимум 150 MB (~90 мин). Сожмите аудио перед загрузкой.");
       setState("error");
       return;
+    }
+
+    let uploadFile = file;
+    if (file.size > 20 * 1024 * 1024) {
+      setState("compressing");
+      try {
+        uploadFile = await compressAudio(file);
+      } catch (err: unknown) {
+        setState("error");
+        setErrorMsg(err instanceof Error ? err.message : "Ошибка при сжатии аудио");
+        return;
+      }
     }
 
     setState("uploading");
     setProgress(0);
     setErrorMsg("");
 
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "m4a";
-    const urlResult = await requestAudioUploadUrl(sessionId, ext);
+    const uploadExt = uploadFile.name.split(".").pop()?.toLowerCase() ?? "mp3";
+    const urlResult = await requestAudioUploadUrl(sessionId, uploadExt);
     if ("error" in urlResult) {
       setState("error");
       setErrorMsg(urlResult.error);
@@ -41,7 +109,7 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", uploadUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.setRequestHeader("Content-Type", uploadFile.type);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
         };
@@ -50,7 +118,7 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
           else reject(new Error(`Upload failed (${xhr.status})`));
         };
         xhr.onerror = () => reject(new Error("Сетевая ошибка при загрузке"));
-        xhr.send(file);
+        xhr.send(uploadFile);
       });
     } catch (err: unknown) {
       setState("error");
@@ -88,7 +156,7 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const isActive = state === "uploading" || state === "processing";
+  const isActive = state === "compressing" || state === "uploading" || state === "processing";
 
   return (
     <div className="space-y-3">
@@ -121,9 +189,16 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
             </span>
             <p className="text-sm font-bold text-on-surface">Загрузить аудио</p>
             <p className="text-xs text-on-surface-variant mt-1">
-              Перетащите файл или нажмите · m4a, mp3, wav · до 100 MB
+              Перетащите файл или нажмите · m4a, mp3, wav · до 150 MB · большие файлы сжимаются автоматически
             </p>
           </>
+        )}
+
+        {state === "compressing" && (
+          <div className="space-y-2">
+            <p className="text-sm font-bold text-on-surface">Сжимаем аудио…</p>
+            <p className="text-xs text-on-surface-variant">Займёт несколько секунд, не закрывайте вкладку</p>
+          </div>
         )}
 
         {state === "uploading" && (

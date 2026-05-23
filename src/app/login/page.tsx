@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
@@ -20,6 +20,17 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
 
+  // Читаем claim из URL один раз и сразу убираем из адресной строки
+  const claimRef = useRef(searchParams.get("claim"));
+  const claimToken = claimRef.current;
+  useEffect(() => {
+    if (claimToken) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("claim");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [claimToken]);
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,10 +43,13 @@ function LoginContent() {
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
 
+      const body: Record<string, string> = { idToken };
+      if (claimToken) body.claimToken = claimToken;
+
       const res = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error("Session creation failed");
@@ -48,6 +62,10 @@ function LoginContent() {
   };
 
   const displayError = error ?? (urlError ? (ERROR_MESSAGES[urlError] ?? urlError) : null);
+
+  const grechkaAction = claimToken
+    ? `/api/auth/grechka?claim=${encodeURIComponent(claimToken)}`
+    : "/api/auth/grechka";
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -64,14 +82,12 @@ function LoginContent() {
 
         <div className="space-y-4">
           {/* Grechka Sign In */}
-          <form action="/api/auth/grechka" method="GET">
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-primary text-black font-semibold py-4 px-6 rounded-2xl hover:opacity-90 transition-opacity active:scale-[0.98]"
-            >
-              Войти через Гречку
-            </button>
-          </form>
+          <a
+            href={grechkaAction}
+            className="w-full flex items-center justify-center gap-3 bg-primary text-black font-semibold py-4 px-6 rounded-2xl hover:opacity-90 transition-opacity active:scale-[0.98]"
+          >
+            Войти через Гречку
+          </a>
 
           {/* Google Sign In */}
           <button
