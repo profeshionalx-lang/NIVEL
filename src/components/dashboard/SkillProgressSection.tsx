@@ -19,10 +19,12 @@ interface Props {
 }
 
 export default function SkillProgressSection({ skills, deltas, newIds, label, addButton }: Props) {
-  const [showAll, setShowAll] = useState(false);
-
   const updated = skills.filter((s) => deltas[s.skill_id] || newIds.includes(s.skill_id));
   const rest = skills.filter((s) => !deltas[s.skill_id] && !newIds.includes(s.skill_id));
+
+  // Toggle только когда есть и новые, и старые скиллы
+  const hasToggle = updated.length > 0 && rest.length > 0;
+  const [showAll, setShowAll] = useState(false);
 
   return (
     <section className="bg-surface-high rounded-3xl p-6">
@@ -53,11 +55,11 @@ export default function SkillProgressSection({ skills, deltas, newIds, label, ad
         ))}
       </div>
 
-      {/* Rest — collapsible via grid 0fr → 1fr trick for smooth height */}
+      {/* Rest — collapsible only when there are also updated skills */}
       {rest.length > 0 && (
         <div
           className="grid transition-[grid-template-rows] duration-300 ease-out"
-          style={{ gridTemplateRows: showAll ? "1fr" : "0fr" }}
+          style={{ gridTemplateRows: !hasToggle || showAll ? "1fr" : "0fr" }}
         >
           <div className="overflow-hidden min-h-0">
             {/* Divider between updated and earlier skills */}
@@ -88,7 +90,7 @@ export default function SkillProgressSection({ skills, deltas, newIds, label, ad
         </div>
       )}
 
-      {rest.length > 0 && (
+      {hasToggle && (
         <button
           onClick={() => setShowAll((v) => !v)}
           className="mt-5 w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-on-surface-variant"
