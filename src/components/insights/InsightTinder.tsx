@@ -12,6 +12,7 @@ interface Props {
 const SWIPE_THRESHOLD = 110;
 const TAP_THRESHOLD = 8;
 const COMMIT_MS = 380;
+const INTRO_PLAYED_KEY = "nivel_insight_intro_played";
 
 export default function InsightTinder({ cards }: Props) {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function InsightTinder({ cards }: Props) {
   const [intro, setIntro] = useState(false);
   const [, startTransition] = useTransition();
   const startRef = useRef<{ x: number; y: number } | null>(null);
-  const introPlayedRef = useRef(false);
+  const introPlayedRef = useRef(typeof window !== "undefined" && !!localStorage.getItem(INTRO_PLAYED_KEY));
   const total = cards.length;
 
   const top = queue[0];
@@ -33,6 +34,7 @@ export default function InsightTinder({ cards }: Props) {
     setFlipped(false);
     if (!topId || introPlayedRef.current) return;
     introPlayedRef.current = true;
+    localStorage.setItem(INTRO_PLAYED_KEY, "1");
     setIntro(true);
     const t = setTimeout(() => setIntro(false), 2700);
     return () => clearTimeout(t);
