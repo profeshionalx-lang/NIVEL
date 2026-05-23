@@ -20,7 +20,6 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
   const claimToken = searchParams.get("claim");
-  const inviteName = searchParams.get("name");
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -70,18 +69,6 @@ function LoginContent() {
             Падел-платформа для тренеров и игроков
           </p>
         </div>
-
-        {/* Invite welcome banner */}
-        {claimToken && (
-          <div className="rounded-2xl bg-surface-card p-4 text-sm space-y-1">
-            {inviteName && (
-              <p className="font-bold text-on-surface">Привет, {inviteName}!</p>
-            )}
-            <p className="text-on-surface-variant">
-              Ваш тренер уже создал для вас профиль. Войдите, чтобы привязать его к своему аккаунту.
-            </p>
-          </div>
-        )}
 
         <div className="space-y-4">
           {/* Grechka Sign In */}
