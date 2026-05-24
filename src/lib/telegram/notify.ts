@@ -94,3 +94,30 @@ export async function notifySessionReminder(
     return "failed";
   }
 }
+
+export async function notifyStudentCompletedReview(
+  trainerProfileId: string,
+  sessionId: string,
+  studentName: string,
+  sessionNumber: number
+): Promise<NotifyResult> {
+  try {
+    const chatId = await getActiveChat(trainerProfileId);
+    if (chatId === null) return "no_link";
+    const text = `✅ ${studentName} завершил разбор тренировки #${sessionNumber}.`;
+    const keyboard: InlineKeyboard = {
+      inline_keyboard: [
+        [{ text: "Посмотреть", url: `${APP_URL}/trainer/sessions/${sessionId}/insights` }],
+      ],
+    };
+    const res = await sendMessage(chatId, text, { reply_markup: keyboard });
+    if (res.forbidden) {
+      await deactivateLink(trainerProfileId);
+      return "no_link";
+    }
+    return res.ok ? "sent" : "failed";
+  } catch (e) {
+    console.error("[tg] notifyStudentCompletedReview failed", e);
+    return "failed";
+  }
+}
