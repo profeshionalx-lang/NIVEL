@@ -28,6 +28,10 @@ export async function consumeLinkToken(
     .gt("expires_at", new Date().toISOString())
     .select("profile_id")
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    console.error("[tg] consumeLinkToken db error", error);
+    return null;
+  }
+  if (!data) return null;
   return { profileId: data.profile_id as string };
 }

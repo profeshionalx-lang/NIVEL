@@ -69,6 +69,9 @@ export default function TelegramLinkCardClient({ linked, username }: Props) {
         <p className="text-xs text-on-surface-variant mt-0.5">
           Бот напишет, когда тренер пришлёт новые разборы и за 2 часа до тренировки.
         </p>
+        <p className="text-[10px] text-on-surface-variant/70 mt-1">
+          Ссылка одноразовая и действует 15 минут — не пересылай её другим.
+        </p>
       </div>
       <div className="flex items-center gap-2">
         <button

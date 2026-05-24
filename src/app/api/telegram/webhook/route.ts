@@ -27,9 +27,14 @@ const OK = new Response("ok", { status: 200 });
 
 export async function POST(req: Request): Promise<Response> {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!secret) {
+    // Fail loudly: missing env is a deploy bug, not a Telegram-side issue.
+    console.error("[tg] TELEGRAM_WEBHOOK_SECRET is not set — webhook is misconfigured");
+    return new Response("misconfigured", { status: 500 });
+  }
   const headerSecret = req.headers.get("x-telegram-bot-api-secret-token");
-  if (!secret || headerSecret !== secret) {
-    // Silently 200 so Telegram doesn't retry on misconfigured webhooks.
+  if (headerSecret !== secret) {
+    // Silently 200 so legitimate Telegram retries don't pile up if a real request gets here.
     return OK;
   }
 

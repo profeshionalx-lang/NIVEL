@@ -226,21 +226,38 @@ export async function setTrainerReviewCompleted(
     return { success: false, error: "Only trainers can finish review" };
   }
 
-  const { data: prev } = await supabase
-    .from("sessions")
-    .select("trainer_review_completed, goal_id, goals!inner(user_id)")
-    .eq("id", sessionId)
-    .single();
+  let transitionedToTrue = false;
 
-  const { error } = await supabase
-    .from("sessions")
-    .update({ trainer_review_completed: completed })
-    .eq("id", sessionId);
+  if (completed === true) {
+    // Atomic guard: only the request that flips false → true wins this update.
+    // Concurrent double-clicks see zero affected rows on the loser.
+    const { data: updatedRows, error } = await supabase
+      .from("sessions")
+      .update({ trainer_review_completed: true })
+      .eq("id", sessionId)
+      .eq("trainer_review_completed", false)
+      .select("id");
 
-  if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: error.message };
+    transitionedToTrue = (updatedRows?.length ?? 0) > 0;
+  } else {
+    const { error } = await supabase
+      .from("sessions")
+      .update({ trainer_review_completed: false })
+      .eq("id", sessionId);
+    if (error) return { success: false, error: error.message };
+  }
 
-  if (completed === true && prev?.trainer_review_completed !== true) {
-    const studentId = (prev as { goals?: { user_id?: string } | null } | null)?.goals?.user_id;
+  if (transitionedToTrue) {
+    const { data: ctx } = await supabase
+      .from("sessions")
+      .select("goals!inner(user_id)")
+      .eq("id", sessionId)
+      .single();
+
+    const goalsField = (ctx as { goals?: { user_id?: string } | { user_id?: string }[] | null } | null)?.goals;
+    const studentId = Array.isArray(goalsField) ? goalsField[0]?.user_id : goalsField?.user_id;
+
     if (studentId) {
       const { count } = await supabase
         .from("insight_cards")

@@ -19,14 +19,17 @@ async function deactivateLink(profileId: string): Promise<void> {
     .eq("profile_id", profileId);
 }
 
+export type NotifyResult = "sent" | "no_link" | "failed";
+
 async function getActiveChat(profileId: string): Promise<number | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("telegram_links")
-    .select("telegram_chat_id, is_active")
+    .select("telegram_chat_id")
     .eq("profile_id", profileId)
+    .eq("is_active", true)
     .maybeSingle();
-  if (!data || !data.is_active) return null;
+  if (!data) return null;
   return Number(data.telegram_chat_id);
 }
 
@@ -34,10 +37,10 @@ export async function notifyNewInsights(
   profileId: string,
   sessionId: string,
   count: number
-): Promise<void> {
+): Promise<NotifyResult> {
   try {
     const chatId = await getActiveChat(profileId);
-    if (chatId === null) return;
+    if (chatId === null) return "no_link";
     const word = plural(count, "новый разбор", "новых разбора", "новых разборов");
     const text = `🎾 Тренер прислал ${count} ${word} с тренировки.`;
     const keyboard: InlineKeyboard = {
@@ -46,9 +49,14 @@ export async function notifyNewInsights(
       ],
     };
     const res = await sendMessage(chatId, text, { reply_markup: keyboard });
-    if (res.forbidden) await deactivateLink(profileId);
+    if (res.forbidden) {
+      await deactivateLink(profileId);
+      return "no_link";
+    }
+    return res.ok ? "sent" : "failed";
   } catch (e) {
     console.error("[tg] notifyNewInsights failed", e);
+    return "failed";
   }
 }
 
@@ -57,12 +65,13 @@ export async function notifySessionReminder(
   sessionId: string,
   scheduledAt: string,
   hoursBefore: number
-): Promise<void> {
+): Promise<NotifyResult> {
   try {
     const chatId = await getActiveChat(profileId);
-    if (chatId === null) return;
+    if (chatId === null) return "no_link";
     const word = plural(hoursBefore, "час", "часа", "часов");
     const date = new Date(scheduledAt);
+    // TODO: brать таймзону из профиля юзера, пока хардкод под основную аудиторию.
     const time = date.toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
@@ -75,8 +84,13 @@ export async function notifySessionReminder(
       ],
     };
     const res = await sendMessage(chatId, text, { reply_markup: keyboard });
-    if (res.forbidden) await deactivateLink(profileId);
+    if (res.forbidden) {
+      await deactivateLink(profileId);
+      return "no_link";
+    }
+    return res.ok ? "sent" : "failed";
   } catch (e) {
     console.error("[tg] notifySessionReminder failed", e);
+    return "failed";
   }
 }

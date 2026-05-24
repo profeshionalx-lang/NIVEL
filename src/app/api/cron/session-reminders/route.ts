@@ -37,11 +37,19 @@ export async function GET(req: Request): Promise<Response> {
 
   const rows = (data ?? []) as unknown as Row[];
   let processed = 0;
+  let failed = 0;
 
   for (const s of rows) {
-    const studentId = s.goals?.user_id;
+    const goalsField = s.goals as unknown as { user_id: string } | { user_id: string }[] | null;
+    const studentId = Array.isArray(goalsField) ? goalsField[0]?.user_id : goalsField?.user_id;
     if (!studentId || !s.scheduled_at) continue;
-    await notifySessionReminder(studentId, s.id, s.scheduled_at, HOURS_BEFORE);
+
+    const result = await notifySessionReminder(studentId, s.id, s.scheduled_at, HOURS_BEFORE);
+    if (result === "failed") {
+      // Не помечаем reminder_sent_at — следующий тик попробует ещё раз.
+      failed++;
+      continue;
+    }
     await supabase
       .from("sessions")
       .update({ reminder_sent_at: new Date().toISOString() })
@@ -49,5 +57,5 @@ export async function GET(req: Request): Promise<Response> {
     processed++;
   }
 
-  return Response.json({ processed, scanned: rows.length });
+  return Response.json({ processed, failed, scanned: rows.length });
 }
