@@ -71,11 +71,10 @@ export async function notifySessionReminder(
     if (chatId === null) return "no_link";
     const word = plural(hoursBefore, "час", "часа", "часов");
     const date = new Date(scheduledAt);
-    // TODO: brать таймзону из профиля юзера, пока хардкод под основную аудиторию.
     const time = date.toLocaleTimeString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: "Europe/Moscow",
+      timeZone: "Europe/Madrid",
     });
     const text = `⏰ Через ${hoursBefore} ${word} тренировка (в ${time}).`;
     const keyboard: InlineKeyboard = {
