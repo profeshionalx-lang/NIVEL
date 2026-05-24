@@ -12,6 +12,7 @@ import PlaytomicConnectBlock from "@/components/playtomic/PlaytomicConnectBlock"
 import SkillProgressSection from "@/components/dashboard/SkillProgressSection";
 import MarkSeenEffect from "@/components/dashboard/MarkSeenEffect";
 import InlineSkillAdder from "@/components/dashboard/edit/InlineSkillAdder";
+import TelegramLinkCard from "@/components/telegram/TelegramLinkCard";
 
 export interface DashboardViewEditable {
   studentId: string;
@@ -73,6 +74,9 @@ export default function DashboardView({ data, locale, editable, previewMode, all
       {!isTrainer && !previewMode && (
         <PlaytomicConnectBlock currentUserId={profile.playtomic_user_id ?? null} />
       )}
+
+      {/* Telegram link — student only */}
+      {!isTrainer && !previewMode && <TelegramLinkCard />}
 
       {/* Empty state — student only */}
       {isEmpty && !isTrainer ? (

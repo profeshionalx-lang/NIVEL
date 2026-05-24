@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { notifyNewInsights } from "@/lib/telegram/notify";
 
 export async function createSession(
   goalId: string,
@@ -225,12 +226,49 @@ export async function setTrainerReviewCompleted(
     return { success: false, error: "Only trainers can finish review" };
   }
 
-  const { error } = await supabase
-    .from("sessions")
-    .update({ trainer_review_completed: completed })
-    .eq("id", sessionId);
+  let transitionedToTrue = false;
 
-  if (error) return { success: false, error: error.message };
+  if (completed === true) {
+    // Atomic guard: only the request that flips false → true wins this update.
+    // Concurrent double-clicks see zero affected rows on the loser.
+    const { data: updatedRows, error } = await supabase
+      .from("sessions")
+      .update({ trainer_review_completed: true })
+      .eq("id", sessionId)
+      .eq("trainer_review_completed", false)
+      .select("id");
+
+    if (error) return { success: false, error: error.message };
+    transitionedToTrue = (updatedRows?.length ?? 0) > 0;
+  } else {
+    const { error } = await supabase
+      .from("sessions")
+      .update({ trainer_review_completed: false })
+      .eq("id", sessionId);
+    if (error) return { success: false, error: error.message };
+  }
+
+  if (transitionedToTrue) {
+    const { data: ctx } = await supabase
+      .from("sessions")
+      .select("goals!inner(user_id)")
+      .eq("id", sessionId)
+      .single();
+
+    const goalsField = (ctx as { goals?: { user_id?: string } | { user_id?: string }[] | null } | null)?.goals;
+    const studentId = Array.isArray(goalsField) ? goalsField[0]?.user_id : goalsField?.user_id;
+
+    if (studentId) {
+      const { count } = await supabase
+        .from("insight_cards")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", sessionId)
+        .eq("trainer_status", "approved");
+      if ((count ?? 0) > 0) {
+        await notifyNewInsights(studentId, sessionId, count ?? 0);
+      }
+    }
+  }
 
   await maybeCompleteSession(sessionId);
 

@@ -64,8 +64,19 @@ export interface Session {
   student_insight: string | null;
   status: "planned" | "completed";
   trainer_review_completed: boolean;
+  scheduled_at: string | null;
+  reminder_sent_at: string | null;
   completed_at: string | null;
   created_at: string;
+}
+
+export interface TelegramLink {
+  profile_id: string;
+  telegram_chat_id: number;
+  telegram_user_id: number | null;
+  username: string | null;
+  linked_at: string;
+  is_active: boolean;
 }
 
 export type InsightCardSource = "manual" | "ai" | "ai-paste";
