@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { notifyNewInsights } from "@/lib/telegram/notify";
+import { notifyNewInsights, notifyStudentCompletedReview } from "@/lib/telegram/notify";
 
 export async function createSession(
   goalId: string,
@@ -207,11 +207,52 @@ export async function maybeCompleteSession(
     return { completed: false };
   }
 
-  await supabase
+  // Атомарная транзиция planned → completed. При гонке/повторном вызове
+  // .select() вернёт [] для всех проигравших — пуш тренеру отправится ровно один раз.
+  const { data: updatedRows } = await supabase
     .from("sessions")
     .update({ status: "completed", completed_at: new Date().toISOString() })
-    .eq("id", sessionId);
+    .eq("id", sessionId)
+    .eq("status", "planned")
+    .select("id, session_number, goal_id");
 
+  const transitionedToCompleted = (updatedRows?.length ?? 0) > 0;
+
+  if (transitionedToCompleted) {
+    const updated = updatedRows![0];
+    // Assumption: одна сессия = один тренер. Проверено перед стартом задачи:
+    //   select count(*) from (select session_id, count(distinct trainer_id) c
+    //   from insight_cards group by session_id) t where t.c > 1; -- 0 строк.
+    // Если в будущем co-coaching — пересмотреть источник.
+    const { data: cardRow } = await supabase
+      .from("insight_cards")
+      .select("trainer_id")
+      .eq("session_id", sessionId)
+      .limit(1)
+      .maybeSingle();
+    const { data: studentRow } = await supabase
+      .from("goals")
+      .select("profiles!inner(full_name)")
+      .eq("id", updated.goal_id)
+      .single();
+
+    const trainerId = cardRow?.trainer_id as string | undefined;
+    const profilesField =
+      (studentRow as { profiles?: { full_name?: string | null } | { full_name?: string | null }[] | null } | null)
+        ?.profiles;
+    const rawName = Array.isArray(profilesField)
+      ? profilesField[0]?.full_name
+      : profilesField?.full_name;
+    const name = rawName?.trim() || "Ученик";
+
+    if (trainerId) {
+      await notifyStudentCompletedReview(trainerId, sessionId, name, updated.session_number);
+    }
+  }
+
+  // К этой точке мы дошли через ранние проверки (планируется + ревью завершено + decisions есть).
+  // Если update не сработал — значит параллельный вызов уже перевёл в completed. В любом случае
+  // сессия сейчас в completed → возвращаем true, сохраняя семантику оригинала.
   return { completed: true };
 }
 
