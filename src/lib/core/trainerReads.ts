@@ -164,3 +164,45 @@ export async function getSessionDetailCore(
     })),
   };
 }
+
+export type SessionInsightCard = {
+  id: string;
+  title: string | null;
+  body: string | null;
+  quote: string | null;
+  tags: string[] | null;
+  front_text: string | null;
+  context_text: string | null;
+  source: string | null;
+  trainer_status: string | null;
+  student_decision: string | null;
+  position: number | null;
+  created_at: string;
+};
+
+export async function getSessionInsightCardsCore(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<SessionInsightCard[]> {
+  const { data } = await supabase
+    .from("insight_cards")
+    .select(
+      "id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at"
+    )
+    .eq("session_id", sessionId)
+    .order("position", { ascending: true });
+  return (data ?? []).map((c: Record<string, unknown>) => ({
+    id: c.id as string,
+    title: (c.title as string | null) ?? null,
+    body: (c.body as string | null) ?? null,
+    quote: (c.quote as string | null) ?? null,
+    tags: (c.tags as string[] | null) ?? null,
+    front_text: (c.front_text as string | null) ?? null,
+    context_text: (c.context_text as string | null) ?? null,
+    source: (c.source as string | null) ?? null,
+    trainer_status: (c.trainer_status as string | null) ?? null,
+    student_decision: (c.student_decision as string | null) ?? null,
+    position: (c.position as number | null) ?? null,
+    created_at: c.created_at as string,
+  }));
+}
