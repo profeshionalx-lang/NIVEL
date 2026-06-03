@@ -1,71 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/auth/session";
-import { parseInsightsMarkdown, type InsightCardDraft } from "@/lib/ai/parseInsights";
-import { requireTrainerOwnsSession } from "@/lib/auth/ownership";
-import { generateInsightsRaw } from "@/lib/ai/openrouter";
-
-/**
- * Сохраняет распарсенные draft-карточки через RPC replace_ai_draft_cards
- * и назначает template_id новым карточкам. Общий код для ручной вставки
- * (pasteInsightsFromClaude) и автоанализа (generateAiInsights).
- */
-async function saveAiDraftCards(
-  supabase: SupabaseClient,
-  sessionId: string,
-  studentId: string,
-  trainerId: string,
-  cards: InsightCardDraft[]
-): Promise<{ count: number } | { error: string }> {
-  const { data, error } = await supabase.rpc("replace_ai_draft_cards", {
-    p_session_id: sessionId,
-    p_student_id: studentId,
-    p_trainer_id: trainerId,
-    p_cards: cards.map((c) => ({
-      title: c.title,
-      body: c.body,
-      quote: c.quote,
-      tag: c.tag,
-    })),
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  // Assign template_id to newly created cards.
-  // Reuse existing template_id if a card with the same title+body already exists,
-  // otherwise generate a new one. This ensures cards created across multiple students
-  // automatically share the same template_id.
-  const { data: newCards } = await supabase
-    .from("insight_cards")
-    .select("id, title, body")
-    .eq("session_id", sessionId)
-    .is("template_id", null);
-
-  for (const card of newCards ?? []) {
-    let tid: string;
-    if (card.title && card.body) {
-      const { data: existing } = await supabase
-        .from("insight_cards")
-        .select("template_id")
-        .eq("title", card.title)
-        .eq("body", card.body)
-        .not("template_id", "is", null)
-        .limit(1)
-        .maybeSingle();
-      tid = existing?.template_id ?? crypto.randomUUID();
-    } else {
-      tid = crypto.randomUUID();
-    }
-    await supabase.from("insight_cards").update({ template_id: tid }).eq("id", card.id);
-  }
-
-  return { count: (data as number) ?? cards.length };
-}
+import { requireTrainerOwnsSession, requireTrainerOwnsCard } from "@/lib/auth/ownership";
+import {
+  pasteInsightsFromClaudeCore,
+  generateAiInsightsCore,
+  setAiCardTrainerStatusCore,
+  deleteAiInsightCardCore,
+  updateAiInsightCardCore,
+  validateAiInsightCardPatch,
+} from "@/lib/core/aiInsights";
 
 export async function pasteInsightsFromClaude(
   sessionId: string,
@@ -74,106 +18,41 @@ export async function pasteInsightsFromClaude(
   const ctx = await requireTrainerOwnsSession(sessionId);
   if (!ctx) return { error: "Сессия не найдена или нет доступа" };
 
-  const parsed = parseInsightsMarkdown(markdown);
-  if (!parsed.ok) {
-    return { error: parsed.error, line: parsed.line };
-  }
+  const result = await pasteInsightsFromClaudeCore(
+    ctx.supabase,
+    sessionId,
+    ctx.studentId,
+    ctx.trainerId,
+    markdown
+  );
 
-  const { supabase, studentId, trainerId } = ctx;
-  const result = await saveAiDraftCards(supabase, sessionId, studentId, trainerId, parsed.cards);
-  if ("error" in result) {
-    return { error: result.error };
+  if ("success" in result) {
+    revalidatePath(`/sessions/${sessionId}`);
   }
-
-  revalidatePath(`/sessions/${sessionId}`);
-  return { success: true, count: result.count };
+  return result;
 }
 
-/**
- * Автоматический анализ транскрипта через LLM: грузит готовый транскрипт,
- * прогоняет через OpenRouter, парсит ответ и создаёт draft-карточки.
- * Вызывается автоматически из UI после транскрипции и вручную кнопкой
- * «Перегенерировать». Статус анализа пишется в transcripts.analysis_status.
- */
 export async function generateAiInsights(
   sessionId: string
 ): Promise<{ success: true; count: number } | { error: string }> {
   const ctx = await requireTrainerOwnsSession(sessionId);
   if (!ctx) return { error: "Сессия не найдена или нет доступа" };
 
-  const { supabase, studentId, trainerId } = ctx;
+  const result = await generateAiInsightsCore(
+    ctx.supabase,
+    sessionId,
+    ctx.studentId,
+    ctx.trainerId
+  );
 
-  const { data: transcript } = await supabase
-    .from("transcripts")
-    .select("status, raw_text, analysis_status")
-    .eq("session_id", sessionId)
-    .maybeSingle();
-
-  if (!transcript || transcript.status !== "ready" || !transcript.raw_text?.trim()) {
-    return { error: "Транскрипт не готов" };
-  }
-
-  // Идемпотентность: не запускаем второй раз, если анализ уже идёт.
-  if (transcript.analysis_status === "processing") {
-    return { error: "Анализ уже выполняется" };
-  }
-
-  await supabase
-    .from("transcripts")
-    .update({ analysis_status: "processing", analysis_error: null })
-    .eq("session_id", sessionId);
-
-  try {
-    const raw = await generateInsightsRaw(transcript.raw_text);
-
-    const parsed = parseInsightsMarkdown(raw);
-    if (!parsed.ok) {
-      throw new Error(`LLM вернул невалидный формат: ${parsed.error}`);
-    }
-
-    const result = await saveAiDraftCards(supabase, sessionId, studentId, trainerId, parsed.cards);
-    if ("error" in result) {
-      throw new Error(result.error);
-    }
-
-    await supabase
-      .from("transcripts")
-      .update({ analysis_status: "ready", analysis_error: null })
-      .eq("session_id", sessionId);
-
+  if ("success" in result) {
     revalidatePath(`/sessions/${sessionId}`);
     revalidatePath(`/sessions/${sessionId}/transcript`);
-    return { success: true, count: result.count };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await supabase
-      .from("transcripts")
-      .update({ analysis_status: "failed", analysis_error: message })
-      .eq("session_id", sessionId);
+  } else {
+    // На пути ошибки оригинал тоже ревалидировал карточку сессии (статус анализа).
     revalidatePath(`/sessions/${sessionId}`);
-    return { error: message };
   }
-}
-
-async function requireTrainerOwnsCard(cardId: string) {
-  const user = await getSession();
-  if (!user || user.role !== "trainer") return null;
-
-  const supabase = await createClient();
-
-  const { data: card } = await supabase
-    .from("insight_cards")
-    .select("id, session_id, trainer_id, template_id")
-    .eq("id", cardId)
-    .single();
-
-  if (!card || card.trainer_id !== user.id) return null;
-
-  return {
-    supabase,
-    sessionId: card.session_id as string,
-    templateId: card.template_id as string | null,
-  };
+  return result;
 }
 
 export async function approveInsightCard(
@@ -182,16 +61,9 @@ export async function approveInsightCard(
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
 
-  const { supabase, sessionId, templateId } = ctx;
-  const filter = templateId
-    ? supabase.from("insight_cards").update({ trainer_status: "approved" }).eq("template_id", templateId)
-    : supabase.from("insight_cards").update({ trainer_status: "approved" }).eq("id", cardId);
-  const { error } = await filter;
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/sessions/${sessionId}`);
-  return { success: true };
+  const result = await setAiCardTrainerStatusCore(ctx.supabase, cardId, ctx.templateId, "approved");
+  if ("success" in result) revalidatePath(`/sessions/${ctx.sessionId}`);
+  return result;
 }
 
 export async function rejectInsightCard(
@@ -200,16 +72,9 @@ export async function rejectInsightCard(
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
 
-  const { supabase, sessionId, templateId } = ctx;
-  const filter = templateId
-    ? supabase.from("insight_cards").update({ trainer_status: "rejected" }).eq("template_id", templateId)
-    : supabase.from("insight_cards").update({ trainer_status: "rejected" }).eq("id", cardId);
-  const { error } = await filter;
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/sessions/${sessionId}`);
-  return { success: true };
+  const result = await setAiCardTrainerStatusCore(ctx.supabase, cardId, ctx.templateId, "rejected");
+  if ("success" in result) revalidatePath(`/sessions/${ctx.sessionId}`);
+  return result;
 }
 
 export async function deleteAiInsightCard(
@@ -218,55 +83,23 @@ export async function deleteAiInsightCard(
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
 
-  const { supabase, sessionId } = ctx;
-  const { error } = await supabase
-    .from("insight_cards")
-    .delete()
-    .eq("id", cardId);
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/sessions/${sessionId}`);
-  return { success: true };
+  const result = await deleteAiInsightCardCore(ctx.supabase, cardId);
+  if ("success" in result) revalidatePath(`/sessions/${ctx.sessionId}`);
+  return result;
 }
-
-const VALID_TAGS = new Set(["техника", "тактика", "физика", "менталка"]);
-const VALID_SIDES = new Set(["защита", "атака"]);
 
 export async function updateAiInsightCard(
   cardId: string,
   patch: { title: string; body: string; tag: string; side?: string | null }
 ): Promise<{ success: true } | { error: string }> {
-  if (!patch.title.trim()) return { error: "Заголовок обязателен" };
-  if (patch.title.trim().length > 80) return { error: "Заголовок не более 80 знаков" };
-  if (!patch.body.trim()) return { error: "Описание обязательно" };
-  if (patch.body.trim().length > 400) return { error: "Описание не более 400 знаков" };
-  if (!VALID_TAGS.has(patch.tag)) return { error: `Недопустимая тема: ${patch.tag}` };
-  if (patch.side && !VALID_SIDES.has(patch.side)) {
-    return { error: `Недопустимая сторона: ${patch.side}` };
-  }
+  // Валидация до проверки владения — сохраняем порядок ошибок оригинала.
+  const validationError = validateAiInsightCardPatch(patch);
+  if (validationError) return { error: validationError };
 
   const ctx = await requireTrainerOwnsCard(cardId);
   if (!ctx) return { error: "Forbidden" };
 
-  const tags = patch.side ? [patch.tag, patch.side] : [patch.tag];
-
-  const { supabase, sessionId, templateId } = ctx;
-  const contentPatch = {
-    title: patch.title.trim(),
-    body: patch.body.trim(),
-    tags,
-    front_text: patch.title.trim(),
-    context_text: patch.body.trim(),
-  };
-
-  const filter = templateId
-    ? supabase.from("insight_cards").update(contentPatch).eq("template_id", templateId)
-    : supabase.from("insight_cards").update(contentPatch).eq("id", cardId);
-  const { error } = await filter;
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/sessions/${sessionId}`);
-  return { success: true };
+  const result = await updateAiInsightCardCore(ctx.supabase, cardId, ctx.templateId, patch);
+  if ("success" in result) revalidatePath(`/sessions/${ctx.sessionId}`);
+  return result;
 }
