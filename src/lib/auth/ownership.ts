@@ -51,3 +51,42 @@ export async function requireTrainerOwnsSession(
 
   return { user, supabase, studentId, trainerId: user.id };
 }
+
+export type CardOwnershipContext = {
+  user: SessionUser;
+  supabase: SupabaseClient;
+  sessionId: string;
+  templateId: string | null;
+};
+
+/**
+ * Verifies that the current session belongs to the trainer who owns the given
+ * insight card (card.trainer_id === user.id). Returns a CardOwnershipContext on
+ * success, or null otherwise (not a trainer, card missing, or not the owner).
+ *
+ * Plain module (no "use server") so it can be shared by Server Actions and
+ * Route Handlers alike.
+ */
+export async function requireTrainerOwnsCard(
+  cardId: string
+): Promise<CardOwnershipContext | null> {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") return null;
+
+  const supabase = await createClient();
+
+  const { data: card } = await supabase
+    .from("insight_cards")
+    .select("id, session_id, trainer_id, template_id")
+    .eq("id", cardId)
+    .single();
+
+  if (!card || card.trainer_id !== user.id) return null;
+
+  return {
+    user,
+    supabase,
+    sessionId: card.session_id as string,
+    templateId: card.template_id as string | null,
+  };
+}
