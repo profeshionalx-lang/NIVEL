@@ -91,6 +91,7 @@ export async function requireTrainerOwnsStudent(
     .from("profiles")
     .select("id")
     .eq("id", studentId)
+    .eq("role", "student")
     .eq("created_by", user.id)
     .maybeSingle();
 
