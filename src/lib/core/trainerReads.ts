@@ -206,3 +206,134 @@ export async function getSessionInsightCardsCore(
     created_at: c.created_at as string,
   }));
 }
+
+export type ReferenceData = {
+  problem_categories: Array<{ id: number; name: string; sort_order: number | null }>;
+  problems: Array<{ id: number; category_id: number; name: string; sort_order: number | null }>;
+  skills: Array<{ id: number; name: string }>;
+  exercises: Array<{ id: number; name: string }>;
+};
+
+/**
+ * Reference dictionaries shown when the trainer composes goals / sessions /
+ * insight cards: problem categories + problems, skills, exercises.
+ *
+ * Localized fields use name_ru / name_en (mirrors goals/new and the trainer
+ * student page). `exercises` only has a single `name` column, so it is not
+ * localized.
+ */
+export async function getReferenceCore(
+  supabase: SupabaseClient,
+  lang: "ru" | "en"
+): Promise<ReferenceData> {
+  const nameCol = lang === "en" ? "name_en" : "name_ru";
+
+  const [catsRes, probsRes, skillsRes, exercisesRes] = await Promise.all([
+    supabase
+      .from("problem_categories")
+      .select(`id, sort_order, ${nameCol}`)
+      .order("sort_order"),
+    supabase
+      .from("problems")
+      .select(`id, category_id, sort_order, ${nameCol}`)
+      .order("sort_order"),
+    supabase.from("skills").select(`id, ${nameCol}`).order(nameCol),
+    supabase.from("exercises").select("id, name").order("name"),
+  ]);
+
+  return {
+    problem_categories: (catsRes.data ?? []).map((c: Record<string, unknown>) => ({
+      id: c.id as number,
+      name: (c[nameCol] as string | null) ?? "",
+      sort_order: (c.sort_order as number | null) ?? null,
+    })),
+    problems: (probsRes.data ?? []).map((p: Record<string, unknown>) => ({
+      id: p.id as number,
+      category_id: p.category_id as number,
+      name: (p[nameCol] as string | null) ?? "",
+      sort_order: (p.sort_order as number | null) ?? null,
+    })),
+    skills: (skillsRes.data ?? []).map((s: Record<string, unknown>) => ({
+      id: s.id as number,
+      name: (s[nameCol] as string | null) ?? "",
+    })),
+    exercises: (exercisesRes.data ?? []).map((e: Record<string, unknown>) => ({
+      id: e.id as number,
+      name: (e.name as string | null) ?? "",
+    })),
+  };
+}
+
+export type MasterPlanData = {
+  id: string;
+  student_id: string;
+  trainer_id: string;
+  created_at: string;
+  updated_at: string;
+  sections: Array<{
+    id: string;
+    plan_id: string;
+    title: string;
+    category: string;
+    sort_order: number;
+    items: Array<{
+      id: string;
+      section_id: string;
+      title: string;
+      description: string | null;
+      image_url: string | null;
+      sort_order: number;
+    }>;
+  }>;
+};
+
+/**
+ * The student's master plan with its sections and items (mirrors getMasterPlan
+ * in actions/masterPlan.ts). Returns null when the student has no plan yet.
+ * Sections and items are returned ordered by sort_order for a stable DTO.
+ */
+export async function getMasterPlanCore(
+  supabase: SupabaseClient,
+  studentId: string
+): Promise<MasterPlanData | null> {
+  const { data: plan } = await supabase
+    .from("master_plans")
+    .select("id, student_id, trainer_id, created_at, updated_at")
+    .eq("student_id", studentId)
+    .maybeSingle();
+  if (!plan) return null;
+
+  const planRow = plan as Record<string, unknown>;
+  const { data: sections } = await supabase
+    .from("master_plan_sections")
+    .select(
+      "id, plan_id, title, category, sort_order, master_plan_items(id, section_id, title, description, image_url, sort_order)"
+    )
+    .eq("plan_id", planRow.id as string)
+    .order("sort_order");
+
+  return {
+    id: planRow.id as string,
+    student_id: planRow.student_id as string,
+    trainer_id: planRow.trainer_id as string,
+    created_at: planRow.created_at as string,
+    updated_at: planRow.updated_at as string,
+    sections: (sections ?? []).map((s: Record<string, unknown>) => ({
+      id: s.id as string,
+      plan_id: s.plan_id as string,
+      title: s.title as string,
+      category: s.category as string,
+      sort_order: (s.sort_order as number | null) ?? 0,
+      items: (((s.master_plan_items as Record<string, unknown>[]) ?? [])
+        .map((it) => ({
+          id: it.id as string,
+          section_id: it.section_id as string,
+          title: it.title as string,
+          description: (it.description as string | null) ?? null,
+          image_url: (it.image_url as string | null) ?? null,
+          sort_order: (it.sort_order as number | null) ?? 0,
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)),
+    })),
+  };
+}
