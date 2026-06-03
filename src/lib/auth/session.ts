@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { verifyFirebaseIdToken } from "@/lib/firebase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -21,11 +21,10 @@ function getSecret() {
   return new TextEncoder().encode(s);
 }
 
-export async function createSession(idToken: string): Promise<SessionUser> {
+async function resolveLoginPayload(idToken: string): Promise<SessionUser> {
   const { uid, email } = await verifyFirebaseIdToken(idToken);
   const profile = await getOrCreateSupabaseProfile(uid, email);
-
-  const payload: SessionUser = {
+  return {
     firebase_uid: uid,
     email,
     id: profile.id,
@@ -33,13 +32,17 @@ export async function createSession(idToken: string): Promise<SessionUser> {
     avatar_url: profile.avatar_url,
     role: profile.role,
   };
+}
 
-  const token = await new SignJWT({ ...payload })
+async function signSessionToken(payload: SessionUser): Promise<string> {
+  return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
     .sign(getSecret());
+}
 
+async function setSessionCookie(token: string): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -48,18 +51,62 @@ export async function createSession(idToken: string): Promise<SessionUser> {
     maxAge: MAX_AGE_SECONDS,
     path: "/",
   });
+}
 
+async function verifySessionToken(token: string): Promise<SessionUser | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    return payload as unknown as SessionUser;
+  } catch {
+    return null;
+  }
+}
+
+export async function createSession(idToken: string): Promise<SessionUser> {
+  const payload = await resolveLoginPayload(idToken);
+  await setSessionCookie(await signSessionToken(payload));
   return payload;
 }
 
+export type BearerSession = { token: string; user: SessionUser; expiresIn: number };
+
+/**
+ * Exchange a Firebase ID token for a bearer session JWT, for native/mobile
+ * clients that can't use the httpOnly `__session` cookie. Returns the SAME
+ * HMAC-signed token as the web cookie — verified identically by getSession.
+ * Honors the claim flow when a claimToken is provided.
+ */
+export async function exchangeIdTokenForBearer(
+  idToken: string,
+  claimToken?: string | null
+): Promise<BearerSession> {
+  const payload = claimToken
+    ? await resolveClaimPayload(idToken, claimToken)
+    : await resolveLoginPayload(idToken);
+  const token = await signSessionToken(payload);
+  return { token, user: payload, expiresIn: MAX_AGE_SECONDS };
+}
+
 export async function getSession(): Promise<SessionUser | null> {
+  // Native/mobile clients send the session JWT as a bearer token; the web
+  // sends it as the httpOnly cookie. Accept either — bearer takes precedence.
+  try {
+    const requestHeaders = await headers();
+    const authorization =
+      requestHeaders.get("authorization") ?? requestHeaders.get("Authorization");
+    if (authorization?.startsWith("Bearer ")) {
+      const fromBearer = await verifySessionToken(authorization.slice(7).trim());
+      if (fromBearer) return fromBearer;
+    }
+  } catch {
+    // headers() can be unavailable in some execution contexts — fall back to cookie.
+  }
+
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE)?.value;
     if (!token) return null;
-
-    const { payload } = await jwtVerify(token, getSecret());
-    return payload as unknown as SessionUser;
+    return await verifySessionToken(token);
   } catch {
     return null;
   }
@@ -139,14 +186,14 @@ export class ClaimError extends Error {
   }
 }
 
-export async function claimSession(
+async function resolveClaimPayload(
   idToken: string,
   claimToken: string
 ): Promise<SessionUser> {
   // 1) Verify Firebase ID token.
   let uid: string;
   let email: string;
-  let avatar_url: string | null = null;
+  const avatar_url: string | null = null;
   try {
     const verified = await verifyFirebaseIdToken(idToken);
     uid = verified.uid;
@@ -226,7 +273,7 @@ export async function claimSession(
     throw new ClaimError("invalid_token", `Failed to update profile: ${updErr?.message}`);
   }
 
-  // 5) Mint session cookie (same logic as createSession).
+  // 5) Build the session payload (token minting / cookie handled by callers).
   const payload: SessionUser = {
     firebase_uid: uid,
     email,
@@ -236,20 +283,14 @@ export async function claimSession(
     role: updated.role,
   };
 
-  const token = await new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(getSecret());
+  return payload;
+}
 
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: MAX_AGE_SECONDS,
-    path: "/",
-  });
-
+export async function claimSession(
+  idToken: string,
+  claimToken: string
+): Promise<SessionUser> {
+  const payload = await resolveClaimPayload(idToken, claimToken);
+  await setSessionCookie(await signSessionToken(payload));
   return payload;
 }
