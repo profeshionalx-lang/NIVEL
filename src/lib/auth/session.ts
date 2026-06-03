@@ -55,7 +55,7 @@ async function setSessionCookie(token: string): Promise<void> {
 
 async function verifySessionToken(token: string): Promise<SessionUser | null> {
   try {
-    const { payload } = await jwtVerify(token, getSecret());
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
     return payload as unknown as SessionUser;
   } catch {
     return null;
@@ -92,8 +92,7 @@ export async function getSession(): Promise<SessionUser | null> {
   // sends it as the httpOnly cookie. Accept either — bearer takes precedence.
   try {
     const requestHeaders = await headers();
-    const authorization =
-      requestHeaders.get("authorization") ?? requestHeaders.get("Authorization");
+    const authorization = requestHeaders.get("authorization");
     if (authorization?.startsWith("Bearer ")) {
       const fromBearer = await verifySessionToken(authorization.slice(7).trim());
       if (fromBearer) return fromBearer;
