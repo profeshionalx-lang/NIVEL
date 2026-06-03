@@ -22,8 +22,6 @@ import {
 } from "@/lib/core/insightCards";
 import type { InsightCardWithRelations, InsightStudentDecision } from "@/lib/types";
 
-export type { StudentSessionOption, VaultFilters };
-
 type Result<T = void> =
   | (T extends void ? { success: true } : { success: true } & T)
   | { success: false; error: string };

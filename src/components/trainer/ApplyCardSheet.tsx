@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { applyTemplateToStudent, getStudentSessions } from "@/lib/actions/insightCards";
-import type { StudentSessionOption } from "@/lib/actions/insightCards";
+import type { StudentSessionOption } from "@/lib/core/insightCards";
 
 interface Student {
   id: string;

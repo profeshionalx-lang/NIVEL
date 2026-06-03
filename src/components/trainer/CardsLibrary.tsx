@@ -10,7 +10,7 @@ import {
   applyCollectionToStudent,
   getStudentSessions,
 } from "@/lib/actions/insightCards";
-import type { StudentSessionOption } from "@/lib/actions/insightCards";
+import type { StudentSessionOption } from "@/lib/core/insightCards";
 
 type Tab = "cards" | "collections";
 
