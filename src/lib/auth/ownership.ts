@@ -56,7 +56,7 @@ export type TrainerContext = { user: SessionUser; supabase: SupabaseClient };
 
 /**
  * Verifies the current session is a trainer. Returns { user, supabase } or null.
- * For trainer-scoped read endpoints that aren't tied to a single session.
+ * For trainer-scoped operations that aren't tied to a single session/card.
  * Plain module (no "use server") — shared by Server Actions and Route Handlers.
  */
 export async function requireTrainer(): Promise<TrainerContext | null> {
@@ -64,6 +64,39 @@ export async function requireTrainer(): Promise<TrainerContext | null> {
   if (!user || user.role !== "trainer") return null;
   const supabase = await createClient();
   return { user, supabase };
+}
+
+export type StudentOwnershipContext = {
+  user: SessionUser;
+  supabase: SupabaseClient;
+  studentId: string;
+  trainerId: string;
+};
+
+/**
+ * Verifies that the current session belongs to a trainer who created the given
+ * student profile (profiles.created_by === trainer.id). Returns a
+ * StudentOwnershipContext on success, or null otherwise. Plain module
+ * (no "use server") so it can be shared by Server Actions and Route Handlers.
+ */
+export async function requireTrainerOwnsStudent(
+  studentId: string
+): Promise<StudentOwnershipContext | null> {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") return null;
+
+  const supabase = await createClient();
+
+  const { data: student } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", studentId)
+    .eq("created_by", user.id)
+    .maybeSingle();
+
+  if (!student) return null;
+
+  return { user, supabase, studentId, trainerId: user.id };
 }
 
 export type CardOwnershipContext = {
