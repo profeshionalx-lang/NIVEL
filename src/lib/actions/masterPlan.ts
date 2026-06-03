@@ -3,6 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createMasterPlanCore,
+  addMasterPlanSectionCore,
+  deleteMasterPlanSectionCore,
+  addMasterPlanItemCore,
+  deleteMasterPlanItemCore,
+} from "@/lib/core/masterPlan";
 import type { MasterPlan, MasterPlanCategory } from "@/lib/types";
 
 type Result<T = void> =
@@ -50,15 +57,11 @@ export async function createMasterPlan(
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
 
-  const { data, error } = await auth.supabase
-    .from("master_plans")
-    .insert({ student_id: studentId, trainer_id: auth.userId })
-    .select("id")
-    .single();
+  const result = await createMasterPlanCore(auth.supabase, auth.userId, studentId);
+  if (!result.success) return result;
 
-  if (error || !data) return { success: false, error: error?.message ?? "Failed" };
   revalidatePath(`/trainer/students/${studentId}`);
-  return { success: true, id: data.id };
+  return { success: true, id: result.id };
 }
 
 export async function addSection(
@@ -69,20 +72,11 @@ export async function addSection(
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
 
-  const { data, error } = await auth.supabase
-    .from("master_plan_sections")
-    .insert({
-      plan_id: planId,
-      title: payload.title.trim(),
-      category: payload.category,
-      sort_order: payload.sortOrder ?? 0,
-    })
-    .select("id")
-    .single();
+  const result = await addMasterPlanSectionCore(auth.supabase, planId, payload);
+  if (!result.success) return result;
 
-  if (error || !data) return { success: false, error: error?.message ?? "Failed" };
   revalidatePath(`/trainer/students/${studentId}`);
-  return { success: true, id: data.id };
+  return { success: true, id: result.id };
 }
 
 export async function deleteSection(
@@ -92,12 +86,9 @@ export async function deleteSection(
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
 
-  const { error } = await auth.supabase
-    .from("master_plan_sections")
-    .delete()
-    .eq("id", sectionId);
+  const result = await deleteMasterPlanSectionCore(auth.supabase, sectionId);
+  if (!result.success) return result;
 
-  if (error) return { success: false, error: error.message };
   revalidatePath(`/trainer/students/${studentId}`);
   return { success: true };
 }
@@ -110,22 +101,12 @@ export async function addItem(
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
 
-  const { data, error } = await auth.supabase
-    .from("master_plan_items")
-    .insert({
-      section_id: sectionId,
-      title: payload.title.trim(),
-      description: payload.description?.trim() || null,
-      image_url: payload.imageUrl?.trim() || null,
-      sort_order: payload.sortOrder ?? 0,
-    })
-    .select("id")
-    .single();
+  const result = await addMasterPlanItemCore(auth.supabase, sectionId, payload);
+  if (!result.success) return result;
 
-  if (error || !data) return { success: false, error: error?.message ?? "Failed" };
   revalidatePath(`/trainer/students/${studentId}`);
   revalidatePath(`/masterplan`);
-  return { success: true, id: data.id };
+  return { success: true, id: result.id };
 }
 
 export async function deleteItem(
@@ -135,12 +116,9 @@ export async function deleteItem(
   const auth = await requireTrainer();
   if (!auth.ok) return { success: false, error: auth.error };
 
-  const { error } = await auth.supabase
-    .from("master_plan_items")
-    .delete()
-    .eq("id", itemId);
+  const result = await deleteMasterPlanItemCore(auth.supabase, itemId);
+  if (!result.success) return result;
 
-  if (error) return { success: false, error: error.message };
   revalidatePath(`/trainer/students/${studentId}`);
   revalidatePath(`/masterplan`);
   return { success: true };

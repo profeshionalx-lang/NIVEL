@@ -373,6 +373,24 @@ export async function applyTemplateToStudentCore(
   return { success: true, id: newCard.id };
 }
 
+/**
+ * Verifies a collection belongs to the given trainer. Used by `/api/v1` to gate
+ * mutations on collections by id (the web actions implicitly trust the UI).
+ */
+export async function collectionBelongsToTrainer(
+  supabase: SupabaseClient,
+  collectionId: string,
+  trainerId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("insight_collections")
+    .select("id")
+    .eq("id", collectionId)
+    .eq("trainer_id", trainerId)
+    .maybeSingle();
+  return !!data;
+}
+
 export async function createCollectionCore(
   supabase: SupabaseClient,
   trainerId: string,
