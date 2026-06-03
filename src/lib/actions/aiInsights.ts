@@ -48,11 +48,16 @@ export async function generateAiInsights(
   if ("success" in result) {
     revalidatePath(`/sessions/${sessionId}`);
     revalidatePath(`/sessions/${sessionId}/transcript`);
-  } else {
-    // На пути ошибки оригинал тоже ревалидировал карточку сессии (статус анализа).
+    return result;
+  }
+
+  // Ревалидируем карточку сессии только если анализ реально менял состояние
+  // транскрипта (analysis_status='failed') — как в оригинале. Прекондишн-ошибки
+  // (нет транскрипта / анализ уже идёт) ничего не меняли → ревалидации нет.
+  if (result.mutated) {
     revalidatePath(`/sessions/${sessionId}`);
   }
-  return result;
+  return { error: result.error };
 }
 
 export async function approveInsightCard(

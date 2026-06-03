@@ -93,12 +93,18 @@ export async function pasteInsightsFromClaudeCore(
  * прогоняет через OpenRouter, парсит ответ и создаёт draft-карточки. Статус
  * анализа пишется в transcripts.analysis_status.
  */
+/**
+ * Возврат: на ошибке отдаём `mutated` — менялось ли состояние транскрипта
+ * (analysis_status). Прекондишн-ошибки (нет готового транскрипта / анализ уже
+ * идёт) не мутируют и не требуют ревалидации; ошибка в процессе анализа
+ * выставляет analysis_status='failed' и требует ревалидации карточки сессии.
+ */
 export async function generateAiInsightsCore(
   supabase: SupabaseClient,
   sessionId: string,
   studentId: string,
   trainerId: string
-): Promise<{ success: true; count: number } | { error: string }> {
+): Promise<{ success: true; count: number } | { error: string; mutated: boolean }> {
   const { data: transcript } = await supabase
     .from("transcripts")
     .select("status, raw_text, analysis_status")
@@ -106,12 +112,12 @@ export async function generateAiInsightsCore(
     .maybeSingle();
 
   if (!transcript || transcript.status !== "ready" || !transcript.raw_text?.trim()) {
-    return { error: "Транскрипт не готов" };
+    return { error: "Транскрипт не готов", mutated: false };
   }
 
   // Идемпотентность: не запускаем второй раз, если анализ уже идёт.
   if (transcript.analysis_status === "processing") {
-    return { error: "Анализ уже выполняется" };
+    return { error: "Анализ уже выполняется", mutated: false };
   }
 
   await supabase
@@ -144,7 +150,7 @@ export async function generateAiInsightsCore(
       .from("transcripts")
       .update({ analysis_status: "failed", analysis_error: message })
       .eq("session_id", sessionId);
-    return { error: message };
+    return { error: message, mutated: true };
   }
 }
 
