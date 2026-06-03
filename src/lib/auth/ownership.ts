@@ -99,6 +99,37 @@ export async function requireTrainerOwnsStudent(
   return { user, supabase, studentId, trainerId: user.id };
 }
 
+/**
+ * Verifies that the current session belongs to a trainer who owns the student
+ * behind the given goal (goals.user_id → profiles.created_by === trainer.id).
+ * Returns a StudentOwnershipContext (studentId = the goal's owner) or null.
+ */
+export async function requireTrainerOwnsGoal(
+  goalId: string
+): Promise<StudentOwnershipContext | null> {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") return null;
+
+  const supabase = await createClient();
+
+  const { data: goal } = await supabase
+    .from("goals")
+    .select("user_id")
+    .eq("id", goalId)
+    .maybeSingle();
+  if (!goal) return null;
+
+  const { data: student } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", goal.user_id)
+    .eq("created_by", user.id)
+    .maybeSingle();
+  if (!student) return null;
+
+  return { user, supabase, studentId: goal.user_id as string, trainerId: user.id };
+}
+
 export type CardOwnershipContext = {
   user: SessionUser;
   supabase: SupabaseClient;

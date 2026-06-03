@@ -5,6 +5,7 @@ import {
   requireTrainerOwnsSession,
   requireTrainerOwnsCard,
   requireTrainerOwnsStudent,
+  requireTrainerOwnsGoal,
   type TrainerContext,
   type OwnershipContext,
   type CardOwnershipContext,
@@ -50,6 +51,16 @@ export async function guardStudent(
 ): Promise<GuardResult<StudentOwnershipContext>> {
   if (!(await getSession())) return { ok: false, res: unauthenticated() };
   const ctx = await requireTrainerOwnsStudent(studentId);
+  if (!ctx) return { ok: false, res: forbidden() };
+  return { ok: true, ctx };
+}
+
+/** 401 if no session, 403 if not the trainer who owns the goal's student. */
+export async function guardGoal(
+  goalId: string
+): Promise<GuardResult<StudentOwnershipContext>> {
+  if (!(await getSession())) return { ok: false, res: unauthenticated() };
+  const ctx = await requireTrainerOwnsGoal(goalId);
   if (!ctx) return { ok: false, res: forbidden() };
   return { ok: true, ctx };
 }
