@@ -52,6 +52,20 @@ export async function requireTrainerOwnsSession(
   return { user, supabase, studentId, trainerId: user.id };
 }
 
+export type TrainerContext = { user: SessionUser; supabase: SupabaseClient };
+
+/**
+ * Verifies the current session is a trainer. Returns { user, supabase } or null.
+ * For trainer-scoped read endpoints that aren't tied to a single session.
+ * Plain module (no "use server") — shared by Server Actions and Route Handlers.
+ */
+export async function requireTrainer(): Promise<TrainerContext | null> {
+  const user = await getSession();
+  if (!user || user.role !== "trainer") return null;
+  const supabase = await createClient();
+  return { user, supabase };
+}
+
 export type CardOwnershipContext = {
   user: SessionUser;
   supabase: SupabaseClient;
