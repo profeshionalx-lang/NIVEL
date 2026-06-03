@@ -55,6 +55,7 @@ src/
 - **profiles.id**: обычный `gen_random_uuid()`, НЕ FK на auth.users (мы не используем Supabase Auth)
 - **session.ts без "use server"**: файл — обычный модуль, вызывается из Route Handlers и Server Actions
 - **proxy.ts, не middleware.ts**: Next.js 16 использует `proxy.ts` как точку входа для middleware-логики
+- **`/api/v1/*` авторизуются сами**: эти эндпоинты (для нативного клиента) исключены из cookie-гейта `proxy.ts` и работают по `Authorization: Bearer`. Каждый route handler под `/api/v1/` ОБЯЗАН сам вызвать `getSession()` и проверить доступ — прокси их не защищает.
 
 ## ENV переменные
 

@@ -6,6 +6,10 @@ export async function proxy(request: NextRequest) {
   const isPublic =
     pathname === "/login" ||
     pathname.startsWith("/api/auth/") ||
+    // Native/mobile REST API: these endpoints authenticate themselves via the
+    // `Authorization: Bearer` header, so they must bypass the cookie-based page
+    // gate (otherwise bearer requests without a cookie get 302'd to /login).
+    pathname.startsWith("/api/v1/") ||
     pathname.startsWith("/api/telegram/") ||
     pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/invite/");
