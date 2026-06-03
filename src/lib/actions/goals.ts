@@ -3,46 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createGoalCore,
+  createGoalForStudentCore,
+  cancelGoalCore,
+} from "@/lib/core/goals";
 
 export async function createGoal(
   problemId: number | null,
   customProblem: string | null
 ): Promise<{ success: true; goalId: string } | { success: false; error: string }> {
-  try {
-    const user = await getSession();
-    if (!user) return { success: false, error: "Not authenticated" };
+  const user = await getSession();
+  if (!user) return { success: false, error: "Not authenticated" };
 
-    const supabase = await createClient();
+  const supabase = await createClient();
+  const result = await createGoalCore(supabase, user.id, problemId, customProblem);
 
-    const { data: goal, error: goalError } = await supabase
-      .from("goals")
-      .insert({ user_id: user.id, custom_problem: customProblem })
-      .select("id")
-      .single();
-
-    if (goalError || !goal) {
-      return { success: false, error: goalError?.message ?? "Failed to create goal" };
-    }
-
-    if (problemId) {
-      const { error: problemsError } = await supabase
-        .from("goal_problems")
-        .insert({ goal_id: goal.id, problem_id: problemId });
-
-      if (problemsError) {
-        return { success: false, error: problemsError.message };
-      }
-    }
-
+  if (result.success) {
     revalidatePath("/dashboard");
-
-    return { success: true, goalId: goal.id };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
-    };
   }
+  return result;
 }
 
 export async function createGoalForStudent(
@@ -50,77 +30,31 @@ export async function createGoalForStudent(
   problemId: number | null,
   customProblem: string | null
 ): Promise<{ success: true; goalId: string } | { success: false; error: string }> {
-  try {
-    const user = await getSession();
-    if (!user) return { success: false, error: "Not authenticated" };
-    if (user.role !== "trainer") return { success: false, error: "Forbidden" };
+  const user = await getSession();
+  if (!user) return { success: false, error: "Not authenticated" };
+  if (user.role !== "trainer") return { success: false, error: "Forbidden" };
 
-    const supabase = await createClient();
+  const supabase = await createClient();
+  const result = await createGoalForStudentCore(supabase, studentId, problemId, customProblem);
 
-    const { data: student } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", studentId)
-      .single();
-    if (!student) return { success: false, error: "Student not found" };
-
-    const { data: goal, error: goalError } = await supabase
-      .from("goals")
-      .insert({ user_id: studentId, custom_problem: customProblem })
-      .select("id")
-      .single();
-
-    if (goalError || !goal) {
-      return { success: false, error: goalError?.message ?? "Failed to create goal" };
-    }
-
-    if (problemId) {
-      const { error: problemsError } = await supabase
-        .from("goal_problems")
-        .insert({ goal_id: goal.id, problem_id: problemId });
-
-      if (problemsError) {
-        return { success: false, error: problemsError.message };
-      }
-    }
-
+  if (result.success) {
     revalidatePath(`/trainer/students/${studentId}`);
     revalidatePath(`/dashboard`);
-
-    return { success: true, goalId: goal.id };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
-    };
   }
+  return result;
 }
 
 export async function cancelGoal(
   goalId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
-  try {
-    const user = await getSession();
-    if (!user) return { success: false, error: "Not authenticated" };
+  const user = await getSession();
+  if (!user) return { success: false, error: "Not authenticated" };
 
-    const supabase = await createClient();
+  const supabase = await createClient();
+  const result = await cancelGoalCore(supabase, goalId);
 
-    const { error: updateError } = await supabase
-      .from("goals")
-      .update({ status: "cancelled" })
-      .eq("id", goalId);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-
+  if (result.success) {
     revalidatePath("/dashboard");
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "An unexpected error occurred",
-    };
   }
+  return result;
 }
