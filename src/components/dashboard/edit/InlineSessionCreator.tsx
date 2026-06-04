@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSessionForStudent } from "@/lib/actions/sessions";
 import type { DashboardGoal } from "@/lib/dashboard/data";
+import { madridLocalToUtcISO } from "@/lib/time/madrid";
 
 interface Props {
   studentId: string;
@@ -26,8 +27,9 @@ export default function InlineSessionCreator({ studentId, goals }: Props) {
       return;
     }
     startTransition(async () => {
-      // datetime-local has no timezone — append Z to treat the entered time as UTC literally
-      const iso = date ? `${date}:00.000Z` : null;
+      // datetime-local не несёт таймзоны — трактуем ввод как местное время Europe/Madrid
+      // и сохраняем настоящий UTC-инстант (согласовано с показом на /dashboard и Telegram-напоминанием).
+      const iso = date ? madridLocalToUtcISO(date) : null;
       const res = await createSessionForStudent(studentId, goalId, {
         scheduledAt: iso,
         completedAt: completed ? iso ?? new Date().toISOString() : null,
