@@ -34,6 +34,78 @@
 - **A5 (#192):** привести review-роуты к префиксу `…/insight-cards/*` (а не `cards/*`).
 - **B3-клиент (#36):** заменить ожидаемый путь `/sessions/{id}/cards` → `/sessions/{id}/insight-cards`.
 
-## Осталось в A6 (после мёрджа A3+A5)
-- Дописать раздел write-эндпоинтов (A5, 21 роут) с телами/ответами.
-- Контракт-тесты, падающие при несовместимом изменении формы ответов.
+## Write (A5)
+
+Все успешные write-ответы — JSON-конверт `{ ok: true, ... }`; ошибки — по общему контракту выше
+(401/403/400/404/422/500/502). `201` — для создания ресурса. Тела сверены по route-файлам
+`src/app/api/v1/**` и их `*Core`-функциям.
+
+### Ученики и приглашения
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /students` | `{ full_name }` | 201 `{ ok, studentId, claimUrl, claimToken, expiresAt }` |
+| `POST /students/{id}/invite/regenerate` | — | `{ ok, studentId, claimUrl, claimToken, expiresAt }` |
+| `POST /students/{id}/invite/revoke` | — | `{ ok }` |
+
+### Цели
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /students/{id}/goals` | `{ customProblem? , problemId? }` | 201 `{ ok, goalId }` |
+| `POST /goals/{id}/cancel` | — | `{ ok }` |
+
+### Сессии
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /sessions` | `{ goalId, studentId, exercises: [{ name, skillNames: string[] }] }` | 201 `{ ok, sessionId }` |
+| `POST /sessions/for-student` | `{ studentId, goalId, scheduledAt?, completedAt?, trainerNotes?, status?: "planned"\|"completed" }` | 201 `{ ok, sessionId }` |
+
+`POST /sessions` резолвит/создаёт упражнения и навыки по имени (ilike) и инкрементит
+`increment_skill_progress` (RPC) по уникальным навыкам — на клиенте прогресс трогать не нужно.
+
+### Инсайт-карточки и ревью
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /sessions/{id}/insights/generate` | — | `{ ok, count }` (502 если анализ мутировал и упал, иначе 400) |
+| `POST /sessions/{id}/insights/paste` | `{ markdown }` | `{ ok, count }` (400 `{ error, line }` при ошибке парсинга) |
+| `PATCH /cards/{id}` | `{ title, body, tag, side? }` | `{ ok }` |
+| `DELETE /cards/{id}` | — | `{ ok }` |
+| `POST /cards/{id}/approve` | — | `{ ok }` |
+| `POST /cards/{id}/reject` | — | `{ ok }` |
+| `POST /sessions/{id}/cards/reorder` | `{ orderedIds: string[] }` | `{ ok }` |
+| `POST /sessions/{id}/review-complete` | — | `{ ok }` |
+
+> См. «Канон нейминга карточек» выше: review-роуты карточек пока под `/cards/*`; чтение — под
+> канонический `…/insight-cards`.
+
+### Навыки ученика
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /students/{id}/skills` | `{ points, skillId? \| nameRu?, nameEn? }` | `{ ok }` |
+
+### Библиотека шаблонов и коллекции
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /collections` | `{ name }` | 201 `{ ok, id }` |
+| `POST /collections/{id}/cards` | `{ templateId }` | 201 `{ ok }` |
+| `DELETE /collections/{id}/cards/{templateId}` | — | `{ ok }` |
+| `POST /collections/{id}/apply` | `{ sessionId }` | `{ ok, applied }` |
+| `POST /sessions/{id}/templates/apply` | `{ templateId }` | 201 `{ ok, id }` |
+
+### Мастер-план
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /students/{id}/master-plan/sections` | `{ planId, title, category: strength\|technique\|tactics\|custom, sortOrder? }` | 201 `{ ok, id }` |
+| `DELETE /students/{id}/master-plan/sections/{sectionId}` | — | `{ ok }` |
+| `POST /students/{id}/master-plan/sections/{sectionId}/items` | `{ title, description?, imageUrl? }` | 201 `{ ok, id }` |
+| `DELETE /students/{id}/master-plan/items/{itemId}` | — | `{ ok }` |
+
+## Поддержание контракта (контракт-тесты)
+
+`src/lib/core/__tests__/apiContract.test.ts` (`npm test`) фиксирует **форму ответов** read- и
+audio-ядер (`trainerReads.ts`, `audio.ts`) — тех, чьи шейпы мапятся в DTO нативного клиента
+(`nivel-android/.../data/remote/Dto.kt`). Тесты прогоняют ядра на mock-supabase и сверяют **точный
+набор ключей** каждого объекта. Если поле переименовали/убрали/добавили — тест **падает**, пока не
+обновишь и ядро, и ожидание в тесте, и этот документ (и DTO в `nivel-android`).
+
+Write-ответы (A5) — простые конверты `{ ok, ... }`, документированы выше; их инвариант (`ok:true` +
+перечисленные поля) дешевле держать ревью + типами роутов, чем мок-тестом каждого из ~21 роута.
