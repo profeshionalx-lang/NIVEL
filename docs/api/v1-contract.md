@@ -44,6 +44,7 @@
 | Метод / путь | Вход | Успех |
 |---|---|---|
 | `POST /students` | `{ full_name }` | 201 `{ ok, studentId, claimUrl, claimToken, expiresAt }` |
+| `PATCH /students/{id}` | `{ full_name?, avatar_url? }` | `{ ok }` (400 `Nothing to update`, если оба отсутствуют) |
 | `POST /students/{id}/invite/regenerate` | — | `{ ok, studentId, claimUrl, claimToken, expiresAt }` |
 | `POST /students/{id}/invite/revoke` | — | `{ ok }` |
 
@@ -72,7 +73,7 @@
 | `POST /cards/{id}/approve` | — | `{ ok }` |
 | `POST /cards/{id}/reject` | — | `{ ok }` |
 | `POST /sessions/{id}/cards/reorder` | `{ orderedIds: string[] }` | `{ ok }` |
-| `POST /sessions/{id}/review-complete` | — | `{ ok }` |
+| `POST /sessions/{id}/review-complete` | `{ completed?: boolean }` (деф. true) | `{ ok }` |
 
 > См. «Канон нейминга карточек» выше: review-роуты карточек пока под `/cards/*`; чтение — под
 > канонический `…/insight-cards`.
@@ -94,10 +95,13 @@
 ### Мастер-план
 | Метод / путь | Вход | Успех |
 |---|---|---|
+| `POST /students/{id}/master-plan` | — | 201 `{ ok, id }` (создаёт пустой план; его `id` — это `planId` для секций ниже) |
 | `POST /students/{id}/master-plan/sections` | `{ planId, title, category: strength\|technique\|tactics\|custom, sortOrder? }` | 201 `{ ok, id }` |
 | `DELETE /students/{id}/master-plan/sections/{sectionId}` | — | `{ ok }` |
-| `POST /students/{id}/master-plan/sections/{sectionId}/items` | `{ title, description?, imageUrl? }` | 201 `{ ok, id }` |
+| `POST /students/{id}/master-plan/sections/{sectionId}/items` | `{ title, description?, imageUrl?, sortOrder? }` | 201 `{ ok, id }` |
 | `DELETE /students/{id}/master-plan/items/{itemId}` | — | `{ ok }` |
+
+> Чтение плана — `GET /students/{id}/master-plan` (A3); до создания плана возвращает `{ plan: null }`.
 
 ## Поддержание контракта (контракт-тесты)
 
