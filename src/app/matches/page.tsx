@@ -58,6 +58,7 @@ export default async function MatchesPage({ searchParams }: PageProps) {
         resource_name,
         status,
         teams,
+        results,
         match_goals(count)
       `
       )
@@ -72,6 +73,7 @@ export default async function MatchesPage({ searchParams }: PageProps) {
       resource_name: string | null;
       status: string | null;
       teams: unknown;
+      results: unknown;
       match_goals: Array<{ count: number }>;
     }>;
 
@@ -83,6 +85,7 @@ export default async function MatchesPage({ searchParams }: PageProps) {
       resource_name: r.resource_name,
       status: r.status,
       teams: r.teams,
+      results: r.results,
       goalsCount: r.match_goals?.[0]?.count ?? 0,
     }));
 

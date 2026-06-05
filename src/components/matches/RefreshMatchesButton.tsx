@@ -22,14 +22,15 @@ export default function RefreshMatchesButton({ locale }: Props) {
     <button
       onClick={handleRefresh}
       disabled={isPending}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-elevated text-xs font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface disabled:opacity-40 transition-colors"
+      aria-label={isPending ? t(locale, "matches.refreshing") : t(locale, "matches.refresh")}
+      title={isPending ? t(locale, "matches.refreshing") : t(locale, "matches.refresh")}
+      className="flex items-center justify-center h-11 w-11 rounded-xl bg-surface-elevated text-on-surface-variant hover:text-on-surface disabled:opacity-40 transition-colors"
     >
       <span
-        className={`material-symbols-outlined text-[18px] ${isPending ? "animate-spin" : ""}`}
+        className={`material-symbols-outlined text-[20px] ${isPending ? "animate-spin" : ""}`}
       >
         refresh
       </span>
-      {isPending ? t(locale, "matches.refreshing") : t(locale, "matches.refresh")}
     </button>
   );
 }

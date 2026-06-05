@@ -1,5 +1,4 @@
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getLocale } from "@/lib/i18n";
@@ -7,6 +6,7 @@ import { t } from "@/lib/i18n/dict";
 import AttachInsightModal from "@/components/matches/AttachInsightModal";
 import ReflectionTextarea from "@/components/matches/ReflectionTextarea";
 import { getVaultCards } from "@/lib/actions/insightCards";
+import { formatScore } from "@/lib/playtomic/score";
 import BackButton from "@/components/navigation/BackButton";
 
 const UPCOMING_STATUSES = ["PENDING", "CONFIRMED"];
@@ -41,49 +41,6 @@ function formatDate(iso: string): string {
 function extractTeams(raw: unknown): Team[] {
   if (!Array.isArray(raw)) return [];
   return raw as Team[];
-}
-
-/**
- * Parses the Playtomic `results` jsonb into a human-readable score string.
- * Playtomic results can be an array of game objects like:
- *   [{ sets: [{local_score: 6, visitor_score: 3}, ...] }]
- * or a flat array of score objects.
- * Returns a formatted string like "6-3, 4-6, 6-4", or null if not parseable.
- */
-function formatScore(results: unknown): string | null {
-  if (results == null || typeof results !== "object") return null;
-  if (!Array.isArray(results)) return null;
-
-  const sets: string[] = [];
-
-  for (const item of results) {
-    if (!item || typeof item !== "object") continue;
-    const obj = item as Record<string, unknown>;
-
-    // Shape: { sets: [{local_score, visitor_score}] }
-    if (Array.isArray(obj["sets"])) {
-      for (const s of obj["sets"] as unknown[]) {
-        if (!s || typeof s !== "object") continue;
-        const setObj = s as Record<string, unknown>;
-        const local =
-          setObj["local_score"] ?? setObj["team1"] ?? setObj["home"];
-        const visitor =
-          setObj["visitor_score"] ?? setObj["team2"] ?? setObj["away"];
-        if (local != null && visitor != null) {
-          sets.push(`${local}-${visitor}`);
-        }
-      }
-    } else {
-      // Flat shape: [{local_score, visitor_score}]
-      const local = obj["local_score"] ?? obj["team1"] ?? obj["home"];
-      const visitor = obj["visitor_score"] ?? obj["team2"] ?? obj["away"];
-      if (local != null && visitor != null) {
-        sets.push(`${local}-${visitor}`);
-      }
-    }
-  }
-
-  return sets.length > 0 ? sets.join(", ") : null;
 }
 
 export default async function MatchDetailPage({ params }: PageProps) {

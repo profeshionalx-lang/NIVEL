@@ -43,10 +43,11 @@ export default function AddMatchByUrlModal({ locale }: Props) {
     <>
       <button
         onClick={handleOpen}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary/10 text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors"
+        aria-label={t(locale, "matches.addByUrl")}
+        title={t(locale, "matches.addByUrl")}
+        className="flex items-center justify-center h-11 w-11 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
       >
-        <span className="material-symbols-outlined text-[18px]">add_link</span>
-        {t(locale, "matches.addByUrl")}
+        <span className="material-symbols-outlined text-[20px]">add_link</span>
       </button>
 
       {open && (
