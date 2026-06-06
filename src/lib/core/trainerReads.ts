@@ -128,6 +128,7 @@ export type SessionDetail = {
   trainer_notes: string | null;
   scheduled_at: string | null;
   completed_at: string | null;
+  trainer_review_completed: boolean;
   exercises: Array<{ id: number; name: string | null; sort_order: number | null }>;
 };
 
@@ -137,7 +138,7 @@ export async function getSessionDetailCore(
 ): Promise<SessionDetail | null> {
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, goal_id, session_number, status, trainer_notes, scheduled_at, completed_at")
+    .select("id, goal_id, session_number, status, trainer_notes, scheduled_at, completed_at, trainer_review_completed")
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return null;
@@ -157,6 +158,7 @@ export async function getSessionDetailCore(
     trainer_notes: (s.trainer_notes as string | null) ?? null,
     scheduled_at: (s.scheduled_at as string | null) ?? null,
     completed_at: (s.completed_at as string | null) ?? null,
+    trainer_review_completed: (s.trainer_review_completed as boolean | null) ?? false,
     exercises: (exercises ?? []).map((e: Record<string, unknown>) => ({
       id: e.id as number,
       name: ((e.exercises as { name?: string } | null)?.name as string | null) ?? null,
