@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendMessage, type InlineKeyboard } from "./client";
+import { sendPushNotification } from "@/lib/fcm";
 
 const APP_URL = process.env.NEXT_PUBLIC_NIVEL_URL ?? "https://nivel-five.vercel.app";
 
@@ -38,10 +39,18 @@ export async function notifyNewInsights(
   sessionId: string,
   count: number
 ): Promise<NotifyResult> {
+  // Push (FCM) fires independently of the Telegram link — best-effort.
+  const word = plural(count, "новый разбор", "новых разбора", "новых разборов");
+  void sendPushNotification(
+    profileId,
+    "Новые разборы",
+    `Тренер прислал ${count} ${word} с тренировки.`,
+    { deeplink: `nivel://session/${sessionId}`, type: "new_insights", sessionId }
+  );
+
   try {
     const chatId = await getActiveChat(profileId);
     if (chatId === null) return "no_link";
-    const word = plural(count, "новый разбор", "новых разбора", "новых разборов");
     const text = `🎾 Тренер прислал ${count} ${word} с тренировки.`;
     const keyboard: InlineKeyboard = {
       inline_keyboard: [
@@ -66,16 +75,24 @@ export async function notifySessionReminder(
   scheduledAt: string,
   hoursBefore: number
 ): Promise<NotifyResult> {
+  const word = plural(hoursBefore, "час", "часа", "часов");
+  const date = new Date(scheduledAt);
+  const time = date.toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Madrid",
+  });
+
+  void sendPushNotification(
+    profileId,
+    "Скоро тренировка",
+    `Через ${hoursBefore} ${word} тренировка (в ${time}).`,
+    { deeplink: `nivel://session/${sessionId}`, type: "session_reminder", sessionId }
+  );
+
   try {
     const chatId = await getActiveChat(profileId);
     if (chatId === null) return "no_link";
-    const word = plural(hoursBefore, "час", "часа", "часов");
-    const date = new Date(scheduledAt);
-    const time = date.toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/Madrid",
-    });
     const text = `⏰ Через ${hoursBefore} ${word} тренировка (в ${time}).`;
     const keyboard: InlineKeyboard = {
       inline_keyboard: [
@@ -100,6 +117,13 @@ export async function notifyStudentCompletedReview(
   studentName: string,
   sessionNumber: number
 ): Promise<NotifyResult> {
+  void sendPushNotification(
+    trainerProfileId,
+    "Разбор завершён",
+    `${studentName} завершил разбор тренировки #${sessionNumber}.`,
+    { deeplink: `nivel://session/${sessionId}`, type: "review_complete", sessionId }
+  );
+
   try {
     const chatId = await getActiveChat(trainerProfileId);
     if (chatId === null) return "no_link";
