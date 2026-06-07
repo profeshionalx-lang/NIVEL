@@ -209,6 +209,139 @@ export async function getSessionInsightCardsCore(
   }));
 }
 
+export type CardLibraryTemplate = {
+  id: string;
+  template_id: string | null;
+  title: string | null;
+  body: string | null;
+  quote: string | null;
+  tags: string[] | null;
+  trainer_status: string;
+  created_at: string;
+  student_count: number;
+  taken_count: number;
+  skipped_count: number;
+  pending_count: number;
+  student_ids: string[];
+};
+
+export type CardLibraryStudentRef = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+};
+
+export type CardLibraryData = {
+  templates: CardLibraryTemplate[];
+  students: CardLibraryStudentRef[];
+};
+
+/**
+ * Card template library shown on the trainer "Карточки" page: the trainer's
+ * insight cards deduplicated by `template_id` with per-template student stats
+ * (taken / skipped / pending), plus the student list used by the apply sheet.
+ *
+ * Mirrors the aggregation in `src/app/trainer/cards/page.tsx` so the native
+ * screen can be a one-to-one port. The web page reads Supabase directly; this
+ * is the `/api/v1` equivalent.
+ */
+export async function getCardLibraryCore(
+  supabase: SupabaseClient,
+  trainerId: string
+): Promise<CardLibraryData> {
+  const [{ data: allCards }, { data: students }] = await Promise.all([
+    supabase
+      .from("insight_cards")
+      .select(
+        "id, template_id, title, body, quote, tags, trainer_status, created_at, student_id, student_decision"
+      )
+      .eq("trainer_id", trainerId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .eq("role", "student")
+      .order("full_name"),
+  ]);
+
+  // Deduplicate by template_id (fall back to card id), aggregate decision stats.
+  const templateMap = new Map<string, CardLibraryTemplate>();
+  for (const raw of allCards ?? []) {
+    const card = raw as Record<string, unknown>;
+    const cardId = card.id as string;
+    const key = (card.template_id as string | null) ?? cardId;
+    if (!templateMap.has(key)) {
+      templateMap.set(key, {
+        id: cardId,
+        template_id: (card.template_id as string | null) ?? null,
+        title: (card.title as string | null) ?? null,
+        body: (card.body as string | null) ?? null,
+        quote: (card.quote as string | null) ?? null,
+        tags: (card.tags as string[] | null) ?? null,
+        trainer_status: (card.trainer_status as string | null) ?? "draft",
+        created_at: card.created_at as string,
+        student_count: 0,
+        taken_count: 0,
+        skipped_count: 0,
+        pending_count: 0,
+        student_ids: [],
+      });
+    }
+    const t = templateMap.get(key)!;
+    t.student_count++;
+    t.student_ids.push(card.student_id as string);
+    const decision = card.student_decision as string | null;
+    if (decision === "taken") t.taken_count++;
+    else if (decision === "skipped") t.skipped_count++;
+    else t.pending_count++;
+  }
+
+  return {
+    templates: Array.from(templateMap.values()),
+    students: (students ?? []).map((s: Record<string, unknown>) => ({
+      id: s.id as string,
+      full_name: (s.full_name as string | null) ?? null,
+      avatar_url: (s.avatar_url as string | null) ?? null,
+    })),
+  };
+}
+
+export type TrainerCollection = {
+  id: string;
+  trainer_id: string;
+  name: string;
+  created_at: string;
+  card_count: number;
+  template_ids: string[];
+};
+
+/**
+ * The trainer's card collections with their template ids and count. Mirrors the
+ * `collectionsWithCount` mapping in `src/app/trainer/cards/page.tsx`.
+ */
+export async function listTrainerCollectionsCore(
+  supabase: SupabaseClient,
+  trainerId: string
+): Promise<TrainerCollection[]> {
+  const { data } = await supabase
+    .from("insight_collections")
+    .select("id, name, created_at, insight_collection_cards(template_id)")
+    .eq("trainer_id", trainerId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((raw: Record<string, unknown>) => {
+    const cards = (raw.insight_collection_cards as { template_id: string }[]) ?? [];
+    return {
+      id: raw.id as string,
+      trainer_id: trainerId,
+      name: raw.name as string,
+      created_at: raw.created_at as string,
+      card_count: cards.length,
+      template_ids: cards.map((c) => c.template_id),
+    };
+  });
+}
+
 export type ReferenceData = {
   problem_categories: Array<{ id: number; name: string; sort_order: number | null }>;
   problems: Array<{ id: number; category_id: number; name: string; sort_order: number | null }>;

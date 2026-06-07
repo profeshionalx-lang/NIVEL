@@ -6,6 +6,8 @@ import {
   getSessionInsightCardsCore,
   getReferenceCore,
   getMasterPlanCore,
+  getCardLibraryCore,
+  listTrainerCollectionsCore,
 } from "../trainerReads";
 import { getTranscriptStatusCore, requestAudioUploadUrlCore } from "../audio";
 
@@ -135,6 +137,7 @@ describe("GET /api/v1/sessions/{id} — getSessionDetailCore", () => {
         rows: [{
           id: "se1", goal_id: "g1", session_number: 1, status: "planned",
           trainer_notes: null, scheduled_at: null, completed_at: null,
+          trainer_review_completed: false,
         }],
       },
       session_exercises: { rows: [{ id: 10, sort_order: 1, exercises: { name: "Стенка" } }] },
@@ -142,7 +145,7 @@ describe("GET /api/v1/sessions/{id} — getSessionDetailCore", () => {
     const r = await getSessionDetailCore(sb, "se1");
     expectKeys(r, [
       "id", "goal_id", "session_number", "status", "trainer_notes",
-      "scheduled_at", "completed_at", "exercises",
+      "scheduled_at", "completed_at", "trainer_review_completed", "exercises",
     ]);
     expectKeys(r!.exercises[0], ["id", "name", "sort_order"]);
     expect(r!.exercises[0]).toEqual({ id: 10, name: "Стенка", sort_order: 1 });
@@ -198,6 +201,60 @@ describe("GET /api/v1/students/{id}/master-plan — getMasterPlanCore", () => {
 
   it("нет плана → null", async () => {
     expect(await getMasterPlanCore(makeSupabaseStub({}), "s1")).toBeNull();
+  });
+});
+
+describe("GET /api/v1/cards — getCardLibraryCore", () => {
+  it("шейп шаблона/ученика стабилен; дедуп по template_id, агрегация решений", async () => {
+    const sb = makeSupabaseStub({
+      insight_cards: {
+        rows: [
+          {
+            id: "c1", template_id: "tpl", title: "T", body: "B", quote: null, tags: ["техника"],
+            trainer_status: "approved", created_at: "2026-01-02",
+            student_id: "s1", student_decision: "taken",
+          },
+          {
+            id: "c2", template_id: "tpl", title: "T", body: "B", quote: null, tags: ["техника"],
+            trainer_status: "approved", created_at: "2026-01-01",
+            student_id: "s2", student_decision: null,
+          },
+        ],
+      },
+      profiles: { rows: [{ id: "s1", full_name: "Иван", avatar_url: null }] },
+    });
+    const r = await getCardLibraryCore(sb, "t1");
+    expectKeys(r, ["templates", "students"]);
+    // два ряда с одним template_id схлопываются в один шаблон
+    expect(r.templates).toHaveLength(1);
+    expectKeys(r.templates[0], [
+      "id", "template_id", "title", "body", "quote", "tags", "trainer_status",
+      "created_at", "student_count", "taken_count", "skipped_count", "pending_count", "student_ids",
+    ]);
+    expect(r.templates[0].student_count).toBe(2);
+    expect(r.templates[0].taken_count).toBe(1);
+    expect(r.templates[0].pending_count).toBe(1);
+    expect(r.templates[0].student_ids).toEqual(["s1", "s2"]);
+    expectKeys(r.students[0], ["id", "full_name", "avatar_url"]);
+  });
+});
+
+describe("GET /api/v1/collections — listTrainerCollectionsCore", () => {
+  it("шейп коллекции стабилен; card_count и template_ids из вложенных карточек", async () => {
+    const sb = makeSupabaseStub({
+      insight_collections: {
+        rows: [{
+          id: "col1", name: "Подача", created_at: "2026-01-01",
+          insight_collection_cards: [{ template_id: "tpl1" }, { template_id: "tpl2" }],
+        }],
+      },
+    });
+    const r = await listTrainerCollectionsCore(sb, "t1");
+    expect(r).toHaveLength(1);
+    expectKeys(r[0], ["id", "trainer_id", "name", "created_at", "card_count", "template_ids"]);
+    expect(r[0].card_count).toBe(2);
+    expect(r[0].template_ids).toEqual(["tpl1", "tpl2"]);
+    expect(r[0].trainer_id).toBe("t1");
   });
 });
 
