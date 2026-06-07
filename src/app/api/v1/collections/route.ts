@@ -1,6 +1,26 @@
 import { NextResponse } from "next/server";
 import { guardTrainer, parseJson, badRequest, coreError } from "@/lib/api/respond";
 import { createCollectionCore } from "@/lib/core/insightCards";
+import { listTrainerCollectionsCore } from "@/lib/core/trainerReads";
+
+/**
+ * GET /api/v1/collections
+ *
+ * Trainer-only. The trainer's card collections with their template ids and
+ * count. Mirrors the web `trainer/cards` page (Collections tab).
+ *
+ * Response: { collections: TrainerCollection[] }
+ */
+export async function GET() {
+  const guard = await guardTrainer();
+  if (!guard.ok) return guard.res;
+
+  const collections = await listTrainerCollectionsCore(
+    guard.ctx.supabase,
+    guard.ctx.user.id
+  );
+  return NextResponse.json({ collections });
+}
 
 /**
  * POST /api/v1/collections
