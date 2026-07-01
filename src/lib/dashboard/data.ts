@@ -43,6 +43,14 @@ export interface DashboardNextSession {
   scheduled_at: string | null;
 }
 
+export interface DashboardSubscription {
+  total: number; // размер пака
+  completed: number; // проведено (completed-сессии с даты пака)
+  planned: number; // запланировано (предстоящие planned-сессии с даты пака)
+  remaining: number; // осталось = total - completed
+  startedAt: string;
+}
+
 export interface DashboardProfile {
   id: string;
   email: string | null;
@@ -71,6 +79,7 @@ export interface DashboardData {
   totalPendingCards: number;
   firstPendingSessionId: string | null;
   upcomingMatches: DashboardMatch[];
+  subscription: DashboardSubscription | null;
 }
 
 export async function loadDashboardData(
@@ -85,7 +94,7 @@ export async function loadDashboardData(
   // Fire-and-forget Playtomic sync (cooldown enforced). Don't block the page.
   after(() => syncUserMatches(userId));
 
-  // Stage 1: 8 independent queries in parallel (single round-trip on the wire).
+  // Stage 1: 9 independent queries in parallel (single round-trip on the wire).
   const [
     profileRes,
     goalsRes,
@@ -95,6 +104,7 @@ export async function loadDashboardData(
     nextSessionRes,
     masterPlan,
     matchesRes,
+    subscriptionRes,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -145,6 +155,14 @@ export async function loadDashboardData(
       .gte("start_date", nowIso)
       .order("start_date", { ascending: true })
       .limit(5),
+    // Активный абонемент = последний по started_at.
+    supabase
+      .from("subscriptions")
+      .select("total_sessions, started_at")
+      .eq("student_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const profileRow = profileRes.data;
@@ -157,14 +175,38 @@ export async function loadDashboardData(
   const nextSessionRaw = nextSessionRes.data;
   const matchesRaw = matchesRes.data;
 
-  // Stage 2: one extra query for per-goal session counts (replaces N×2 loop).
+  // Stage 2: per-goal session counts + subscription counts. Both depend only on
+  // stage-1 data (goalIds / started_at), so run them in one parallel round-trip.
   const goalIds = (goalsRaw ?? []).map((g: Record<string, unknown>) => g.id as string);
-  const { data: goalSessions } = goalIds.length > 0
-    ? await supabase
-        .from("sessions")
-        .select("goal_id, status")
-        .in("goal_id", goalIds)
-    : { data: [] as Array<{ goal_id: string; status: string }> };
+  const subscriptionRow = subscriptionRes.data as
+    | { total_sessions: number; started_at: string }
+    | null;
+  const subStartedAt = subscriptionRow?.started_at ?? null;
+
+  const [goalSessionsRes, subCompletedRes, subPlannedRes] = await Promise.all([
+    goalIds.length > 0
+      ? supabase.from("sessions").select("goal_id, status").in("goal_id", goalIds)
+      : Promise.resolve({ data: [] as Array<{ goal_id: string; status: string }> }),
+    // Абонемент — проведено: completed-сессии ученика с completed_at >= started_at.
+    subStartedAt
+      ? supabase
+          .from("sessions")
+          .select("id, goals!inner(user_id)", { count: "exact", head: true })
+          .eq("goals.user_id", userId)
+          .eq("status", "completed")
+          .gte("completed_at", subStartedAt)
+      : Promise.resolve({ count: 0 }),
+    // Абонемент — запланировано: предстоящие planned-сессии с scheduled_at >= started_at.
+    subStartedAt
+      ? supabase
+          .from("sessions")
+          .select("id, goals!inner(user_id)", { count: "exact", head: true })
+          .eq("goals.user_id", userId)
+          .eq("status", "planned")
+          .gte("scheduled_at", subStartedAt)
+      : Promise.resolve({ count: 0 }),
+  ]);
+  const goalSessions = goalSessionsRes.data;
 
   const totalByGoal = new Map<string, number>();
   const completedByGoal = new Map<string, number>();
@@ -173,6 +215,19 @@ export async function loadDashboardData(
     if (s.status === "completed") {
       completedByGoal.set(s.goal_id, (completedByGoal.get(s.goal_id) ?? 0) + 1);
     }
+  }
+
+  let subscription: DashboardSubscription | null = null;
+  if (subscriptionRow) {
+    const completed = subCompletedRes.count ?? 0;
+    const planned = subPlannedRes.count ?? 0;
+    subscription = {
+      total: subscriptionRow.total_sessions,
+      completed,
+      planned,
+      remaining: Math.max(0, subscriptionRow.total_sessions - completed),
+      startedAt: subscriptionRow.started_at,
+    };
   }
 
   const goals: DashboardGoal[] = (goalsRaw ?? []).map((goal: Record<string, unknown>) => {
@@ -282,5 +337,6 @@ export async function loadDashboardData(
     totalPendingCards,
     firstPendingSessionId,
     upcomingMatches,
+    subscription,
   };
 }

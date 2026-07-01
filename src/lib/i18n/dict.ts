@@ -58,6 +58,13 @@ const ru = {
   "dashboard.session": "Сессия",
   "dashboard.nextSession": "Следующая сессия",
 
+  // Абонемент
+  "subscription.title": "Абонемент",
+  "subscription.remaining": "осталось",
+  "subscription.of": "из",
+  "subscription.completed": "Проведено",
+  "subscription.planned": "Запланировано",
+
   // Insights / vault
   "insights.title": "Инсайты",
   "insights.empty": "Пока нет инсайтов. Они появятся после сессий с тренером.",
@@ -215,6 +222,13 @@ const en: Record<keyof typeof ru, string> = {
   "dashboard.sessionHistory": "Trainings",
   "dashboard.session": "Session",
   "dashboard.nextSession": "Next session",
+
+  // Subscription
+  "subscription.title": "Package",
+  "subscription.remaining": "left",
+  "subscription.of": "of",
+  "subscription.completed": "Completed",
+  "subscription.planned": "Scheduled",
 
   "insights.title": "Insight vault",
   "insights.empty": "No insights yet. They appear after sessions with your coach.",
