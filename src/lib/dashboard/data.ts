@@ -175,14 +175,38 @@ export async function loadDashboardData(
   const nextSessionRaw = nextSessionRes.data;
   const matchesRaw = matchesRes.data;
 
-  // Stage 2: one extra query for per-goal session counts (replaces N×2 loop).
+  // Stage 2: per-goal session counts + subscription counts. Both depend only on
+  // stage-1 data (goalIds / started_at), so run them in one parallel round-trip.
   const goalIds = (goalsRaw ?? []).map((g: Record<string, unknown>) => g.id as string);
-  const { data: goalSessions } = goalIds.length > 0
-    ? await supabase
-        .from("sessions")
-        .select("goal_id, status")
-        .in("goal_id", goalIds)
-    : { data: [] as Array<{ goal_id: string; status: string }> };
+  const subscriptionRow = subscriptionRes.data as
+    | { total_sessions: number; started_at: string }
+    | null;
+  const subStartedAt = subscriptionRow?.started_at ?? null;
+
+  const [goalSessionsRes, subCompletedRes, subPlannedRes] = await Promise.all([
+    goalIds.length > 0
+      ? supabase.from("sessions").select("goal_id, status").in("goal_id", goalIds)
+      : Promise.resolve({ data: [] as Array<{ goal_id: string; status: string }> }),
+    // Абонемент — проведено: completed-сессии ученика с completed_at >= started_at.
+    subStartedAt
+      ? supabase
+          .from("sessions")
+          .select("id, goals!inner(user_id)", { count: "exact", head: true })
+          .eq("goals.user_id", userId)
+          .eq("status", "completed")
+          .gte("completed_at", subStartedAt)
+      : Promise.resolve({ count: 0 }),
+    // Абонемент — запланировано: предстоящие planned-сессии с scheduled_at >= started_at.
+    subStartedAt
+      ? supabase
+          .from("sessions")
+          .select("id, goals!inner(user_id)", { count: "exact", head: true })
+          .eq("goals.user_id", userId)
+          .eq("status", "planned")
+          .gte("scheduled_at", subStartedAt)
+      : Promise.resolve({ count: 0 }),
+  ]);
+  const goalSessions = goalSessionsRes.data;
 
   const totalByGoal = new Map<string, number>();
   const completedByGoal = new Map<string, number>();
@@ -193,36 +217,16 @@ export async function loadDashboardData(
     }
   }
 
-  // Абонемент: остаток считаем по истории сессий ученика с даты пака.
-  // completed_at >= started_at → проведено; planned & scheduled_at >= started_at → предстоящие.
-  const subscriptionRow = subscriptionRes.data as
-    | { total_sessions: number; started_at: string }
-    | null;
   let subscription: DashboardSubscription | null = null;
   if (subscriptionRow) {
-    const startedAt = subscriptionRow.started_at;
-    const [completedRes, plannedRes] = await Promise.all([
-      supabase
-        .from("sessions")
-        .select("id, goals!inner(user_id)", { count: "exact", head: true })
-        .eq("goals.user_id", userId)
-        .eq("status", "completed")
-        .gte("completed_at", startedAt),
-      supabase
-        .from("sessions")
-        .select("id, goals!inner(user_id)", { count: "exact", head: true })
-        .eq("goals.user_id", userId)
-        .eq("status", "planned")
-        .gte("scheduled_at", startedAt),
-    ]);
-    const completed = completedRes.count ?? 0;
-    const planned = plannedRes.count ?? 0;
+    const completed = subCompletedRes.count ?? 0;
+    const planned = subPlannedRes.count ?? 0;
     subscription = {
       total: subscriptionRow.total_sessions,
       completed,
       planned,
       remaining: Math.max(0, subscriptionRow.total_sessions - completed),
-      startedAt,
+      startedAt: subscriptionRow.started_at,
     };
   }
 
