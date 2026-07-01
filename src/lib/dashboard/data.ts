@@ -43,6 +43,14 @@ export interface DashboardNextSession {
   scheduled_at: string | null;
 }
 
+export interface DashboardSubscription {
+  total: number; // размер пака
+  completed: number; // проведено (completed-сессии с даты пака)
+  planned: number; // запланировано (предстоящие planned-сессии с даты пака)
+  remaining: number; // осталось = total - completed
+  startedAt: string;
+}
+
 export interface DashboardProfile {
   id: string;
   email: string | null;
@@ -71,6 +79,7 @@ export interface DashboardData {
   totalPendingCards: number;
   firstPendingSessionId: string | null;
   upcomingMatches: DashboardMatch[];
+  subscription: DashboardSubscription | null;
 }
 
 export async function loadDashboardData(
@@ -85,7 +94,7 @@ export async function loadDashboardData(
   // Fire-and-forget Playtomic sync (cooldown enforced). Don't block the page.
   after(() => syncUserMatches(userId));
 
-  // Stage 1: 8 independent queries in parallel (single round-trip on the wire).
+  // Stage 1: 9 independent queries in parallel (single round-trip on the wire).
   const [
     profileRes,
     goalsRes,
@@ -95,6 +104,7 @@ export async function loadDashboardData(
     nextSessionRes,
     masterPlan,
     matchesRes,
+    subscriptionRes,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -145,6 +155,14 @@ export async function loadDashboardData(
       .gte("start_date", nowIso)
       .order("start_date", { ascending: true })
       .limit(5),
+    // Активный абонемент = последний по started_at.
+    supabase
+      .from("subscriptions")
+      .select("total_sessions, started_at")
+      .eq("student_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const profileRow = profileRes.data;
@@ -173,6 +191,39 @@ export async function loadDashboardData(
     if (s.status === "completed") {
       completedByGoal.set(s.goal_id, (completedByGoal.get(s.goal_id) ?? 0) + 1);
     }
+  }
+
+  // Абонемент: остаток считаем по истории сессий ученика с даты пака.
+  // completed_at >= started_at → проведено; planned & scheduled_at >= started_at → предстоящие.
+  const subscriptionRow = subscriptionRes.data as
+    | { total_sessions: number; started_at: string }
+    | null;
+  let subscription: DashboardSubscription | null = null;
+  if (subscriptionRow) {
+    const startedAt = subscriptionRow.started_at;
+    const [completedRes, plannedRes] = await Promise.all([
+      supabase
+        .from("sessions")
+        .select("id, goals!inner(user_id)", { count: "exact", head: true })
+        .eq("goals.user_id", userId)
+        .eq("status", "completed")
+        .gte("completed_at", startedAt),
+      supabase
+        .from("sessions")
+        .select("id, goals!inner(user_id)", { count: "exact", head: true })
+        .eq("goals.user_id", userId)
+        .eq("status", "planned")
+        .gte("scheduled_at", startedAt),
+    ]);
+    const completed = completedRes.count ?? 0;
+    const planned = plannedRes.count ?? 0;
+    subscription = {
+      total: subscriptionRow.total_sessions,
+      completed,
+      planned,
+      remaining: Math.max(0, subscriptionRow.total_sessions - completed),
+      startedAt,
+    };
   }
 
   const goals: DashboardGoal[] = (goalsRaw ?? []).map((goal: Record<string, unknown>) => {
@@ -282,5 +333,6 @@ export async function loadDashboardData(
     totalPendingCards,
     firstPendingSessionId,
     upcomingMatches,
+    subscription,
   };
 }

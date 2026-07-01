@@ -13,6 +13,7 @@ import SkillProgressSection from "@/components/dashboard/SkillProgressSection";
 import MarkSeenEffect from "@/components/dashboard/MarkSeenEffect";
 import InlineSkillAdder from "@/components/dashboard/edit/InlineSkillAdder";
 import TelegramLinkCard from "@/components/telegram/TelegramLinkCard";
+import SubscriptionCard from "@/components/dashboard/SubscriptionCard";
 
 export interface DashboardViewEditable {
   studentId: string;
@@ -43,7 +44,7 @@ function pluralizeInsights(locale: Locale, n: number): string {
 
 export default function DashboardView({ data, locale, editable, previewMode, allSkills }: Props) {
   const dateLocale = locale === "ru" ? "ru-RU" : "en-US";
-  const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId, upcomingMatches } = data;
+  const { profile, goals, skillProgress, sessions, nextSession, masterPlan, totalPendingCards, firstPendingSessionId, upcomingMatches, subscription } = data;
   const isTrainer = !!editable && !previewMode;
   const sessionLinkSuffix = previewMode ? "?as=student" : "";
 
@@ -116,6 +117,11 @@ export default function DashboardView({ data, locale, editable, previewMode, all
                 <span className="material-symbols-outlined text-2xl">arrow_forward</span>
               </div>
             </Link>
+          )}
+
+          {/* Абонемент: остаток тренировок по паку */}
+          {subscription && (
+            <SubscriptionCard subscription={subscription} locale={locale} />
           )}
 
           {/* Актуальное — student only */}
