@@ -180,7 +180,7 @@ export default function DashboardView({ data, locale, editable, previewMode, all
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-3 px-1">
                   {t(locale, "dashboard.upcoming")}
                 </h3>
-                <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="-mx-4 px-4 flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {allItems.map((item) => {
                       if (item.kind === "session") {
                         const dateStr = item.scheduled_at
@@ -190,17 +190,14 @@ export default function DashboardView({ data, locale, editable, previewMode, all
                           <Link
                             key={`session-${item.id}`}
                             href={`/sessions/${item.id}${sessionLinkSuffix}`}
-                            className="snap-start shrink-0 w-[78%] flex flex-col gap-3 bg-surface-low rounded-2xl px-4 py-4 active:bg-surface-card transition-colors"
+                            className="snap-start shrink-0 w-[60%] flex flex-col gap-1.5 bg-surface-low rounded-2xl px-3.5 py-3 active:bg-surface-card transition-colors"
                           >
-                            <div className="w-10 h-10 rounded-xl bg-surface-card text-primary flex items-center justify-center font-black text-sm">
-                              {item.session_number}
-                            </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-sm">
-                                {t(locale, "dashboard.session")} {item.session_number}
+                              <p className="font-semibold text-xs">
+                                {t(locale, "dashboard.session")}{item.session_number}
                               </p>
                               {dateStr && (
-                                <p className="text-[11px] text-on-surface-variant mt-0.5">{dateStr}</p>
+                                <p className="text-[10px] text-on-surface-variant mt-0.5">{dateStr}</p>
                               )}
                             </div>
                           </Link>
@@ -217,17 +214,14 @@ export default function DashboardView({ data, locale, editable, previewMode, all
                         <Link
                           key={`match-${item.id}`}
                           href={`/matches/${item.id}`}
-                          className="snap-start shrink-0 w-[78%] flex flex-col gap-3 bg-surface-low rounded-2xl px-4 py-4 active:bg-surface-card transition-colors"
+                          className="snap-start shrink-0 w-[60%] flex flex-col gap-1.5 bg-surface-low rounded-2xl px-3.5 py-3 active:bg-surface-card transition-colors"
                         >
-                          <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[20px]">sports_tennis</span>
-                          </div>
                           <div className="min-w-0">
-                            <p className="font-semibold text-sm truncate">
+                            <p className="font-semibold text-xs truncate">
                               {t(locale, "dashboard.upcomingMatch")}
                               {item.location ? ` · ${item.location}` : ""}
                             </p>
-                            <p className="text-[11px] text-on-surface-variant mt-0.5">
+                            <p className="text-[10px] text-on-surface-variant mt-0.5">
                               {dateStr}
                               {item.resource_name ? ` · ${item.resource_name}` : ""}
                             </p>

@@ -55,7 +55,7 @@ const ru = {
   "dashboard.goal": "Цель",
   "dashboard.skillProgression": "Прогресс навыков",
   "dashboard.sessionHistory": "Прошедшие тренировки",
-  "dashboard.session": "Сессия",
+  "dashboard.session": "Тренировка #",
   "dashboard.nextSession": "Следующая сессия",
 
   // Абонемент
@@ -220,7 +220,7 @@ const en: Record<keyof typeof ru, string> = {
   "dashboard.goal": "Goal",
   "dashboard.skillProgression": "Skill progression",
   "dashboard.sessionHistory": "Past trainings",
-  "dashboard.session": "Session",
+  "dashboard.session": "Training #",
   "dashboard.nextSession": "Next session",
 
   // Subscription
