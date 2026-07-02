@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { generateAiInsights } from "@/lib/actions/aiInsights";
+import { requeueAiInsights } from "@/lib/actions/aiInsights";
 import { getTranscriptStatus } from "@/lib/actions/audio";
 
 interface Props {
@@ -30,17 +30,17 @@ export function InsightsAnalysisStatus({
   const [, startTransition] = useTransition();
 
   // Ручной перезапуск через кнопки «Повторить» / «Перегенерировать».
+  // Ставим транскрипт в очередь — консольный Claude на машине тренера
+  // (pm2-демон) подхватит его в течение ~5 минут. Результат ловим поллингом.
   const restartAnalysis = useCallback(() => {
-    setStatus("processing");
+    setStatus("idle");
     setError(null);
     startTransition(async () => {
-      const result = await generateAiInsights(sessionId);
+      const result = await requeueAiInsights(sessionId);
       if ("error" in result) {
         setStatus("failed");
         setError(result.error);
       } else {
-        setStatus("ready");
-        setError(null);
         router.refresh();
       }
     });

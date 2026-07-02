@@ -10,6 +10,7 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 // ─── Конфиг ─────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,14 @@ const SUPA_URL = env.match(/NEXT_PUBLIC_SUPABASE_URL="?([^"\n]+)"?/)[1];
 const SERVICE  = env.match(/SUPABASE_SERVICE_ROLE_KEY="?([^"\n]+)"?/)[1];
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 минут
-const CLAUDE_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут на один анализ
+const CLAUDE_TIMEOUT_MS = 25 * 60 * 1000; // 25 минут на один анализ (длинные транскрипты)
+
+// Изоляция консольного Claude от контекста проекта: запускаем из нейтральной
+// директории (не грузим CLAUDE.md / .claude / хуки) и с --strict-mcp-config
+// (без MCP-серверов). Иначе на каждый запуск подтягиваются SessionStart-хуки
+// (pm2, gh, Vercel) и MCP — это замедляет старт и приводило к зависаниям на
+// длинных транскриптах. OAuth-вход по подписке при этом сохраняется.
+const CLAUDE_CWD = tmpdir();
 
 // Тот же промпт что в src/lib/ai/insightsPrompt.ts — менять синхронно!
 const SYSTEM_PROMPT = `Ты помогаешь тренеру по паделю. Прочитай транскрипт тренировки, который приведён в следующем сообщении, и выдели практические инсайты для ученика.
@@ -120,10 +128,11 @@ async function analyzeSession(sessionId, rawText) {
   // Вызов Claude через CLI
   const prompt = `${SYSTEM_PROMPT}\n\nТранскрипт тренировки:\n${rawText}`;
   const t0 = Date.now();
-  const result = spawnSync("claude", ["-p", prompt, "--output-format", "text"], {
+  const result = spawnSync("claude", ["-p", prompt, "--output-format", "text", "--strict-mcp-config"], {
     encoding: "utf8",
     timeout: CLAUDE_TIMEOUT_MS,
     maxBuffer: 10 * 1024 * 1024,
+    cwd: CLAUDE_CWD,
   });
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
