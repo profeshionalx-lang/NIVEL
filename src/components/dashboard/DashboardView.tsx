@@ -371,13 +371,13 @@ export default function DashboardView({ data, locale, editable, previewMode, all
                 <InlineSessionCreator studentId={editable.studentId} goals={goals} />
               )}
             </div>
-            {sessions.length === 0 ? (
+            {sessions.filter((s) => s.status === "completed").length === 0 ? (
               <p className="text-on-surface-variant text-sm bg-surface-card rounded-2xl p-4">
                 {isTrainer ? "No sessions yet. Add a goal first, then create your first session." : "—"}
               </p>
             ) : (
               <div className="space-y-2">
-                {sessions.map((session) => (
+                {sessions.filter((s) => s.status === "completed").map((session) => (
                   <div key={session.id} className="flex items-center gap-2">
                     <Link
                       href={`/sessions/${session.id}${sessionLinkSuffix}`}
@@ -413,20 +413,6 @@ export default function DashboardView({ data, locale, editable, previewMode, all
               </div>
             )}
           </section>
-
-          {/* Next session — student only */}
-          {!isTrainer && nextSession && (
-            <section>
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4 px-1">
-                {t(locale, "dashboard.nextSession")}
-              </h3>
-              <Link href={`/sessions/${nextSession.id}${sessionLinkSuffix}`} className="block bg-surface-low rounded-3xl p-5">
-                <h4 className="text-xl font-black tracking-tight mb-4">
-                  {t(locale, "dashboard.session")} {nextSession.session_number}
-                </h4>
-              </Link>
-            </section>
-          )}
 
           {/* Helpful hint — silence the linter about unused displayName */}
           {isTrainer && <span className="hidden">{displayName}</span>}
