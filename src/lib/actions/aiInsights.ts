@@ -5,6 +5,7 @@ import { requireTrainerOwnsSession, requireTrainerOwnsCard } from "@/lib/auth/ow
 import {
   pasteInsightsFromClaudeCore,
   generateAiInsightsCore,
+  requeueAiInsightsCore,
   setAiCardTrainerStatusCore,
   deleteAiInsightCardCore,
   updateAiInsightCardCore,
@@ -54,6 +55,30 @@ export async function generateAiInsights(
   // Ревалидируем карточку сессии только если анализ реально менял состояние
   // транскрипта (analysis_status='failed') — как в оригинале. Прекондишн-ошибки
   // (нет транскрипта / анализ уже идёт) ничего не меняли → ревалидации нет.
+  if (result.mutated) {
+    revalidatePath(`/sessions/${sessionId}`);
+  }
+  return { error: result.error };
+}
+
+/**
+ * Ставит транскрипт в очередь на анализ консольным Claude (pm2-демон на машине
+ * тренера). Возвращается сразу — результат появится позже, UI поллит статус.
+ */
+export async function requeueAiInsights(
+  sessionId: string
+): Promise<{ success: true } | { error: string }> {
+  const ctx = await requireTrainerOwnsSession(sessionId);
+  if (!ctx) return { error: "Сессия не найдена или нет доступа" };
+
+  const result = await requeueAiInsightsCore(ctx.supabase, sessionId);
+
+  if ("success" in result) {
+    revalidatePath(`/sessions/${sessionId}`);
+    revalidatePath(`/sessions/${sessionId}/transcript`);
+    return result;
+  }
+
   if (result.mutated) {
     revalidatePath(`/sessions/${sessionId}`);
   }

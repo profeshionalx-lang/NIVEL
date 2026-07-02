@@ -155,6 +155,42 @@ export async function generateAiInsightsCore(
 }
 
 /**
+ * Возвращает транскрипт в очередь на анализ консольным Claude: ставит
+ * analysis_status='idle'. Внешний pm2-демон (scripts/analyze-pending.mjs) на
+ * машине тренера подхватывает такие транскрипты и прогоняет их через `claude`.
+ * Сам анализ здесь НЕ запускается — только постановка в очередь.
+ *
+ * Возврат `mutated` по той же логике, что и generateAiInsightsCore.
+ */
+export async function requeueAiInsightsCore(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<{ success: true } | { error: string; mutated: boolean }> {
+  const { data: transcript } = await supabase
+    .from("transcripts")
+    .select("status, raw_text, analysis_status")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+
+  if (!transcript || transcript.status !== "ready" || !transcript.raw_text?.trim()) {
+    return { error: "Транскрипт не готов", mutated: false };
+  }
+
+  // Уже в очереди или в процессе — второй раз не ставим.
+  if (transcript.analysis_status === "idle" || transcript.analysis_status === "processing") {
+    return { error: "Анализ уже в очереди", mutated: false };
+  }
+
+  const { error } = await supabase
+    .from("transcripts")
+    .update({ analysis_status: "idle", analysis_error: null })
+    .eq("session_id", sessionId);
+
+  if (error) return { error: error.message, mutated: false };
+  return { success: true };
+}
+
+/**
  * Applies a trainer_status to a draft card. If the card has a template_id, the
  * status propagates to every card sharing that template (cross-student).
  */
