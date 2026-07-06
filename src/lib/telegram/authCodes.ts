@@ -67,3 +67,24 @@ export async function consumeAuthCode(
   if (!data || !data.profile_id) return null;
   return { profileId: data.profile_id as string };
 }
+
+/**
+ * Read-only status check for the polling endpoint: tells "still pending"
+ * (code exists, not expired, not yet confirmed) apart from "expired" (code
+ * missing, past its TTL, or already consumed) — without mutating anything.
+ */
+export async function isAuthCodePending(code: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("telegram_auth_codes")
+    .select("code")
+    .eq("code", code)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (error) {
+    console.error("[tg] isAuthCodePending db error", error);
+    return false;
+  }
+  return !!data;
+}
