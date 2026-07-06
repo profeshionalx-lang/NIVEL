@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const CODE_TTL_MIN = 10;
 
-export async function createAuthCode(): Promise<string> {
+export async function createAuthCode(claimProfileId?: string): Promise<string> {
   const supabase = await createClient();
   // base64url alphabet is [A-Za-z0-9_-] — safe to embed in a t.me deep-link
   // (Telegram start payloads only allow [A-Za-z0-9_-], max 64 chars).
@@ -12,6 +12,7 @@ export async function createAuthCode(): Promise<string> {
   const { error } = await supabase.from("telegram_auth_codes").insert({
     code,
     expires_at: expiresAt,
+    claim_profile_id: claimProfileId ?? null,
   });
   if (error) throw new Error(`createAuthCode failed: ${error.message}`);
   return code;
@@ -66,6 +67,27 @@ export async function consumeAuthCode(
   }
   if (!data || !data.profile_id) return null;
   return { profileId: data.profile_id as string };
+}
+
+/**
+ * Reads the claim (invite) shadow-profile id attached to a live pending
+ * code, if any. Used by the webhook to decide between "bind Telegram to
+ * the trainer-created shadow profile" and the regular login path.
+ */
+export async function getPendingClaimProfileId(code: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("telegram_auth_codes")
+    .select("claim_profile_id")
+    .eq("code", code)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (error) {
+    console.error("[tg] getPendingClaimProfileId db error", error);
+    return null;
+  }
+  return (data?.claim_profile_id as string | null) ?? null;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendMessage } from "@/lib/telegram/client";
 import { consumeLinkToken } from "@/lib/telegram/tokens";
-import { confirmAuthCode } from "@/lib/telegram/authCodes";
+import { confirmAuthCode, getPendingClaimProfileId } from "@/lib/telegram/authCodes";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +90,14 @@ async function handleStartWithLoginCode(
   try {
     const supabase = await createClient();
 
+    // 0) Invite flow: the code carries a trainer-created shadow profile —
+    //    bind this Telegram to it instead of the regular login path.
+    const claimProfileId = await getPendingClaimProfileId(code);
+    if (claimProfileId) {
+      await handleClaimLogin(code, claimProfileId, message, chatId);
+      return;
+    }
+
     // 1) Chat already linked to a profile → just confirm the login code.
     const { data: existingLink } = await supabase
       .from("telegram_links")
@@ -162,6 +170,101 @@ async function handleStartWithLoginCode(
   } catch (e) {
     console.error("[tg] handleStartWithLoginCode failed", e);
   }
+}
+
+async function handleClaimLogin(
+  code: string,
+  claimProfileId: string,
+  message: TelegramMessage,
+  chatId: number
+): Promise<void> {
+  const supabase = await createClient();
+
+  // Re-check the shadow profile is still claimable (start endpoint validated
+  // it, but the invite could have been claimed/expired since).
+  const { data: shadow } = await supabase
+    .from("profiles")
+    .select("id, claimed_at, claim_expires_at")
+    .eq("id", claimProfileId)
+    .maybeSingle();
+
+  if (
+    !shadow ||
+    shadow.claimed_at ||
+    (shadow.claim_expires_at &&
+      new Date(shadow.claim_expires_at).getTime() < Date.now())
+  ) {
+    await sendMessage(
+      chatId,
+      "Приглашение уже использовано или истекло. Открой страницу входа Nivel и войди без ссылки-приглашения."
+    );
+    return;
+  }
+
+  // This Telegram must not already belong to another profile — same
+  // semantics as the uid_collision case in the Google claim flow.
+  const { data: existingLink } = await supabase
+    .from("telegram_links")
+    .select("profile_id")
+    .eq("telegram_chat_id", chatId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (existingLink && existingLink.profile_id !== claimProfileId) {
+    await sendMessage(
+      chatId,
+      "Этот Telegram уже привязан к другому аккаунту Nivel. Войди в него без ссылки-приглашения или сначала отключи Telegram в том аккаунте."
+    );
+    return;
+  }
+
+  const { error: linkErr } = await supabase.from("telegram_links").upsert(
+    {
+      profile_id: claimProfileId,
+      telegram_chat_id: chatId,
+      telegram_user_id: message.from?.id ?? null,
+      username: message.from?.username ?? null,
+      linked_at: new Date().toISOString(),
+      is_active: true,
+    },
+    { onConflict: "profile_id" }
+  );
+
+  if (linkErr) {
+    console.error("[tg] claim login: failed to link telegram", linkErr);
+    await sendMessage(chatId, "Не удалось войти. Попробуй позже.");
+    return;
+  }
+
+  const { error: claimErr } = await supabase
+    .from("profiles")
+    .update({
+      claimed_at: new Date().toISOString(),
+      claim_token: null,
+      claim_expires_at: null,
+    })
+    .eq("id", claimProfileId)
+    .is("claimed_at", null);
+
+  if (claimErr) {
+    console.error("[tg] claim login: failed to mark claimed", claimErr);
+    await sendMessage(chatId, "Не удалось войти. Попробуй позже.");
+    return;
+  }
+
+  const confirmed = await confirmAuthCode(code, claimProfileId);
+  if (!confirmed) {
+    await sendMessage(
+      chatId,
+      "Ссылка устарела, обнови страницу входа и попробуй ещё раз."
+    );
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    "✅ Готово! Возвращайся на страницу Nivel — вход выполнится сам."
+  );
 }
 
 async function handleStartWithToken(
