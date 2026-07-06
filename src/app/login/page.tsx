@@ -58,9 +58,15 @@ function LoginContent() {
     setTgLoading(true);
     stopPolling();
     try {
-      const res = await fetch("/api/auth/telegram/start", { method: "POST" });
+      const res = await fetch("/api/auth/telegram/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(claimToken ? { claimToken } : {}),
+      });
       if (!res.ok) {
-        setTgError("Не удалось начать вход. Попробуйте снова.");
+        const data = await res.json().catch(() => ({}));
+        const code: string = data.error ?? "";
+        setTgError(ERROR_MESSAGES[code] ?? "Не удалось начать вход. Попробуйте снова.");
         return;
       }
       const { code, deepLink } = (await res.json()) as { code: string; deepLink: string };
