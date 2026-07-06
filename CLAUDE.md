@@ -75,6 +75,9 @@ NEXT_PUBLIC_SUPABASE_URL
 GROQ_API_KEY                   — STT через Groq Whisper (https://console.groq.com)
 OPENROUTER_API_KEY             — LLM-анализ транскриптов (https://openrouter.ai)
 INSIGHTS_MODEL                 — модель анализа; пусто = дефолт-константа (z-ai/glm-4.5-air:free)
+TELEGRAM_BOT_TOKEN              — server-only, токен бота (sendMessage, getMe)
+TELEGRAM_BOT_USERNAME           — server-only, юзернейм бота без @ (напр. GrechkaTrainyBot); используется на сервере для сборки t.me deep-link'ов, клиенту не отдаётся напрямую
+TELEGRAM_WEBHOOK_SECRET         — секрет для проверки заголовка x-telegram-bot-api-secret-token в вебхуке
 ```
 
 ---

@@ -34,6 +34,74 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [tgLoading, setTgLoading] = useState(false);
+  const [tgWaiting, setTgWaiting] = useState(false);
+  const [tgError, setTgError] = useState<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollDeadlineRef = useRef<number>(0);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  const handleTelegramLogin = async () => {
+    setTgError(null);
+    setTgLoading(true);
+    stopPolling();
+    try {
+      const res = await fetch("/api/auth/telegram/start", { method: "POST" });
+      if (!res.ok) {
+        setTgError("Не удалось начать вход. Попробуйте снова.");
+        return;
+      }
+      const { code, deepLink } = (await res.json()) as { code: string; deepLink: string };
+      window.open(deepLink, "_blank");
+      setTgWaiting(true);
+
+      const POLL_INTERVAL_MS = 2000;
+      const POLL_TIMEOUT_MS = 10 * 60_000;
+      pollDeadlineRef.current = Date.now() + POLL_TIMEOUT_MS;
+
+      pollTimerRef.current = setInterval(async () => {
+        if (Date.now() > pollDeadlineRef.current) {
+          stopPolling();
+          setTgWaiting(false);
+          setTgError("Время вышло, попробуйте ещё раз.");
+          return;
+        }
+        try {
+          const statusRes = await fetch(
+            `/api/auth/telegram/status?code=${encodeURIComponent(code)}`
+          );
+          const data = (await statusRes.json()) as { status: "ok" | "pending" | "expired" };
+          if (data.status === "ok") {
+            stopPolling();
+            window.location.href = "/dashboard";
+          } else if (data.status === "expired") {
+            stopPolling();
+            setTgWaiting(false);
+            setTgError("Время вышло, попробуйте ещё раз.");
+          }
+        } catch {
+          // Transient network error — keep polling until the deadline.
+        }
+      }, POLL_INTERVAL_MS);
+    } catch (err) {
+      setTgError(err instanceof Error ? err.message : "Ошибка входа");
+    } finally {
+      setTgLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setError(null);
     setLoading(true);
@@ -120,6 +188,22 @@ function LoginContent() {
             </svg>
             {loading ? "Входим…" : "Войти через Google"}
           </button>
+
+          {/* Telegram Sign In */}
+          <button
+            onClick={handleTelegramLogin}
+            disabled={tgLoading || tgWaiting}
+            className="w-full flex items-center justify-center gap-3 bg-[#229ED9] text-white font-semibold py-4 px-6 rounded-2xl hover:opacity-90 transition-opacity active:scale-[0.98] disabled:opacity-50"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21.94 4.36a1.5 1.5 0 0 0-1.53-.25L2.94 10.86a1.32 1.32 0 0 0 .1 2.49l4.6 1.44 1.78 5.72a1.1 1.1 0 0 0 1.83.44l2.55-2.4 4.5 3.32a1.29 1.29 0 0 0 2.05-.77l2.7-15.13a1.5 1.5 0 0 0-.51-1.35zM9.6 14.6l-1.24-3.98 9.6-6.13z" />
+            </svg>
+            {tgWaiting ? "Ждём подтверждения…" : tgLoading ? "Открываем Telegram…" : "Войти через Telegram"}
+          </button>
+          <p className="text-on-surface-variant text-xs">
+            Откроется Telegram — нажми Start, и вход выполнится автоматически.
+          </p>
+          {tgError && <p className="text-error text-sm">{tgError}</p>}
         </div>
 
         {displayError && (
