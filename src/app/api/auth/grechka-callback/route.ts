@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ClaimError, claimSession, createSession } from "@/lib/auth/session";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`grechka-callback:${ip}`, { limit: 5, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfterMs);
+
   const { searchParams, origin } = new URL(request.url);
   const token = searchParams.get("token");
   const state = searchParams.get("state");

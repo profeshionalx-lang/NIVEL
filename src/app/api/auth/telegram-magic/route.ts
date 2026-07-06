@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { consumeMagicToken } from "@/lib/telegram/magicTokens";
 import { createSessionForProfile, getSession } from "@/lib/auth/session";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`telegram-magic:${ip}`, { limit: 10, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfterMs);
+
   const token = request.nextUrl.searchParams.get("token");
   const url = request.nextUrl.clone();
   url.search = "";
