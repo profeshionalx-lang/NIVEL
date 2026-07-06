@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { requireTrainerOwnsSession } from "@/lib/auth/ownership";
-import { transcribeSessionCore } from "@/lib/core/audio";
-
-// STT (download + Groq Whisper) runs inline and can take a while for long
-// recordings — allow up to the platform max.
-export const maxDuration = 300;
+import { enqueueTranscriptionCore } from "@/lib/core/audio";
 
 /**
  * POST /api/v1/sessions/{id}/transcribe
  * Body: { storagePath: string }  (from the upload-url step)
  *
- * Runs the existing Groq STT pipeline: downloads the uploaded audio,
- * transcribes it, stores the transcript, and removes the audio file.
- * Trainer-only; ownership enforced.
+ * Enqueues the audio for STT: marks the transcript row 'pending' and
+ * returns immediately (202). The actual Groq Whisper transcription runs in
+ * the background (scripts/transcribe-pending.mjs — same pm2-poller pattern
+ * already used for LLM insight analysis), so this request never blocks on
+ * Groq latency. Poll GET /api/v1/sessions/{id}/transcript/status for
+ * progress. Trainer-only; ownership enforced.
  */
 export async function POST(
   request: Request,
@@ -39,10 +38,9 @@ export async function POST(
     return NextResponse.json({ error: "Missing storagePath" }, { status: 400 });
   }
 
-  const result = await transcribeSessionCore(ctx.supabase, id, storagePath);
+  const result = await enqueueTranscriptionCore(ctx.supabase, id, storagePath);
   if (!result.success) {
-    // Transcript row is marked 'failed' by the core; surface the reason.
-    return NextResponse.json({ error: result.error ?? "transcription_failed" }, { status: 502 });
+    return NextResponse.json({ error: result.error ?? "enqueue_failed" }, { status: 502 });
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, status: "pending" }, { status: 202 });
 }

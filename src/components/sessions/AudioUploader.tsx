@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { requestAudioUploadUrl, transcribeSession } from "@/lib/actions/audio";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { requestAudioUploadUrl, transcribeSession, getTranscriptStatus } from "@/lib/actions/audio";
 
 type UploadState = "idle" | "compressing" | "uploading" | "processing" | "done" | "error";
 
@@ -65,6 +66,15 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   async function handleFile(file: File) {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -133,7 +143,29 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
       setErrorMsg(transcribeResult.error ?? "Ошибка запуска транскрипции");
       return;
     }
-    setState("done");
+
+    // Транскрипция теперь ставится в очередь и выполняется фоновым
+    // pm2-процессом (см. scripts/transcribe-pending.ts) — поллим статус
+    // вместо ожидания синхронного ответа.
+    await pollTranscriptUntilDone(sessionId);
+  }
+
+  async function pollTranscriptUntilDone(sessionId: string) {
+    while (mountedRef.current) {
+      const status = await getTranscriptStatus(sessionId);
+      if (!mountedRef.current) return;
+      if (status?.status === "ready") {
+        setState("done");
+        router.refresh();
+        return;
+      }
+      if (status?.status === "failed") {
+        setState("error");
+        setErrorMsg(status.error_message ?? "Ошибка транскрипции");
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
   }
 
   function onDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -150,8 +182,8 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
   if (state === "done") {
     return (
       <div className="rounded-3xl bg-surface-card p-5 text-center space-y-1">
-        <p className="text-sm font-bold text-primary">Аудио загружено — транскрипция запущена</p>
-        <p className="text-xs text-on-surface-variant">Обычно занимает 15–30 секунд.</p>
+        <p className="text-sm font-bold text-primary">Транскрипция готова</p>
+        <p className="text-xs text-on-surface-variant">Анализ карточек скоро появится ниже.</p>
       </div>
     );
   }
@@ -215,8 +247,10 @@ export function AudioUploader({ sessionId }: { sessionId: string }) {
 
         {state === "processing" && (
           <div className="space-y-2">
-            <p className="text-sm font-bold text-on-surface">Запускаем транскрипцию…</p>
-            <p className="text-xs text-on-surface-variant">Это займёт 15–30 секунд</p>
+            <p className="text-sm font-bold text-on-surface">Транскрибируем аудио…</p>
+            <p className="text-xs text-on-surface-variant">
+              Обычно 1–2 минуты, для длинных записей может занять дольше — можно закрыть вкладку
+            </p>
           </div>
         )}
 

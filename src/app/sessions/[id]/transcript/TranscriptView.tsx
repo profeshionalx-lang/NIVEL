@@ -38,7 +38,7 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
   const [tab, setTab] = useState<"segments" | "fulltext">("segments");
 
   useEffect(() => {
-    if (status !== "processing") return;
+    if (status !== "processing" && status !== "pending") return;
     const intervalId = setInterval(async () => {
       const result = await getTranscriptStatus(sessionId);
       if (result?.status === "ready" || result?.status === "failed") {
@@ -49,7 +49,7 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
     return () => clearInterval(intervalId);
   }, [sessionId, status, router]);
 
-  if (status === "processing") {
+  if (status === "processing" || status === "pending") {
     return (
       <div className="rounded-3xl bg-surface-card p-6 text-center space-y-3">
         <span
@@ -58,7 +58,9 @@ export function TranscriptView({ sessionId, status, errorMessage, rawText, segme
         >
           autorenew
         </span>
-        <p className="text-sm font-bold text-on-surface">Транскрипция в процессе…</p>
+        <p className="text-sm font-bold text-on-surface">
+          {status === "pending" ? "В очереди на транскрипцию…" : "Транскрипция в процессе…"}
+        </p>
         <p className="text-xs text-on-surface-variant">Обновляется автоматически каждые 3 секунды</p>
       </div>
     );

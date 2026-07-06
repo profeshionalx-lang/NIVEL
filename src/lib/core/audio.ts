@@ -27,7 +27,17 @@ export async function requestAudioUploadUrlCore(
   return { uploadUrl: data.signedUrl, storagePath };
 }
 
-export async function transcribeSessionCore(
+/**
+ * Ставит транскрипцию в очередь и возвращает управление немедленно.
+ *
+ * Раньше этот шаг синхронно вызывал Groq STT прямо в запросе (route handler
+ * держал соединение открытым до 300с). Теперь по аналогии с LLM-анализом
+ * транскриптов (см. scripts/analyze-pending.mjs) реальная транскрипция
+ * выполняется фоновым pm2-процессом (scripts/transcribe-pending.mjs),
+ * который забирает строки со status='pending'. Клиент поллит статус через
+ * getTranscriptStatusCore.
+ */
+export async function enqueueTranscriptionCore(
   supabase: SupabaseClient,
   sessionId: string,
   storagePath: string
@@ -40,12 +50,31 @@ export async function transcribeSessionCore(
       segments_json: [],
       stt_provider: "groq",
       stt_model: "whisper-large-v3",
-      status: "processing",
+      status: "pending",
+      error_message: null,
     },
     { onConflict: "session_id" }
   );
 
   if (upsertError) return { success: false, error: upsertError.message };
+  return { success: true };
+}
+
+/**
+ * Выполняет саму STT-транскрипцию для транскрипта, уже поставленного в
+ * очередь (status='pending'). Вызывается фоновым воркером
+ * (scripts/transcribe-pending.mjs), не HTTP route handler'ом — может
+ * работать сколько угодно без риска таймаута платформы.
+ */
+export async function runQueuedTranscriptionCore(
+  supabase: SupabaseClient,
+  sessionId: string,
+  storagePath: string
+): Promise<{ success: boolean; error?: string }> {
+  await supabase
+    .from("transcripts")
+    .update({ status: "processing", error_message: null })
+    .eq("session_id", sessionId);
 
   try {
     const filename = storagePath.split("/").pop() ?? "audio.m4a";
