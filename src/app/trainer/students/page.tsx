@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
+import Image from "next/image";
 import CreateStudentButton from "@/components/trainer/CreateStudentButton";
 
 export default async function TrainerStudentsPage() {
@@ -13,7 +14,7 @@ export default async function TrainerStudentsPage() {
   // Fetch all students
   const { data: students } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, email, full_name, avatar_url, created_at")
     .eq("role", "student")
     .order("created_at", { ascending: false });
 
@@ -81,9 +82,11 @@ export default async function TrainerStudentsPage() {
               >
                 <div className="w-12 h-12 rounded-full bg-surface-card border-2 border-primary/30 flex items-center justify-center flex-shrink-0">
                   {student.avatar_url ? (
-                    <img
+                    <Image
                       src={student.avatar_url}
                       alt=""
+                      width={48}
+                      height={48}
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (

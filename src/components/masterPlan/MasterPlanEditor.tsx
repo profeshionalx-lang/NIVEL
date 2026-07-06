@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import Image from "next/image";
 import { createMasterPlan, addSection, addItem, deleteSection, deleteItem } from "@/lib/actions/masterPlan";
 import type { MasterPlan, MasterPlanCategory } from "@/lib/types";
 
@@ -193,12 +194,15 @@ export default function MasterPlanEditor({ studentId, plan: initialPlan }: Props
                         <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">{item.description}</p>
                       )}
                       {item.image_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.image_url}
-                          alt=""
-                          className="mt-2 rounded-lg w-full object-cover max-h-48"
-                        />
+                        <div className="relative mt-2 w-full h-48">
+                          <Image
+                            src={item.image_url}
+                            alt=""
+                            fill
+                            sizes="(max-width: 430px) 100vw, 430px"
+                            className="rounded-lg object-cover"
+                          />
+                        </div>
                       )}
                     </div>
                     <button

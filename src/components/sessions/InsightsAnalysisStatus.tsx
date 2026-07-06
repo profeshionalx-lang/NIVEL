@@ -29,6 +29,9 @@ export function InsightsAnalysisStatus({
   const [error, setError] = useState<string | null>(initialAnalysisError);
   const [, startTransition] = useTransition();
 
+  // Экспоненциальный backoff для поллинга: 3с → 3с → 5с → 10с → 20с → 30с (cap).
+  const POLL_INTERVALS = [3000, 3000, 5000, 10000, 20000, 30000];
+
   // Ручной перезапуск через кнопки «Повторить» / «Перегенерировать».
   // Ставим транскрипт в очередь — консольный Claude на машине тренера
   // (pm2-демон) подхватит его в течение ~5 минут. Результат ловим поллингом.
@@ -47,19 +50,34 @@ export function InsightsAnalysisStatus({
   }, [sessionId, router]);
 
   // Поллинг: подхватываем результат от pm2-анализатора.
+  // Интервал растёт по мере ожидания (exponential backoff), чтобы не долбить сеть
+  // при долгом анализе, но быстро реагировать в первые секунды.
   useEffect(() => {
     if (status !== "processing" && status !== "idle") return;
-    const intervalId = setInterval(async () => {
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let attempt = 0;
+
+    const poll = async () => {
       const result = await getTranscriptStatus(sessionId);
-      if (!result) return;
-      if (result.analysis_status === "ready" || result.analysis_status === "failed") {
-        clearInterval(intervalId);
+      if (cancelled) return;
+      if (result && (result.analysis_status === "ready" || result.analysis_status === "failed")) {
         setStatus(result.analysis_status);
         setError(result.analysis_error);
         router.refresh();
+        return;
       }
-    }, 3000);
-    return () => clearInterval(intervalId);
+      const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
+      attempt += 1;
+      timeoutId = setTimeout(poll, delay);
+    };
+
+    timeoutId = setTimeout(poll, POLL_INTERVALS[0]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, status, router]);
 
   if (transcriptStatus !== "ready") return null;
