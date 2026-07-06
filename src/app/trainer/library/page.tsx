@@ -12,12 +12,12 @@ export default async function LibraryPage() {
 
   const { data: skills } = await supabase
     .from("skills")
-    .select("*")
+    .select("id, name")
     .order("name");
 
   const { data: exercises } = await supabase
     .from("exercises")
-    .select("*")
+    .select("id, name, created_at")
     .order("name");
 
   return (

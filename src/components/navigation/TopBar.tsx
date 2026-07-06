@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Profile } from "@/lib/types";
 import { t, type Locale } from "@/lib/i18n";
 import LogoutButton from "./LogoutButton";
@@ -26,9 +27,11 @@ export default function TopBar({ profile, locale }: TopBarProps) {
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary overflow-hidden">
           {profile.avatar_url ? (
-            <img
+            <Image
               src={profile.avatar_url}
               alt={profile.full_name ?? "Avatar"}
+              width={36}
+              height={36}
               className="h-full w-full object-cover"
             />
           ) : (

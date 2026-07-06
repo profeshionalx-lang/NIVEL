@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 import type { Skill, Exercise } from "@/lib/types";
 
+const SKILL_FIELDS = "id, name, created_at";
+const EXERCISE_FIELDS = "id, name, created_at";
+
 export async function searchSkills(
   query: string
 ): Promise<{ success: true; skills: Skill[] } | { success: false; error: string }> {
@@ -12,7 +15,7 @@ export async function searchSkills(
 
     const { data: skills, error } = await supabase
       .from("skills")
-      .select("*")
+      .select(SKILL_FIELDS)
       .ilike("name", `%${query}%`)
       .order("name")
       .limit(10);
@@ -38,7 +41,7 @@ export async function searchExercises(
 
     const { data: exercises, error } = await supabase
       .from("exercises")
-      .select("*")
+      .select(EXERCISE_FIELDS)
       .ilike("name", `%${query}%`)
       .order("name")
       .limit(10);
@@ -70,14 +73,14 @@ export async function createSkill(
     const { data: skill, error: insertError } = await supabase
       .from("skills")
       .upsert({ name }, { onConflict: "name", ignoreDuplicates: true })
-      .select("*")
+      .select(SKILL_FIELDS)
       .single();
 
     if (insertError || !skill) {
       // If upsert with ignoreDuplicates returns no row, fetch existing
       const { data: existing, error: fetchError } = await supabase
         .from("skills")
-        .select("*")
+        .select(SKILL_FIELDS)
         .ilike("name", name)
         .single();
 
@@ -114,14 +117,14 @@ export async function createExercise(
     const { data: exercise, error: insertError } = await supabase
       .from("exercises")
       .upsert({ name }, { onConflict: "name", ignoreDuplicates: true })
-      .select("*")
+      .select(EXERCISE_FIELDS)
       .single();
 
     if (insertError || !exercise) {
       // If upsert with ignoreDuplicates returns no row, fetch existing
       const { data: existing, error: fetchError } = await supabase
         .from("exercises")
-        .select("*")
+        .select(EXERCISE_FIELDS)
         .ilike("name", name)
         .single();
 

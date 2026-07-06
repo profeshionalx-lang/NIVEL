@@ -35,11 +35,13 @@ export default async function SessionDetailPage({
 
   const { data: session } = await supabase
     .from("sessions")
-    .select("*, goals(user_id)")
+    .select("session_number, status, created_at, goals(user_id)")
     .eq("id", id)
     .single();
 
   if (!session) redirect("/dashboard");
+
+  const sessionGoal = session.goals as unknown as { user_id: string } | null;
 
   const { data: transcript } = await supabase
     .from("transcripts")
@@ -49,7 +51,9 @@ export default async function SessionDetailPage({
 
   const { data: cards } = await supabase
     .from("insight_cards")
-    .select("*")
+    .select(
+      "id, title, front_text, body, context_text, tags, quote, trainer_status, student_decision, student_edited_text"
+    )
     .eq("session_id", id)
     .order("position");
 
@@ -67,8 +71,8 @@ export default async function SessionDetailPage({
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
         <BackButton
           fallbackHref={
-            previewAsStudent && session.goals?.user_id
-              ? `/trainer/students/${session.goals.user_id}/preview`
+            previewAsStudent && sessionGoal?.user_id
+              ? `/trainer/students/${sessionGoal.user_id}/preview`
               : "/dashboard"
           }
         />

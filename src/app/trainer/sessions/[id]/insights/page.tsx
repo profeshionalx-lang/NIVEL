@@ -28,11 +28,11 @@ export default async function TrainerSessionInsightsPage({
   const [{ data: cards }, { data: categories }, { data: problems }] = await Promise.all([
     supabase
       .from("insight_cards")
-      .select("*")
+      .select("id, front_text, context_text, problem_id, tags, trainer_status, student_decision")
       .eq("session_id", id)
       .order("position"),
-    supabase.from("problem_categories").select("*").order("sort_order"),
-    supabase.from("problems").select("*").order("sort_order"),
+    supabase.from("problem_categories").select("id, name, sort_order").order("sort_order"),
+    supabase.from("problems").select("id, name").order("sort_order"),
   ]);
 
   return (

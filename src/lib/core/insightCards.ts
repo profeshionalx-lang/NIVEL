@@ -269,7 +269,7 @@ export async function getVaultCardsCore(
   let query = supabase
     .from("insight_cards")
     .select(
-      `*,
+      `id, title, front_text, body, context_text, tags, quote, student_edited_text,
       problem:problems(id, name),
       category:problem_categories(id, name),
       session:sessions(id, session_number, created_at)`
@@ -314,7 +314,7 @@ export async function applyTemplateToStudentCore(
   // Get representative card for this template
   const { data: template, error: tErr } = await supabase
     .from("insight_cards")
-    .select("*")
+    .select("title, body, quote, tags, front_text, context_text, problem_id, category_id")
     .eq("template_id", templateId)
     .limit(1)
     .single();

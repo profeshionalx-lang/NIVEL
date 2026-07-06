@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { updateStudentProfile } from "@/lib/actions/students";
 import type { DashboardProfile } from "@/lib/dashboard/data";
 
@@ -68,8 +69,7 @@ export default function InlineProfileHeader({ profile }: { profile: DashboardPro
     <button onClick={() => setEditing(true)} className="w-full flex items-center gap-4 text-left active:opacity-80">
       <div className="w-14 h-14 rounded-full bg-surface-card border-2 border-primary flex items-center justify-center overflow-hidden">
         {profile.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+          <Image src={profile.avatar_url} alt="" width={56} height={56} className="w-full h-full object-cover" />
         ) : (
           <span className="text-lg font-bold text-on-surface">{initials}</span>
         )}
