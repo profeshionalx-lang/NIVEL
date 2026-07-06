@@ -1,3 +1,4 @@
+import { timingSafeEqual, createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { sendMessage } from "@/lib/telegram/client";
 import { consumeLinkToken } from "@/lib/telegram/tokens";
@@ -30,6 +31,15 @@ type TelegramUpdate = {
 
 const OK = new Response("ok", { status: 200 });
 
+// Constant-time comparison. timingSafeEqual throws on mismatched buffer
+// lengths, so we hash both sides to a fixed-length digest first — this
+// still leaks nothing about the original secret's length via timing.
+function secretsMatch(provided: string, expected: string): boolean {
+  const providedHash = createHash("sha256").update(provided).digest();
+  const expectedHash = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(providedHash, expectedHash);
+}
+
 export async function POST(req: Request): Promise<Response> {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!secret) {
@@ -37,8 +47,8 @@ export async function POST(req: Request): Promise<Response> {
     console.error("[tg] TELEGRAM_WEBHOOK_SECRET is not set — webhook is misconfigured");
     return new Response("misconfigured", { status: 500 });
   }
-  const headerSecret = req.headers.get("x-telegram-bot-api-secret-token");
-  if (headerSecret !== secret) {
+  const headerSecret = req.headers.get("x-telegram-bot-api-secret-token") ?? "";
+  if (!secretsMatch(headerSecret, secret)) {
     // Silently 200 so legitimate Telegram retries don't pile up if a real request gets here.
     return OK;
   }

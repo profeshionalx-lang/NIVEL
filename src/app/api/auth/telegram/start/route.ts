@@ -1,5 +1,6 @@
 import { createAuthCode } from "@/lib/telegram/authCodes";
 import { createClient } from "@/lib/supabase/server";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,10 @@ export const dynamic = "force-dynamic";
  * the bot claims that profile instead of auto-creating a new one.
  */
 export async function POST(request: Request): Promise<Response> {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`telegram-start:${ip}`, { limit: 5, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfterMs);
+
   const botUsername = process.env.TELEGRAM_BOT_USERNAME?.trim();
   if (!botUsername) {
     console.error("[tg] TELEGRAM_BOT_USERNAME is not set");

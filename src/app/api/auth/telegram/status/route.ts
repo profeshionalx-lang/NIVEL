@@ -1,5 +1,6 @@
 import { consumeAuthCode, isAuthCodePending } from "@/lib/telegram/authCodes";
 import { createSessionForProfile } from "@/lib/auth/session";
+import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,10 @@ export const dynamic = "force-dynamic";
  * Never returns the profile_id to the client.
  */
 export async function GET(request: Request): Promise<Response> {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`telegram-status:${ip}`, { limit: 10, windowMs: 60_000 });
+  if (!limit.ok) return tooManyRequests(limit.retryAfterMs);
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code")?.trim();
   if (!code) {
