@@ -115,17 +115,21 @@ export default async function SessionDetailPage({
                 ) : (
                   <div className="flex items-center gap-3 rounded-2xl bg-surface-card p-4 border border-border-dim">
                     <span className="material-symbols-outlined text-on-surface-variant">
-                      {transcript.status === "processing" ? "hourglass_top" : "error"}
+                      {transcript.status === "pending" || transcript.status === "processing"
+                        ? "hourglass_top"
+                        : "error"}
                     </span>
                     <div>
                       <p className="text-sm font-bold text-on-surface">
-                        {transcript.status === "processing"
+                        {transcript.status === "pending"
+                          ? isRu ? "В очереди на транскрипцию…" : "Queued for transcription…"
+                          : transcript.status === "processing"
                           ? isRu ? "Транскрипция…" : "Transcribing…"
                           : isRu ? "Ошибка транскрипции" : "Transcription failed"}
                       </p>
-                      {transcript.status === "processing" && (
+                      {(transcript.status === "pending" || transcript.status === "processing") && (
                         <p className="text-xs text-on-surface-variant mt-0.5">
-                          {isRu ? "Обычно занимает 15–30 сек" : "Usually takes 15–30 sec"}
+                          {isRu ? "Обычно занимает 1–2 минуты" : "Usually takes 1–2 minutes"}
                         </p>
                       )}
                     </div>

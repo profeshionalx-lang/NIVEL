@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireTrainerOwnsSession } from "@/lib/auth/ownership";
 import {
   requestAudioUploadUrlCore,
-  transcribeSessionCore,
+  enqueueTranscriptionCore,
   getTranscriptStatusCore,
   deleteTranscriptCore,
 } from "@/lib/core/audio";
@@ -20,6 +20,11 @@ export async function requestAudioUploadUrl(
   return requestAudioUploadUrlCore(ctx.supabase, sessionId, ext);
 }
 
+/**
+ * Ставит аудио в очередь на транскрипцию и возвращает управление сразу
+ * (не ждёт Groq). Фоновый pm2-процесс scripts/transcribe-pending.mjs
+ * подхватит status='pending' и выполнит STT — см. lib/core/audio.ts.
+ */
 export async function transcribeSession(
   sessionId: string,
   storagePath: string
@@ -27,7 +32,7 @@ export async function transcribeSession(
   const ctx = await requireTrainerOwnsSession(sessionId);
   if (!ctx) return { success: false, error: "Forbidden" };
 
-  const result = await transcribeSessionCore(ctx.supabase, sessionId, storagePath);
+  const result = await enqueueTranscriptionCore(ctx.supabase, sessionId, storagePath);
 
   if (result.success) {
     revalidatePath(`/sessions/${sessionId}`);
