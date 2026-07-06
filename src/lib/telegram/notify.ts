@@ -1,8 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendMessage, type InlineKeyboard } from "./client";
 import { sendPushNotification } from "@/lib/fcm";
+import { createMagicToken } from "./magicTokens";
 
 const APP_URL = process.env.NEXT_PUBLIC_NIVEL_URL ?? "https://nivel-five.vercel.app";
+
+/**
+ * Builds a magic-login URL for the given profile/path so tapping the button
+ * in Telegram logs the user in directly. Falls back to a plain (non-auth)
+ * URL if token creation fails — the notification must still go out.
+ */
+async function magicUrl(profileId: string, path: string): Promise<string> {
+  try {
+    const token = await createMagicToken(profileId, path);
+    return `${APP_URL}/api/auth/telegram-magic?token=${token}`;
+  } catch (e) {
+    console.error("[tg] magicUrl: createMagicToken failed, falling back to plain URL", e);
+    return `${APP_URL}${path}`;
+  }
+}
 
 function plural(n: number, one: string, few: string, many: string): string {
   const mod10 = n % 10;
@@ -54,7 +70,7 @@ export async function notifyNewInsights(
     const text = `🎾 Тренер прислал ${count} ${word} с тренировки.`;
     const keyboard: InlineKeyboard = {
       inline_keyboard: [
-        [{ text: "Открыть в Nivel", url: `${APP_URL}/sessions/${sessionId}/insights` }],
+        [{ text: "Открыть в Nivel", url: await magicUrl(profileId, `/sessions/${sessionId}/insights`) }],
       ],
     };
     const res = await sendMessage(chatId, text, { reply_markup: keyboard });
@@ -96,7 +112,7 @@ export async function notifySessionReminder(
     const text = `⏰ Через ${hoursBefore} ${word} тренировка (в ${time}).`;
     const keyboard: InlineKeyboard = {
       inline_keyboard: [
-        [{ text: "Открыть в Nivel", url: `${APP_URL}/sessions/${sessionId}` }],
+        [{ text: "Открыть в Nivel", url: await magicUrl(profileId, `/sessions/${sessionId}`) }],
       ],
     };
     const res = await sendMessage(chatId, text, { reply_markup: keyboard });
@@ -130,7 +146,7 @@ export async function notifyStudentCompletedReview(
     const text = `✅ ${studentName} завершил разбор тренировки #${sessionNumber}.`;
     const keyboard: InlineKeyboard = {
       inline_keyboard: [
-        [{ text: "Посмотреть", url: `${APP_URL}/trainer/sessions/${sessionId}/insights` }],
+        [{ text: "Посмотреть", url: await magicUrl(trainerProfileId, `/trainer/sessions/${sessionId}/insights`) }],
       ],
     };
     const res = await sendMessage(chatId, text, { reply_markup: keyboard });
