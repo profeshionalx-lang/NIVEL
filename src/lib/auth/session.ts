@@ -87,6 +87,37 @@ export async function exchangeIdTokenForBearer(
   return { token, user: payload, expiresIn: MAX_AGE_SECONDS };
 }
 
+/**
+ * Create a session directly from a known profile_id, without a Firebase
+ * ID token. Used by the Telegram-login flow: the profile is created (or
+ * already exists) via the Telegram webhook, and the web client exchanges
+ * a confirmed auth code for a session against that profile_id directly.
+ */
+export async function createSessionForProfile(profileId: string): Promise<SessionUser> {
+  const supabase = await createClient();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, role, firebase_uid, email")
+    .eq("id", profileId)
+    .single();
+
+  if (error || !profile) {
+    throw new Error(`createSessionForProfile: profile not found (${error?.message ?? profileId})`);
+  }
+
+  const payload: SessionUser = {
+    firebase_uid: profile.firebase_uid ?? "",
+    email: profile.email ?? "",
+    id: profile.id,
+    full_name: profile.full_name ?? "",
+    avatar_url: profile.avatar_url,
+    role: profile.role,
+  };
+
+  await setSessionCookie(await signSessionToken(payload));
+  return payload;
+}
+
 export async function getSession(): Promise<SessionUser | null> {
   // Native/mobile clients send the session JWT as a bearer token; the web
   // sends it as the httpOnly cookie. Accept either — bearer takes precedence.

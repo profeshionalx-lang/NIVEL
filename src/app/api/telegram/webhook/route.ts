@@ -1,12 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendMessage } from "@/lib/telegram/client";
 import { consumeLinkToken } from "@/lib/telegram/tokens";
+import { confirmAuthCode } from "@/lib/telegram/authCodes";
 
 export const dynamic = "force-dynamic";
+
+const LOGIN_PREFIX = "login_";
 
 type TelegramUser = {
   id: number;
   username?: string;
+  first_name?: string;
+  last_name?: string;
 };
 
 type TelegramChat = {
@@ -60,13 +65,103 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   if (text.startsWith("/start ")) {
-    const token = text.slice("/start ".length).trim();
-    if (!token) return OK;
-    await handleStartWithToken(token, message, chatId);
+    const payload = text.slice("/start ".length).trim();
+    if (!payload) return OK;
+
+    if (payload.startsWith(LOGIN_PREFIX)) {
+      const code = payload.slice(LOGIN_PREFIX.length).trim();
+      if (!code) return OK;
+      await handleStartWithLoginCode(code, message, chatId);
+      return OK;
+    }
+
+    await handleStartWithToken(payload, message, chatId);
     return OK;
   }
 
   return OK;
+}
+
+async function handleStartWithLoginCode(
+  code: string,
+  message: TelegramMessage,
+  chatId: number
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+
+    // 1) Chat already linked to a profile → just confirm the login code.
+    const { data: existingLink } = await supabase
+      .from("telegram_links")
+      .select("profile_id")
+      .eq("telegram_chat_id", chatId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    let profileId = existingLink?.profile_id as string | undefined;
+
+    if (!profileId) {
+      // 2) New chat → auto-create a student profile from Telegram identity.
+      const firstName = message.from?.first_name?.trim() ?? "";
+      const lastName = message.from?.last_name?.trim() ?? "";
+      const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || "Telegram-пользователь";
+      const telegramUserId = message.from?.id;
+      const syntheticEmail = telegramUserId ? `tg${telegramUserId}@telegram.local` : null;
+
+      const { data: created, error: createErr } = await supabase
+        .from("profiles")
+        .insert({
+          full_name: fullName,
+          role: "student",
+          email: syntheticEmail,
+          firebase_uid: null,
+        })
+        .select("id")
+        .single();
+
+      if (createErr || !created) {
+        console.error("[tg] failed to auto-create profile", createErr);
+        await sendMessage(chatId, "Не удалось войти. Попробуй позже.");
+        return;
+      }
+
+      profileId = created.id as string;
+
+      const { error: linkErr } = await supabase.from("telegram_links").upsert(
+        {
+          profile_id: profileId,
+          telegram_chat_id: chatId,
+          telegram_user_id: telegramUserId ?? null,
+          username: message.from?.username ?? null,
+          linked_at: new Date().toISOString(),
+          is_active: true,
+        },
+        { onConflict: "profile_id" }
+      );
+
+      if (linkErr) {
+        console.error("[tg] failed to link auto-created profile", linkErr);
+        await sendMessage(chatId, "Не удалось войти. Попробуй позже.");
+        return;
+      }
+    }
+
+    const confirmed = await confirmAuthCode(code, profileId);
+    if (!confirmed) {
+      await sendMessage(
+        chatId,
+        "Ссылка устарела, обнови страницу входа и попробуй ещё раз."
+      );
+      return;
+    }
+
+    await sendMessage(
+      chatId,
+      "✅ Готово! Возвращайся на страницу Nivel — вход выполнится сам."
+    );
+  } catch (e) {
+    console.error("[tg] handleStartWithLoginCode failed", e);
+  }
 }
 
 async function handleStartWithToken(
