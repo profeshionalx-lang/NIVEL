@@ -23,6 +23,7 @@
 - `GET /api/v1/reference` → справочники problem_categories+problems, skills, exercises
 - `GET /api/v1/students/{id}/master-plan` → секции + пункты мастер-плана
 - `GET /api/v1/trainer/overview` → `{ students_count, upcoming_sessions: [{ id, student_id, student_name, session_number, scheduled_at }], pending_review: [{ id, student_id, student_name, session_number, completed_at }] }`
+- `GET /api/v1/students/{id}/invite` → `{ token, status: claimed|pending|none, claimed_at }` (без приглашения — `token: null`, не 404)
 
 ## Audio (A4)
 - `POST /api/v1/sessions/{id}/audio/upload-url` — тело `{ ext? }` (деф. m4a) → `{ uploadUrl, storagePath }`

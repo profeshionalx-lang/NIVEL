@@ -7,6 +7,7 @@ import {
   regenerateClaimTokenCore,
   revokeClaimTokenCore,
   updateStudentProfileCore,
+  getStudentInviteCore,
   type ShadowStudentResult,
 } from "@/lib/core/students";
 
@@ -78,21 +79,10 @@ export async function getStudentInvite(
   await requireTrainer();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("claim_token, claimed_at")
-    .eq("id", studentId)
-    .maybeSingle();
+  const result = await getStudentInviteCore(supabase, studentId);
+  if (!result) return null;
 
-  if (!data) return null;
-
-  if (data.claimed_at) {
-    return { token: data.claim_token ?? "", status: "claimed", claimed_at: data.claimed_at };
-  }
-  if (!data.claim_token) {
-    return { token: "", status: "none", claimed_at: null };
-  }
-  return { token: data.claim_token, status: "pending", claimed_at: null };
+  return { token: result.token ?? "", status: result.status, claimed_at: result.claimed_at };
 }
 
 export async function regenerateInvite(

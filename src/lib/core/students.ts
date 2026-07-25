@@ -146,3 +146,36 @@ export async function updateStudentProfileCore(
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+export type StudentInviteResult = {
+  token: string | null;
+  status: "claimed" | "pending" | "none";
+  claimed_at: string | null;
+};
+
+/**
+ * Reads the current claim-invite state for a student profile. Returns null if
+ * the student doesn't exist. `token` is null when there's no pending invite
+ * (status "none") — not an empty string, callers that need the legacy `""`
+ * shape (web Server Action) should map it themselves.
+ */
+export async function getStudentInviteCore(
+  supabase: SupabaseClient,
+  studentId: string
+): Promise<StudentInviteResult | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("claim_token, claimed_at")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  if (data.claimed_at) {
+    return { token: data.claim_token ?? null, status: "claimed", claimed_at: data.claimed_at };
+  }
+  if (!data.claim_token) {
+    return { token: null, status: "none", claimed_at: null };
+  }
+  return { token: data.claim_token, status: "pending", claimed_at: null };
+}
