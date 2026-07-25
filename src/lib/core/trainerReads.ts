@@ -266,6 +266,75 @@ export async function getReferenceCore(
   };
 }
 
+export type TrainerOverviewSessionItem = {
+  id: string;
+  student_id: string;
+  student_name: string | null;
+  session_number: number | null;
+};
+
+export type TrainerOverview = {
+  students_count: number;
+  upcoming_sessions: Array<TrainerOverviewSessionItem & { scheduled_at: string | null }>;
+  pending_review: Array<TrainerOverviewSessionItem & { completed_at: string | null }>;
+};
+
+/**
+ * Aggregate dashboard data for the trainer home screen (Android A6 #224):
+ * total students, upcoming (future) sessions, and completed sessions still
+ * awaiting trainer review. Three queries total (count + 2 selects), run in
+ * parallel; student names come from a `goals -> profiles` embed, not a
+ * per-row loop, to avoid N+1.
+ */
+export async function getTrainerOverviewCore(
+  supabase: SupabaseClient
+): Promise<TrainerOverview> {
+  const nowIso = new Date().toISOString();
+
+  const [studentsCountRes, upcomingRes, pendingRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "student"),
+    supabase
+      .from("sessions")
+      .select("id, session_number, scheduled_at, goals!inner(user_id, profiles(full_name))")
+      .not("scheduled_at", "is", null)
+      .gt("scheduled_at", nowIso)
+      .order("scheduled_at", { ascending: true })
+      .limit(10),
+    supabase
+      .from("sessions")
+      .select("id, session_number, completed_at, goals!inner(user_id, profiles(full_name))")
+      .eq("trainer_review_completed", false)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  const mapRow = (r: Record<string, unknown>): TrainerOverviewSessionItem => {
+    const goal = r.goals as { user_id: string; profiles: { full_name: string | null } | null } | null;
+    return {
+      id: r.id as string,
+      student_id: (goal?.user_id as string) ?? "",
+      student_name: goal?.profiles?.full_name ?? null,
+      session_number: (r.session_number as number | null) ?? null,
+    };
+  };
+
+  return {
+    students_count: studentsCountRes.count ?? 0,
+    upcoming_sessions: (upcomingRes.data ?? []).map((r: Record<string, unknown>) => ({
+      ...mapRow(r),
+      scheduled_at: (r.scheduled_at as string | null) ?? null,
+    })),
+    pending_review: (pendingRes.data ?? []).map((r: Record<string, unknown>) => ({
+      ...mapRow(r),
+      completed_at: (r.completed_at as string | null) ?? null,
+    })),
+  };
+}
+
 export type MasterPlanData = {
   id: string;
   student_id: string;
