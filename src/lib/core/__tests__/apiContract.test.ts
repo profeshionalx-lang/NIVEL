@@ -8,7 +8,11 @@ import {
   getMasterPlanCore,
   getTrainerOverviewCore,
 } from "../trainerReads";
-import { getTranscriptStatusCore, requestAudioUploadUrlCore } from "../audio";
+import {
+  getTranscriptStatusCore,
+  requestAudioUploadUrlCore,
+  getTranscriptCore,
+} from "../audio";
 import { getStudentInviteCore } from "../students";
 
 /**
@@ -251,6 +255,43 @@ describe("GET /api/v1/sessions/{id}/transcript/status — getTranscriptStatusCor
 
   it("нет строки транскрипта → null (контракт 404)", async () => {
     expect(await getTranscriptStatusCore(makeSupabaseStub({}), "se1")).toBeNull();
+  });
+});
+
+describe("GET /api/v1/sessions/{id}/transcript — getTranscriptCore", () => {
+  it("шейп транскрипта стабилен; status=ready → raw_text/segments_json заполнены", async () => {
+    const sb = makeSupabaseStub({
+      transcripts: {
+        rows: [{
+          status: "ready", error_message: null, raw_text: "Привет мир",
+          segments_json: [{ id: 0, start: 0, end: 1.2, text: "Привет мир", avg_logprob: -0.2 }],
+          duration_seconds: 120,
+        }],
+      },
+    });
+    const r = await getTranscriptCore(sb, "se1");
+    expectKeys(r, ["status", "error_message", "raw_text", "segments_json", "duration_seconds"]);
+    expect(r!.raw_text).toBe("Привет мир");
+    expectKeys(r!.segments_json[0], ["id", "start", "end", "text", "avg_logprob"]);
+  });
+
+  it("status=failed → raw_text: null, error_message заполнен (контракт для упавшей расшифровки)", async () => {
+    const sb = makeSupabaseStub({
+      transcripts: {
+        rows: [{
+          status: "failed", error_message: "STT error", raw_text: "",
+          segments_json: [], duration_seconds: null,
+        }],
+      },
+    });
+    const r = await getTranscriptCore(sb, "se1");
+    expect(r!.raw_text).toBeNull();
+    expect(r!.error_message).toBe("STT error");
+    expect(r!.status).toBe("failed");
+  });
+
+  it("нет строки транскрипта → null (контракт 404)", async () => {
+    expect(await getTranscriptCore(makeSupabaseStub({}), "se1")).toBeNull();
   });
 });
 

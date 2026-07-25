@@ -124,6 +124,39 @@ export async function getTranscriptStatusCore(
 }
 
 /**
+ * Full transcript read for the native client — status + text + segments.
+ * `raw_text` is only exposed once the transcript is `ready`; for any other
+ * status (`processing` | `failed`) it comes back `null` so the client can't
+ * accidentally render a partial/garbage text alongside an error state.
+ */
+export async function getTranscriptCore(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<{
+  status: string;
+  error_message: string | null;
+  raw_text: string | null;
+  segments_json: unknown[];
+  duration_seconds: number | null;
+} | null> {
+  const { data } = await supabase
+    .from("transcripts")
+    .select("status, error_message, raw_text, segments_json, duration_seconds")
+    .eq("session_id", sessionId)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  return {
+    status: data.status,
+    error_message: data.error_message,
+    raw_text: data.status === "ready" ? data.raw_text : null,
+    segments_json: Array.isArray(data.segments_json) ? data.segments_json : [],
+    duration_seconds: data.duration_seconds,
+  };
+}
+
+/**
  * Removes the transcript row (and any leftover storage file) for a session.
  * Shared by both reset and delete flows — the web wrappers add revalidate+redirect.
  */
