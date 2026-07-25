@@ -6,6 +6,7 @@ import {
   getSessionInsightCardsCore,
   getReferenceCore,
   getMasterPlanCore,
+  getTrainerOverviewCore,
 } from "../trainerReads";
 import { getTranscriptStatusCore, requestAudioUploadUrlCore } from "../audio";
 
@@ -40,6 +41,8 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>): SupabaseClient {
       eq: () => b,
       in: () => b,
       ilike: () => b,
+      not: () => b,
+      gt: () => b,
       order: () => b,
       limit: () => b,
       maybeSingle: () =>
@@ -135,6 +138,7 @@ describe("GET /api/v1/sessions/{id} — getSessionDetailCore", () => {
         rows: [{
           id: "se1", goal_id: "g1", session_number: 1, status: "planned",
           trainer_notes: null, scheduled_at: null, completed_at: null,
+          trainer_review_completed: false,
         }],
       },
       session_exercises: { rows: [{ id: 10, sort_order: 1, exercises: { name: "Стенка" } }] },
@@ -142,7 +146,7 @@ describe("GET /api/v1/sessions/{id} — getSessionDetailCore", () => {
     const r = await getSessionDetailCore(sb, "se1");
     expectKeys(r, [
       "id", "goal_id", "session_number", "status", "trainer_notes",
-      "scheduled_at", "completed_at", "exercises",
+      "scheduled_at", "completed_at", "trainer_review_completed", "exercises",
     ]);
     expectKeys(r!.exercises[0], ["id", "name", "sort_order"]);
     expect(r!.exercises[0]).toEqual({ id: 10, name: "Стенка", sort_order: 1 });
@@ -229,5 +233,39 @@ describe("POST /api/v1/sessions/{id}/audio/upload-url — requestAudioUploadUrlC
   it("неизвестное расширение нормализуется в m4a", async () => {
     const r = await requestAudioUploadUrlCore(makeSupabaseStub({}), "sess-1", "exe");
     expect((r as { storagePath: string }).storagePath).toMatch(/\.m4a$/);
+  });
+});
+
+describe("GET /api/v1/trainer/overview — getTrainerOverviewCore", () => {
+  it("шейп агрегата стабилен; имя ученика — из джойна, без цикла", async () => {
+    const sb = makeSupabaseStub({
+      profiles: { count: 12 },
+      sessions: {
+        rows: [{
+          id: "se1", session_number: 3, scheduled_at: "2026-08-01T10:00:00Z",
+          completed_at: "2026-07-20T10:00:00Z",
+          goals: { user_id: "s1", profiles: { full_name: "Иван" } },
+        }],
+      },
+    });
+    const r = await getTrainerOverviewCore(sb);
+    expectKeys(r, ["students_count", "upcoming_sessions", "pending_review"]);
+    expect(r.students_count).toBe(12);
+    expectKeys(r.upcoming_sessions[0], [
+      "id", "student_id", "student_name", "session_number", "scheduled_at",
+    ]);
+    expect(r.upcoming_sessions[0]).toEqual({
+      id: "se1", student_id: "s1", student_name: "Иван", session_number: 3,
+      scheduled_at: "2026-08-01T10:00:00Z",
+    });
+    expectKeys(r.pending_review[0], [
+      "id", "student_id", "student_name", "session_number", "completed_at",
+    ]);
+  });
+
+  it("тренер без учеников/сессий → нули и пустые массивы, не 404", async () => {
+    const sb = makeSupabaseStub({ profiles: { count: 0 }, sessions: { rows: [] } });
+    const r = await getTrainerOverviewCore(sb);
+    expect(r).toEqual({ students_count: 0, upcoming_sessions: [], pending_review: [] });
   });
 });

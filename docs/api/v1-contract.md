@@ -22,6 +22,7 @@
 - `GET /api/v1/sessions/{id}/insight-cards` → `{ cards: [{ id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at }] }`
 - `GET /api/v1/reference` → справочники problem_categories+problems, skills, exercises
 - `GET /api/v1/students/{id}/master-plan` → секции + пункты мастер-плана
+- `GET /api/v1/trainer/overview` → `{ students_count, upcoming_sessions: [{ id, student_id, student_name, session_number, scheduled_at }], pending_review: [{ id, student_id, student_name, session_number, completed_at }] }`
 
 ## Audio (A4)
 - `POST /api/v1/sessions/{id}/audio/upload-url` — тело `{ ext? }` (деф. m4a) → `{ uploadUrl, storagePath }`
