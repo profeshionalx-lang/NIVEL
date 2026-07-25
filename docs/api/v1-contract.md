@@ -29,6 +29,7 @@
 - `POST /api/v1/sessions/{id}/audio/upload-url` — тело `{ ext? }` (деф. m4a) → `{ uploadUrl, storagePath }`
 - `POST /api/v1/sessions/{id}/transcribe` — тело `{ storagePath }` → `{ ok }` (запускает Groq STT; `maxDuration=300`)
 - `GET /api/v1/sessions/{id}/transcript/status` → `{ status, error_message, analysis_status, analysis_error }`
+- `GET /api/v1/sessions/{id}/transcript` → `{ status, error_message, raw_text, segments_json, duration_seconds }` (404 если транскрипта нет; `raw_text: null`, если `status !== "ready"`)
 
 ## ⚠️ Канон нейминга карточек (решение для реконсиляции)
 Эндпоинт карточек сессии **канонически** — `GET /api/v1/sessions/{id}/insight-cards` (как в A3 #191;
