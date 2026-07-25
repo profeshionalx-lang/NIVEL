@@ -9,6 +9,7 @@ import {
   getTrainerOverviewCore,
 } from "../trainerReads";
 import { getTranscriptStatusCore, requestAudioUploadUrlCore } from "../audio";
+import { getStudentInviteCore } from "../students";
 
 /**
  * Контракт-тесты `/api/v1` read- и audio-эндпоинтов (A6, #187).
@@ -202,6 +203,37 @@ describe("GET /api/v1/students/{id}/master-plan — getMasterPlanCore", () => {
 
   it("нет плана → null", async () => {
     expect(await getMasterPlanCore(makeSupabaseStub({}), "s1")).toBeNull();
+  });
+});
+
+describe("GET /api/v1/students/{id}/invite — getStudentInviteCore", () => {
+  it("шейп приглашения стабилен, claimed", async () => {
+    const sb = makeSupabaseStub({
+      profiles: { rows: [{ claim_token: "tok123", claimed_at: "2026-01-01T00:00:00Z" }] },
+    });
+    const r = await getStudentInviteCore(sb, "s1");
+    expectKeys(r, ["token", "status", "claimed_at"]);
+    expect(r).toEqual({ token: "tok123", status: "claimed", claimed_at: "2026-01-01T00:00:00Z" });
+  });
+
+  it("pending — есть токен, не claimed", async () => {
+    const sb = makeSupabaseStub({
+      profiles: { rows: [{ claim_token: "tok456", claimed_at: null }] },
+    });
+    const r = await getStudentInviteCore(sb, "s1");
+    expect(r).toEqual({ token: "tok456", status: "pending", claimed_at: null });
+  });
+
+  it("none — нет токена → token: null (не пустая строка)", async () => {
+    const sb = makeSupabaseStub({
+      profiles: { rows: [{ claim_token: null, claimed_at: null }] },
+    });
+    const r = await getStudentInviteCore(sb, "s1");
+    expect(r).toEqual({ token: null, status: "none", claimed_at: null });
+  });
+
+  it("нет ученика → null (контракт 404)", async () => {
+    expect(await getStudentInviteCore(makeSupabaseStub({}), "s1")).toBeNull();
   });
 });
 
