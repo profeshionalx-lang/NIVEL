@@ -94,9 +94,20 @@ export function searchExercisesCore(supabase: SupabaseClient, query: string): Pr
 }
 
 /**
- * Creates a row keyed by the legacy `name` (unique) column. Duplicate name →
- * returns the existing row's id instead of failing (matches the web
- * `createSkill`/`createExercise` Server Actions this replaces).
+ * Creates a row. Dedup key is `name_ru` (the field the caller actually submits
+ * and the semantic identity for this API) — NOT the legacy `name` column.
+ *
+ * `name` carries a real DB unique constraint and is what the upsert conflicts
+ * on, but per migration 007 (`007_skills_exercises_i18n.sql:12`) every
+ * pre-existing row got `name_en = name` — so for legacy rows `name` holds the
+ * ENGLISH string, not `name_ru`. Conflicting only on `name` would miss a
+ * legitimate name_ru duplicate against any legacy row whose `name` differs
+ * from the submitted nameRu (i.e. most explicitly-translated seed rows),
+ * silently creating a second row with the same name_ru instead of returning
+ * the existing id. Hence the explicit name_ru lookup before AND after the
+ * insert attempt (the second catches a same-name_ru row created by a
+ * concurrent request between the two, still funneled through the `name`
+ * unique constraint at the DB level).
  */
 async function createLibraryItem(
   supabase: SupabaseClient,
@@ -107,6 +118,10 @@ async function createLibraryItem(
   const trimmedRu = nameRu.trim();
   if (!trimmedRu) return { success: false, error: "nameRu is required" };
   const trimmedEn = nameEn.trim() || trimmedRu;
+
+  const existingBefore = await findByNameRu(supabase, table, trimmedRu);
+  if (!existingBefore.success) return existingBefore;
+  if (existingBefore.id != null) return { success: true, id: existingBefore.id };
 
   const { data: inserted, error: insertError } = await supabase
     .from(table)
@@ -121,21 +136,32 @@ async function createLibraryItem(
     return { success: true, id: inserted.id as number };
   }
 
-  // ignoreDuplicates не вернул строку — конфликт по name, читаем существующую.
-  const { data: existing, error: fetchError } = await supabase
-    .from(table)
-    .select("id")
-    .ilike("name", trimmedRu)
-    .maybeSingle();
-
-  if (existing) {
-    return { success: true, id: existing.id as number };
-  }
+  // Либо конфликт по легаси name (см. докблок), либо гонка с параллельным
+  // созданием того же name_ru между проверкой выше и этим инсертом.
+  const existingAfter = await findByNameRu(supabase, table, trimmedRu);
+  if (!existingAfter.success) return existingAfter;
+  if (existingAfter.id != null) return { success: true, id: existingAfter.id };
 
   return {
     success: false,
-    error: insertError?.message ?? fetchError?.message ?? `Failed to create ${table}`,
+    error: insertError?.message ?? `Failed to create ${table}`,
   };
+}
+
+/**
+ * `limit(1)` + first-of-array rather than `.maybeSingle()`: `name_ru` has no
+ * DB unique constraint, so legacy rows could in principle collide on it —
+ * `.maybeSingle()` errors on >1 rows, which would turn a harmless pre-existing
+ * duplicate into a hard failure here.
+ */
+async function findByNameRu(
+  supabase: SupabaseClient,
+  table: LibraryTable,
+  nameRu: string
+): Promise<{ success: true; id: number | null } | { success: false; error: string }> {
+  const { data, error } = await supabase.from(table).select("id").ilike("name_ru", nameRu).limit(1);
+  if (error) return { success: false, error: error.message };
+  return { success: true, id: (data?.[0]?.id as number | undefined) ?? null };
 }
 
 export function createSkillCore(
