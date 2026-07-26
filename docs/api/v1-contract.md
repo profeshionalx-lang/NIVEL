@@ -40,6 +40,22 @@
 `name_en` (ilike), результат объединён и отсортирован. `POST` на существующее имя (уникальный
 legacy-столбец `name`, куда пишется `name_ru`) — не 500, возвращает `id` существующей записи.
 
+## Библиотека шаблонов и коллекций — чтение (NIVEL#226)
+Чтение для тренерской страницы `/trainer/cards`. Ядро — `src/lib/core/insightCards.ts` (там же
+живут write-эндпоинты этого домена, см. таблицу «Библиотека шаблонов и коллекции» ниже).
+
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `GET /collections` | — | `{ collections: [{ id, name, cards_count, created_at }] }` (только коллекции тренера) |
+| `GET /collections/{id}/cards` | — | `{ cards: [...] }` — та же форма карточки, что в `GET /sessions/{id}/insight-cards` (без `template_id`); чужая коллекция → 403 |
+| `GET /card-templates?q=` | query `q` (опционально) | `{ templates: [{ ...карточка, template_id }] }` |
+
+`cards_count` — агрегат одним запросом (вложенный `insight_collection_cards(template_id)`), без
+N+1. `GET /collections/{id}/cards` — представитель `insight_cards` на каждый `template_id`
+коллекции (по её `position`), две выборки суммарно вне зависимости от размера коллекции.
+`GET /card-templates` — по одной записи на `template_id` среди карточек тренера, `q` фильтрует по
+`title` (ilike); пустой `q` → первые 50 по алфавиту.
+
 ## Audio (A4)
 - `POST /api/v1/sessions/{id}/audio/upload-url` — тело `{ ext? }` (деф. m4a) → `{ uploadUrl, storagePath }`
 - `POST /api/v1/sessions/{id}/transcribe` — тело `{ storagePath }` → `{ ok }` (запускает Groq STT; `maxDuration=300`)
