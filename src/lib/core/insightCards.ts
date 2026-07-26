@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { maybeCompleteSessionCore } from "@/lib/core/sessions";
+import type { SessionInsightCard } from "@/lib/core/trainerReads";
 import type {
   InsightCardWithRelations,
   InsightStudentDecision,
@@ -453,4 +454,152 @@ export async function applyCollectionToStudentCore(
   }
 
   return { success: true, applied };
+}
+
+// --- NIVEL#226: read-endpoints для библиотеки шаблонов и коллекций ---
+
+export type TrainerCollection = {
+  id: string;
+  name: string;
+  created_at: string;
+  cards_count: number;
+};
+
+/**
+ * The trainer's card collections with card counts. `cards_count` comes from a
+ * single query with the nested `insight_collection_cards` join (embedded
+ * relation, no per-collection count query) — no N+1 regardless of how many
+ * collections the trainer has.
+ */
+export async function listTrainerCollectionsCore(
+  supabase: SupabaseClient,
+  trainerId: string
+): Promise<TrainerCollection[]> {
+  const { data } = await supabase
+    .from("insight_collections")
+    .select("id, name, created_at, insight_collection_cards(template_id)")
+    .eq("trainer_id", trainerId)
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as Record<string, unknown>[]).map((raw) => ({
+    id: raw.id as string,
+    name: raw.name as string,
+    created_at: raw.created_at as string,
+    cards_count: ((raw.insight_collection_cards as unknown[]) ?? []).length,
+  }));
+}
+
+const INSIGHT_CARD_COLUMNS =
+  "id, template_id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at";
+
+function mapInsightCardRow(raw: Record<string, unknown>): SessionInsightCard {
+  return {
+    id: raw.id as string,
+    title: (raw.title as string | null) ?? null,
+    body: (raw.body as string | null) ?? null,
+    quote: (raw.quote as string | null) ?? null,
+    tags: (raw.tags as string[] | null) ?? null,
+    front_text: (raw.front_text as string | null) ?? null,
+    context_text: (raw.context_text as string | null) ?? null,
+    source: (raw.source as string | null) ?? null,
+    trainer_status: (raw.trainer_status as string | null) ?? null,
+    student_decision: (raw.student_decision as string | null) ?? null,
+    position: (raw.position as number | null) ?? null,
+    created_at: raw.created_at as string,
+  };
+}
+
+/**
+ * The cards in a collection: one representative `insight_cards` row per
+ * `template_id`, in the collection's stored `position` order. Same DTO shape
+ * as `GET /api/v1/sessions/{id}/insight-cards` (`SessionInsightCard`) — the
+ * native client reuses that model, per NIVEL#226.
+ *
+ * `trainerId` scopes the second query — `template_id` is NOT trainer-unique:
+ * `aiInsights.ts`'s `saveAiDraftCards` reuses an existing `template_id` by
+ * matching `(title, body)` with no `trainer_id` filter ("cards created across
+ * multiple students automatically share the same template_id"), and the
+ * migration 015 backfill deduped the same way repo-wide. Two different
+ * trainers' cards can legitimately share a `template_id`. Without this
+ * filter, a collection containing such a shared `template_id` would leak the
+ * OTHER trainer's card content (including free-text `front_text`/
+ * `context_text`/`quote`) into this trainer's response.
+ *
+ * Ownership of the collection itself must be checked by the caller
+ * (`requireTrainerOwnsCollection`/`collectionBelongsToTrainer`) before
+ * calling this — it does not re-verify. Two queries total regardless of
+ * collection size (links, then one `.in(template_id)` batch) — no N+1.
+ */
+export async function getCollectionCardsCore(
+  supabase: SupabaseClient,
+  collectionId: string,
+  trainerId: string
+): Promise<SessionInsightCard[]> {
+  const { data: links } = await supabase
+    .from("insight_collection_cards")
+    .select("template_id")
+    .eq("collection_id", collectionId)
+    .order("position");
+
+  const templateIds = (links ?? []).map((l) => l.template_id as string);
+  if (templateIds.length === 0) return [];
+
+  const { data: cards } = await supabase
+    .from("insight_cards")
+    .select(INSIGHT_CARD_COLUMNS)
+    .eq("trainer_id", trainerId)
+    .in("template_id", templateIds);
+
+  const byTemplate = new Map<string, Record<string, unknown>>();
+  for (const raw of (cards ?? []) as Record<string, unknown>[]) {
+    const tid = raw.template_id as string;
+    if (!byTemplate.has(tid)) byTemplate.set(tid, raw);
+  }
+
+  return templateIds
+    .map((tid) => byTemplate.get(tid))
+    .filter((raw): raw is Record<string, unknown> => !!raw)
+    .map(mapInsightCardRow);
+}
+
+export type CardTemplate = SessionInsightCard & { template_id: string };
+
+const TEMPLATE_SEARCH_LIMIT = 50;
+
+/**
+ * The trainer's card-template library (what collections are built from): one
+ * representative row per distinct `template_id` among the trainer's insight
+ * cards. `q` (optional) filters by title substring; empty → first 50
+ * alphabetically. Fetches all matching rows and dedupes/caps in application
+ * code (not at the query level) — deferring the limit until after dedup is
+ * what keeps this correct: a template with many applied copies must not push
+ * an older, less-duplicated template out of the first page.
+ */
+export async function searchCardTemplatesCore(
+  supabase: SupabaseClient,
+  trainerId: string,
+  query: string
+): Promise<CardTemplate[]> {
+  let q = supabase
+    .from("insight_cards")
+    .select(INSIGHT_CARD_COLUMNS)
+    .eq("trainer_id", trainerId)
+    .not("template_id", "is", null)
+    .order("title", { ascending: true, nullsFirst: false });
+
+  const trimmed = query.trim();
+  if (trimmed) q = q.ilike("title", `%${trimmed}%`);
+
+  const { data } = await q;
+
+  const seen = new Set<string>();
+  const templates: CardTemplate[] = [];
+  for (const raw of (data ?? []) as Record<string, unknown>[]) {
+    const templateId = raw.template_id as string;
+    if (seen.has(templateId)) continue;
+    seen.add(templateId);
+    templates.push({ ...mapInsightCardRow(raw), template_id: templateId });
+    if (templates.length >= TEMPLATE_SEARCH_LIMIT) break;
+  }
+  return templates;
 }

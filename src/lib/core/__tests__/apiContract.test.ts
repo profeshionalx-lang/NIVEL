@@ -15,6 +15,11 @@ import {
 } from "../audio";
 import { getStudentInviteCore } from "../students";
 import { searchSkillsCore, searchExercisesCore } from "../library";
+import {
+  listTrainerCollectionsCore,
+  getCollectionCardsCore,
+  searchCardTemplatesCore,
+} from "../insightCards";
 
 /**
  * Контракт-тесты `/api/v1` read- и audio-эндпоинтов (A6, #187).
@@ -338,6 +343,122 @@ describe("GET /api/v1/skills, /api/v1/exercises — searchSkillsCore/searchExerc
     expect(r.success).toBe(true);
     if (!r.success) return;
     expectKeys(r.items[0], ["id", "name_ru", "name_en", "created_at"]);
+  });
+});
+
+describe("GET /api/v1/collections — listTrainerCollectionsCore", () => {
+  it("шейп коллекции стабилен; cards_count — из вложенного join, без N+1", async () => {
+    const sb = makeSupabaseStub({
+      insight_collections: {
+        rows: [{
+          id: "col1", name: "Подача", created_at: "2026-01-01",
+          insight_collection_cards: [{ template_id: "tpl1" }, { template_id: "tpl2" }],
+        }],
+      },
+    });
+    const r = await listTrainerCollectionsCore(sb, "t1");
+    expect(r).toHaveLength(1);
+    expectKeys(r[0], ["id", "name", "created_at", "cards_count"]);
+    expect(r[0]).toEqual({ id: "col1", name: "Подача", created_at: "2026-01-01", cards_count: 2 });
+  });
+
+  it("коллекция без карточек → cards_count: 0", async () => {
+    const sb = makeSupabaseStub({
+      insight_collections: {
+        rows: [{ id: "col2", name: "Пустая", created_at: "2026-01-01", insight_collection_cards: [] }],
+      },
+    });
+    const r = await listTrainerCollectionsCore(sb, "t1");
+    expect(r[0].cards_count).toBe(0);
+  });
+});
+
+describe("GET /api/v1/collections/{id}/cards — getCollectionCardsCore", () => {
+  it("шейп карточки — та же форма, что у getSessionInsightCardsCore (без template_id)", async () => {
+    const sb = makeSupabaseStub({
+      insight_collection_cards: { rows: [{ template_id: "tpl1" }] },
+      insight_cards: {
+        rows: [{
+          id: "c1", template_id: "tpl1", title: "T", body: "B", quote: null, tags: ["x"],
+          front_text: null, context_text: null, source: null,
+          trainer_status: "approved", student_decision: null, position: 0, created_at: "2026-01-01",
+        }],
+      },
+    });
+    const cards = await getCollectionCardsCore(sb, "col1", "t1");
+    expect(cards).toHaveLength(1);
+    expectKeys(cards[0], [
+      "id", "title", "body", "quote", "tags", "front_text", "context_text",
+      "source", "trainer_status", "student_decision", "position", "created_at",
+    ]);
+  });
+
+  it("пустая коллекция (нет ссылок) → [] без запроса к insight_cards", async () => {
+    const sb = makeSupabaseStub({ insight_collection_cards: { rows: [] } });
+    expect(await getCollectionCardsCore(sb, "col-empty", "t1")).toEqual([]);
+  });
+
+  it("порядок карточек — по position коллекции, а не по порядку ответа insight_cards", async () => {
+    const card = (id: string) => ({
+      id, template_id: id, title: id, body: "B", quote: null, tags: [],
+      front_text: null, context_text: null, source: null,
+      trainer_status: "approved", student_decision: null, position: 0, created_at: "2026-01-01",
+    });
+    const sb = makeSupabaseStub({
+      // Ссылки коллекции в порядке position: tpl2 раньше tpl1.
+      insight_collection_cards: { rows: [{ template_id: "tpl2" }, { template_id: "tpl1" }] },
+      // insight_cards отдаёт их в другом порядке.
+      insight_cards: { rows: [card("tpl1"), card("tpl2")] },
+    });
+    const cards = await getCollectionCardsCore(sb, "col1", "t1");
+    expect(cards.map((c) => c.id)).toEqual(["tpl2", "tpl1"]);
+  });
+
+  it("шаблон без сохранившейся карточки (все копии удалены) — тихо выпадает из ответа", async () => {
+    const sb = makeSupabaseStub({
+      insight_collection_cards: {
+        rows: [{ template_id: "tpl1" }, { template_id: "tpl-deleted" }],
+      },
+      insight_cards: {
+        rows: [{
+          id: "c1", template_id: "tpl1", title: "T", body: "B", quote: null, tags: [],
+          front_text: null, context_text: null, source: null,
+          trainer_status: "approved", student_decision: null, position: 0, created_at: "2026-01-01",
+        }],
+      },
+    });
+    const cards = await getCollectionCardsCore(sb, "col1", "t1");
+    expect(cards).toHaveLength(1);
+    expect(cards[0].id).toBe("c1");
+  });
+});
+
+describe("GET /api/v1/card-templates — searchCardTemplatesCore", () => {
+  it("шейп шаблона стабилен (карточка + template_id); дедуп по template_id", async () => {
+    const sb = makeSupabaseStub({
+      insight_cards: {
+        rows: [
+          {
+            id: "c1", template_id: "tpl1", title: "Приём слева", body: "B", quote: null,
+            tags: ["техника"], front_text: null, context_text: null, source: null,
+            trainer_status: "approved", student_decision: null, position: 0, created_at: "2026-01-02",
+          },
+          {
+            id: "c2", template_id: "tpl1", title: "Приём слева", body: "B", quote: null,
+            tags: ["техника"], front_text: null, context_text: null, source: null,
+            trainer_status: "approved", student_decision: "taken", position: 0, created_at: "2026-01-01",
+          },
+        ],
+      },
+    });
+    const templates = await searchCardTemplatesCore(sb, "t1", "");
+    // два ряда с одним template_id схлопываются в один шаблон
+    expect(templates).toHaveLength(1);
+    expectKeys(templates[0], [
+      "id", "template_id", "title", "body", "quote", "tags", "front_text", "context_text",
+      "source", "trainer_status", "student_decision", "position", "created_at",
+    ]);
+    expect(templates[0].template_id).toBe("tpl1");
   });
 });
 

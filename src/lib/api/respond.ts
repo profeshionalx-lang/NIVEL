@@ -6,10 +6,12 @@ import {
   requireTrainerOwnsCard,
   requireTrainerOwnsStudent,
   requireTrainerOwnsGoal,
+  requireTrainerOwnsCollection,
   type TrainerContext,
   type OwnershipContext,
   type CardOwnershipContext,
   type StudentOwnershipContext,
+  type CollectionOwnershipContext,
 } from "@/lib/auth/ownership";
 
 /**
@@ -71,6 +73,16 @@ export async function guardCard(
 ): Promise<GuardResult<CardOwnershipContext>> {
   if (!(await getSession())) return { ok: false, res: unauthenticated() };
   const ctx = await requireTrainerOwnsCard(cardId);
+  if (!ctx) return { ok: false, res: forbidden() };
+  return { ok: true, ctx };
+}
+
+/** 401 if no session, 403 if not the trainer who owns the collection. */
+export async function guardCollection(
+  collectionId: string
+): Promise<GuardResult<CollectionOwnershipContext>> {
+  if (!(await getSession())) return { ok: false, res: unauthenticated() };
+  const ctx = await requireTrainerOwnsCollection(collectionId);
   if (!ctx) return { ok: false, res: forbidden() };
   return { ok: true, ctx };
 }
