@@ -12,6 +12,7 @@ import {
   getTranscriptStatusCore,
   requestAudioUploadUrlCore,
   getTranscriptCore,
+  deleteTranscriptCore,
 } from "../audio";
 import { getStudentInviteCore } from "../students";
 import { searchSkillsCore, searchExercisesCore } from "../library";
@@ -20,6 +21,7 @@ import {
   getCollectionCardsCore,
   searchCardTemplatesCore,
 } from "../insightCards";
+import { requeueAiInsightsCore } from "../aiInsights";
 
 /**
  * Контракт-тесты `/api/v1` read- и audio-эндпоинтов (A6, #187).
@@ -34,13 +36,19 @@ import {
 
 type Fixture = { rows?: Record<string, unknown>[]; count?: number };
 
+/** Запросы на запись (`delete`/`remove`), сделанные стабом — для поведенческих тестов #227. */
+type StubCalls = { deletedTables?: string[]; removedPaths?: string[] };
+
 /**
  * Минимальный mock supabase: chainable query-builder, отдающий канонед-данные по
  * имени таблицы. Любой цепочечный метод возвращает builder; терминальный `await`
  * отдаёт `{ data, count }`, а `maybeSingle`/`single` — первый ряд. `head:true`
  * (count-запросы) отдаёт `{ count }`. Покрывает запросы read/audio-ядер.
+ * `delete`/`update` — тоже chainable, резолвятся тем же терминальным `then`
+ * (`{ error: null }` при отсутствии фикстуры-ошибки для таблицы); `calls`, если
+ * передан, собирает какие таблицы удалялись и какие Storage-пути чистились.
  */
-function makeSupabaseStub(fixtures: Record<string, Fixture>): SupabaseClient {
+function makeSupabaseStub(fixtures: Record<string, Fixture>, calls?: StubCalls): SupabaseClient {
   const buildFor = (table: string) => {
     let head = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +64,11 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>): SupabaseClient {
       gt: () => b,
       order: () => b,
       limit: () => b,
+      delete: () => {
+        calls?.deletedTables?.push(table);
+        return b;
+      },
+      update: () => b,
       maybeSingle: () =>
         Promise.resolve({ data: fixtures[table]?.rows?.[0] ?? null, error: null }),
       single: () =>
@@ -84,6 +97,10 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>): SupabaseClient {
           },
           error: null,
         }),
+        remove: async (paths: string[]) => {
+          calls?.removedPaths?.push(...paths);
+          return { data: null, error: null };
+        },
       }),
     },
   } as unknown as SupabaseClient;
@@ -298,6 +315,71 @@ describe("GET /api/v1/sessions/{id}/transcript — getTranscriptCore", () => {
 
   it("нет строки транскрипта → null (контракт 404)", async () => {
     expect(await getTranscriptCore(makeSupabaseStub({}), "se1")).toBeNull();
+  });
+});
+
+describe("POST .../transcript/reset, DELETE .../transcript — deleteTranscriptCore (#227)", () => {
+  it("удаляет строку транскрипта и файл в Storage, если storage_path указан", async () => {
+    const calls: StubCalls = { deletedTables: [], removedPaths: [] };
+    const sb = makeSupabaseStub({ transcripts: { rows: [{ storage_path: "se1/audio.m4a" }] } }, calls);
+    await deleteTranscriptCore(sb, "se1");
+    expect(calls.removedPaths).toEqual(["se1/audio.m4a"]);
+    expect(calls.deletedTables).toContain("transcripts");
+  });
+
+  it("идемпотентен: нет строки транскрипта → ничего не падает, Storage не трогается", async () => {
+    const calls: StubCalls = { deletedTables: [], removedPaths: [] };
+    const sb = makeSupabaseStub({}, calls);
+    await expect(deleteTranscriptCore(sb, "se1")).resolves.toBeUndefined();
+    expect(calls.removedPaths).toEqual([]);
+    expect(calls.deletedTables).toContain("transcripts"); // delete всё равно вызывается, просто no-op
+  });
+
+  it("storage_path уже пуст (аудио давно вычищено) → Storage не трогаем, строку всё равно удаляем", async () => {
+    const calls: StubCalls = { deletedTables: [], removedPaths: [] };
+    const sb = makeSupabaseStub({ transcripts: { rows: [{ storage_path: null }] } }, calls);
+    await deleteTranscriptCore(sb, "se1");
+    expect(calls.removedPaths).toEqual([]);
+    expect(calls.deletedTables).toContain("transcripts");
+  });
+});
+
+describe("POST /api/v1/sessions/{id}/insights/requeue — requeueAiInsightsCore (#227)", () => {
+  it("готовый транскрипт с текстом → success:true, аналог generate/paste-ответов по духу", async () => {
+    const sb = makeSupabaseStub({
+      transcripts: { rows: [{ status: "ready", raw_text: "текст", analysis_status: "failed" }] },
+    });
+    expect(await requeueAiInsightsCore(sb, "se1")).toEqual({ success: true });
+  });
+
+  it("транскрипт не ready → отказ, mutated:false (ничего не поменяли)", async () => {
+    const sb = makeSupabaseStub({
+      transcripts: { rows: [{ status: "processing", raw_text: "", analysis_status: "idle" }] },
+    });
+    expect(await requeueAiInsightsCore(sb, "se1")).toEqual({
+      error: "Транскрипт не готов",
+      mutated: false,
+    });
+  });
+
+  it("транскрипт ready, но текст пустой → отказ (нечего анализировать)", async () => {
+    const sb = makeSupabaseStub({
+      transcripts: { rows: [{ status: "ready", raw_text: "   ", analysis_status: "failed" }] },
+    });
+    expect(await requeueAiInsightsCore(sb, "se1")).toEqual({
+      error: "Транскрипт не готов",
+      mutated: false,
+    });
+  });
+
+  it("анализ уже в очереди/идёт → отказ, второй раз не ставим", async () => {
+    const sb = makeSupabaseStub({
+      transcripts: { rows: [{ status: "ready", raw_text: "текст", analysis_status: "processing" }] },
+    });
+    expect(await requeueAiInsightsCore(sb, "se1")).toEqual({
+      error: "Анализ уже в очереди",
+      mutated: false,
+    });
   });
 });
 

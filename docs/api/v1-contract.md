@@ -61,6 +61,8 @@ N+1. `GET /collections/{id}/cards` — представитель `insight_cards
 - `POST /api/v1/sessions/{id}/transcribe` — тело `{ storagePath }` → `{ ok }` (запускает Groq STT; `maxDuration=300`)
 - `GET /api/v1/sessions/{id}/transcript/status` → `{ status, error_message, analysis_status, analysis_error }`
 - `GET /api/v1/sessions/{id}/transcript` → `{ status, error_message, raw_text, segments_json, duration_seconds }` (404 если транскрипта нет; `raw_text: null`, если `status !== "ready"`)
+- `POST /api/v1/sessions/{id}/transcript/reset` (#227) → `{ ok }` — удаляет строку `transcripts` и файл в Storage (если остался), тренер грузит аудио заново; идемпотентен
+- `DELETE /api/v1/sessions/{id}/transcript` (#227) → `{ ok }` — тот же `deleteTranscriptCore`, что и reset; после вызова `GET .../transcript` → 404; идемпотентен
 
 ## ⚠️ Канон нейминга карточек (решение для реконсиляции)
 Эндпоинт карточек сессии **канонически** — `GET /api/v1/sessions/{id}/insight-cards` (как в A3 #191;
@@ -102,6 +104,7 @@ N+1. `GET /collections/{id}/cards` — представитель `insight_cards
 |---|---|---|
 | `POST /sessions/{id}/insights/generate` | — | `{ ok, count }` (502 если анализ мутировал и упал, иначе 400) |
 | `POST /sessions/{id}/insights/paste` | `{ markdown }` | `{ ok, count }` (400 `{ error, line }` при ошибке парсинга) |
+| `POST /sessions/{id}/insights/requeue` (#227) | — | `{ ok }` (400 `{ error }`, если транскрипт не `ready`/пустой или анализ уже в очереди/идёт) |
 | `PATCH /cards/{id}` | `{ title, body, tag, side? }` | `{ ok }` |
 | `DELETE /cards/{id}` | — | `{ ok }` |
 | `POST /cards/{id}/approve` | — | `{ ok }` |
