@@ -16,6 +16,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? undefined;
 
-  const templates = await listCardTemplatesCore(guard.ctx.supabase, guard.ctx.user.id, q, 50);
+  // `limit` — необязательный, всегда зажат в 1..50: клиент не может расширить окно.
+  const rawLimit = Number(searchParams.get("limit"));
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 50) : 50;
+
+  const templates = await listCardTemplatesCore(guard.ctx.supabase, guard.ctx.user.id, q, limit);
   return NextResponse.json({ templates });
 }
