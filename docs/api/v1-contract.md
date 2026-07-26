@@ -25,7 +25,7 @@
 - `GET /api/v1/trainer/overview` → `{ students_count, upcoming_sessions: [{ id, student_id, student_name, session_number, scheduled_at }], pending_review: [{ id, student_id, student_name, session_number, completed_at }] }`
 - `GET /api/v1/students/{id}/invite` → `{ token, status: claimed|pending|none, claimed_at }` (без приглашения — `token: null`, не 404)
 - `GET /api/v1/collections` → `{ collections: [{ id, name, cards_count, created_at }] }` — только коллекции текущего тренера; `cards_count` агрегатом (без N+1)
-- `GET /api/v1/collections/{id}/cards` → `{ cards: [...] }` — тот же shape, что и `GET /sessions/{id}/insight-cards`; чужая коллекция → 403
+- `GET /api/v1/collections/{id}/cards` → `{ cards: [...] }` — тот же shape, что и `GET /sessions/{id}/insight-cards`; чужая коллекция → 403. Порядок задаётся самим массивом (позиция в коллекции); поле `position` — из исходной карточки (позиция в её сессии), сортировать по нему не нужно
 - `GET /api/v1/card-templates?q=&limit=` → `{ templates: [{ id, template_id, title, body, quote, tags, trainer_status, created_at, student_count, taken_count, skipped_count, pending_count }] }` — библиотека шаблонов тренера, `q` — подстрока по title/body, максимум 50
 
 ## Библиотека (NIVEL#225)

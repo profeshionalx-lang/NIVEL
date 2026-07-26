@@ -22,7 +22,7 @@ export async function GET(
   const guard = await guardCollection(id);
   if (!guard.ok) return guard.res;
 
-  const cards = await getCollectionCardsCore(guard.ctx.supabase, id);
+  const cards = await getCollectionCardsCore(guard.ctx.supabase, id, guard.ctx.user.id);
   return NextResponse.json({ cards });
 }
 

@@ -500,7 +500,8 @@ export async function listCollectionsCore(
  */
 export async function getCollectionCardsCore(
   supabase: SupabaseClient,
-  collectionId: string
+  collectionId: string,
+  trainerId: string
 ): Promise<SessionInsightCard[]> {
   const { data: items } = await supabase
     .from("insight_collection_cards")
@@ -516,7 +517,13 @@ export async function getCollectionCardsCore(
     .select(
       "id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at, template_id"
     )
-    .in("template_id", templateIds);
+    .eq("trainer_id", trainerId)
+    .in("template_id", templateIds)
+    // Детерминизм: у шаблона обычно несколько строк insight_cards (по одной на
+    // ученика). Без сортировки «представитель» шаблона выбирался бы случайно,
+    // и student_decision/position плавали бы между одинаковыми запросами.
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   const byTemplate = new Map<string, Record<string, unknown>>();
   for (const c of cards ?? []) {
@@ -544,6 +551,18 @@ export async function getCollectionCardsCore(
 }
 
 /**
+ * Обезвреживает пользовательскую строку поиска перед подстановкой в PostgREST
+ * `or(...)`. Запятая, скобки и обратный слэш — разделители грамматики `or()`:
+ * без чистки `?q=a,trainer_id.not.is.null` превращается в лишний дизъюнкт.
+ * `%` и `_` — wildcard'ы ilike, в подстрочном поиске их быть не должно.
+ * Возвращает null, если после чистки искать нечего.
+ */
+function sanitizeSearchTerm(q?: string): string | null {
+  const term = (q ?? "").replace(/[,()\\%_"]/g, "").trim();
+  return term.length > 0 ? term : null;
+}
+
+/**
  * Card template library for a trainer — the same dedup-by-template_id logic
  * as `/trainer/cards`' page loader, but query-side: fetches only the trainer's
  * cards, then aggregates per template in memory. `q` filters by substring on
@@ -559,11 +578,14 @@ export async function listCardTemplatesCore(
     .from("insight_cards")
     .select("id, template_id, title, body, quote, tags, trainer_status, created_at, student_id, student_decision")
     .eq("trainer_id", trainerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // Страховка: лимит считается по шаблонам (после дедупа), поэтому в БД его
+    // применить нельзя — но и тянуть неограниченную выборку не нужно.
+    .limit(2000);
 
-  if (q?.trim()) {
-    const term = `%${q.trim()}%`;
-    query = query.or(`title.ilike.${term},body.ilike.${term}`);
+  const term = sanitizeSearchTerm(q);
+  if (term) {
+    query = query.or(`title.ilike.%${term}%,body.ilike.%${term}%`);
   }
 
   const { data } = await query;

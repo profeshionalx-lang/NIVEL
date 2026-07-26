@@ -434,7 +434,7 @@ describe("GET /api/v1/collections/{id}/cards — getCollectionCardsCore", () => 
         }],
       },
     });
-    const cards = await getCollectionCardsCore(sb, "col1");
+    const cards = await getCollectionCardsCore(sb, "col1", "t1");
     expectKeys(cards[0], [
       "id", "title", "body", "quote", "tags", "front_text", "context_text",
       "source", "trainer_status", "student_decision", "position", "created_at",
@@ -442,7 +442,7 @@ describe("GET /api/v1/collections/{id}/cards — getCollectionCardsCore", () => 
   });
 
   it("пустая коллекция → [] без второго запроса", async () => {
-    expect(await getCollectionCardsCore(makeSupabaseStub({}), "col1")).toEqual([]);
+    expect(await getCollectionCardsCore(makeSupabaseStub({}), "col1", "t1")).toEqual([]);
   });
 });
 
@@ -476,6 +476,27 @@ describe("GET /api/v1/card-templates — listCardTemplatesCore", () => {
     const orCalls: string[] = [];
     await listCardTemplatesCore(makeSupabaseStub({ insight_cards: { rows } }, orCalls), "t1", "пода");
     expect(orCalls).toEqual(["title.ilike.%пода%,body.ilike.%пода%"]);
+  });
+
+  it("спецсимволы PostgREST вырезаются из q (нет инъекции в or)", async () => {
+    const orCalls: string[] = [];
+    await listCardTemplatesCore(
+      makeSupabaseStub({ insight_cards: { rows } }, orCalls),
+      "t1",
+      "a,trainer_id.not.is.null"
+    );
+    expect(orCalls).toHaveLength(1);
+    // Ни запятых, ни скобок, ни wildcard'ов (%, _) внутри самого терма.
+    const term = orCalls[0].slice("title.ilike.%".length, orCalls[0].indexOf("%,body"));
+    expect(term).toBe("atrainerid.not.is.null");
+    expect(term).not.toMatch(/[,()\\%_]/);
+    expect(orCalls[0]).toBe(`title.ilike.%${term}%,body.ilike.%${term}%`);
+  });
+
+  it("q из одних спецсимволов не добавляет фильтр", async () => {
+    const orCalls: string[] = [];
+    await listCardTemplatesCore(makeSupabaseStub({ insight_cards: { rows } }, orCalls), "t1", "%%,()");
+    expect(orCalls).toEqual([]);
   });
 
   it("пустой q не добавляет фильтр", async () => {
