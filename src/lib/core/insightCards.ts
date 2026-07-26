@@ -1,9 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { maybeCompleteSessionCore } from "@/lib/core/sessions";
 import type {
+  CardTemplate,
   InsightCardWithRelations,
   InsightStudentDecision,
+  InsightTrainerStatus,
 } from "@/lib/types";
+import type { SessionInsightCard } from "@/lib/core/trainerReads";
 
 /**
  * Business core for insight-card CRUD, reorder, student decisions, vault reads,
@@ -453,4 +456,143 @@ export async function applyCollectionToStudentCore(
   }
 
   return { success: true, applied };
+}
+
+export type CollectionListItem = {
+  id: string;
+  name: string;
+  cards_count: number;
+  created_at: string;
+};
+
+/**
+ * Collections owned by the trainer, with `cards_count` computed via the
+ * embedded `insight_collection_cards(count)` aggregate — a single query, no
+ * per-collection follow-up. Mirrors what `/trainer/cards` shows.
+ */
+export async function listCollectionsCore(
+  supabase: SupabaseClient,
+  trainerId: string
+): Promise<CollectionListItem[]> {
+  const { data } = await supabase
+    .from("insight_collections")
+    .select("id, name, created_at, insight_collection_cards(count)")
+    .eq("trainer_id", trainerId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((c: Record<string, unknown>) => ({
+    id: c.id as string,
+    name: c.name as string,
+    created_at: c.created_at as string,
+    cards_count:
+      ((c.insight_collection_cards as { count: number }[] | null)?.[0]?.count as
+        | number
+        | undefined) ?? 0,
+  }));
+}
+
+/**
+ * Cards contained in a collection, in position order. Each collection item is
+ * a `template_id` — content lives on the representative `insight_cards` row
+ * with that `template_id`. Two queries total (item list, then a batched
+ * `in()` lookup), no N+1. Field shape matches `SessionInsightCard` so native
+ * clients reuse the same DTO as `GET /api/v1/sessions/{id}/insight-cards`.
+ */
+export async function getCollectionCardsCore(
+  supabase: SupabaseClient,
+  collectionId: string
+): Promise<SessionInsightCard[]> {
+  const { data: items } = await supabase
+    .from("insight_collection_cards")
+    .select("template_id")
+    .eq("collection_id", collectionId)
+    .order("position");
+
+  const templateIds = (items ?? []).map((i) => i.template_id as string);
+  if (templateIds.length === 0) return [];
+
+  const { data: cards } = await supabase
+    .from("insight_cards")
+    .select(
+      "id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at, template_id"
+    )
+    .in("template_id", templateIds);
+
+  const byTemplate = new Map<string, Record<string, unknown>>();
+  for (const c of cards ?? []) {
+    const key = c.template_id as string;
+    if (!byTemplate.has(key)) byTemplate.set(key, c);
+  }
+
+  return templateIds
+    .map((tid) => byTemplate.get(tid))
+    .filter((c): c is Record<string, unknown> => !!c)
+    .map((c) => ({
+      id: c.id as string,
+      title: (c.title as string | null) ?? null,
+      body: (c.body as string | null) ?? null,
+      quote: (c.quote as string | null) ?? null,
+      tags: (c.tags as string[] | null) ?? null,
+      front_text: (c.front_text as string | null) ?? null,
+      context_text: (c.context_text as string | null) ?? null,
+      source: (c.source as string | null) ?? null,
+      trainer_status: (c.trainer_status as string | null) ?? null,
+      student_decision: (c.student_decision as string | null) ?? null,
+      position: (c.position as number | null) ?? null,
+      created_at: c.created_at as string,
+    }));
+}
+
+/**
+ * Card template library for a trainer — the same dedup-by-template_id logic
+ * as `/trainer/cards`' page loader, but query-side: fetches only the trainer's
+ * cards, then aggregates per template in memory. `q` filters by substring on
+ * title/body (case-insensitive), capped at 50 results.
+ */
+export async function listCardTemplatesCore(
+  supabase: SupabaseClient,
+  trainerId: string,
+  q?: string,
+  limit = 50
+): Promise<CardTemplate[]> {
+  let query = supabase
+    .from("insight_cards")
+    .select("id, template_id, title, body, quote, tags, trainer_status, created_at, student_id, student_decision")
+    .eq("trainer_id", trainerId)
+    .order("created_at", { ascending: false });
+
+  if (q?.trim()) {
+    const term = `%${q.trim()}%`;
+    query = query.or(`title.ilike.${term},body.ilike.${term}`);
+  }
+
+  const { data } = await query;
+
+  const templateMap = new Map<string, CardTemplate>();
+  for (const card of data ?? []) {
+    const key = (card.template_id as string | null) ?? (card.id as string);
+    if (!templateMap.has(key)) {
+      templateMap.set(key, {
+        id: card.id as string,
+        template_id: card.template_id as string | null,
+        title: card.title as string | null,
+        body: card.body as string | null,
+        quote: card.quote as string | null,
+        tags: card.tags as string[] | null,
+        trainer_status: card.trainer_status as InsightTrainerStatus,
+        created_at: card.created_at as string,
+        student_count: 0,
+        taken_count: 0,
+        skipped_count: 0,
+        pending_count: 0,
+      });
+    }
+    const t = templateMap.get(key)!;
+    t.student_count++;
+    if (card.student_decision === "taken") t.taken_count++;
+    else if (card.student_decision === "skipped") t.skipped_count++;
+    else t.pending_count++;
+  }
+
+  return Array.from(templateMap.values()).slice(0, limit);
 }
