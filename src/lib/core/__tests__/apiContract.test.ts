@@ -14,6 +14,7 @@ import {
   getTranscriptCore,
 } from "../audio";
 import { getStudentInviteCore } from "../students";
+import { searchSkillsCore, searchExercisesCore } from "../library";
 
 /**
  * Контракт-тесты `/api/v1` read- и audio-эндпоинтов (A6, #187).
@@ -306,6 +307,37 @@ describe("POST /api/v1/sessions/{id}/audio/upload-url — requestAudioUploadUrlC
   it("неизвестное расширение нормализуется в m4a", async () => {
     const r = await requestAudioUploadUrlCore(makeSupabaseStub({}), "sess-1", "exe");
     expect((r as { storagePath: string }).storagePath).toMatch(/\.m4a$/);
+  });
+});
+
+describe("GET /api/v1/skills, /api/v1/exercises — searchSkillsCore/searchExercisesCore", () => {
+  it("шейп навыка стабилен (id, name_ru, name_en)", async () => {
+    const sb = makeSupabaseStub({
+      skills: {
+        rows: [{ id: 3, name_ru: "Бэкхенд", name_en: "Backhand", created_at: "2026-01-01" }],
+      },
+    });
+    const r = await searchSkillsCore(sb, "бэк");
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    // #225: v1-роут отдаёт только { id, name_ru, name_en } — created_at в ядре есть
+    // (нужен web-обёртке для Skill.created_at), но в HTTP-ответ его не пробрасывают.
+    expectKeys(r.items[0], ["id", "name_ru", "name_en", "created_at"]);
+    expect(r.items[0]).toEqual({
+      id: 3, name_ru: "Бэкхенд", name_en: "Backhand", created_at: "2026-01-01",
+    });
+  });
+
+  it("шейп упражнения стабилен (id, name_ru, name_en)", async () => {
+    const sb = makeSupabaseStub({
+      exercises: {
+        rows: [{ id: 4, name_ru: "Стенка", name_en: "Wall drill", created_at: "2026-01-01" }],
+      },
+    });
+    const r = await searchExercisesCore(sb, "");
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expectKeys(r.items[0], ["id", "name_ru", "name_en", "created_at"]);
   });
 });
 

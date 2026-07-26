@@ -25,6 +25,21 @@
 - `GET /api/v1/trainer/overview` → `{ students_count, upcoming_sessions: [{ id, student_id, student_name, session_number, scheduled_at }], pending_review: [{ id, student_id, student_name, session_number, completed_at }] }`
 - `GET /api/v1/students/{id}/invite` → `{ token, status: claimed|pending|none, claimed_at }` (без приглашения — `token: null`, не 404)
 
+## Библиотека (NIVEL#225)
+Поиск/создание навыков и упражнений — тренерская страница `/trainer/library` и флоу создания сессии.
+Ядро — `src/lib/core/library.ts` (общее с web Server Actions `src/lib/actions/library.ts`).
+
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `GET /skills?q=` | query `q` (опционально) | `{ skills: [{ id, name_ru, name_en }] }` |
+| `POST /skills` | `{ nameRu, nameEn? }` | 201 `{ ok, id }` |
+| `GET /exercises?q=` | query `q` (опционально) | `{ exercises: [{ id, name_ru, name_en }] }` |
+| `POST /exercises` | `{ nameRu, nameEn? }` | 201 `{ ok, id }` |
+
+`q` пустой → первые 50 записей по алфавиту (`name_ru`); `q` заданный → matches `name_ru` OR
+`name_en` (ilike), результат объединён и отсортирован. `POST` на существующее имя (уникальный
+legacy-столбец `name`, куда пишется `name_ru`) — не 500, возвращает `id` существующей записи.
+
 ## Audio (A4)
 - `POST /api/v1/sessions/{id}/audio/upload-url` — тело `{ ext? }` (деф. m4a) → `{ uploadUrl, storagePath }`
 - `POST /api/v1/sessions/{id}/transcribe` — тело `{ storagePath }` → `{ ok }` (запускает Groq STT; `maxDuration=300`)
