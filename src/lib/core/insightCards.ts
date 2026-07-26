@@ -515,13 +515,25 @@ function mapInsightCardRow(raw: Record<string, unknown>): SessionInsightCard {
  * as `GET /api/v1/sessions/{id}/insight-cards` (`SessionInsightCard`) — the
  * native client reuses that model, per NIVEL#226.
  *
- * Ownership must be checked by the caller (`collectionBelongsToTrainer`)
- * before calling this — it does not re-verify. Two queries total regardless
- * of collection size (links, then one `.in(template_id)` batch) — no N+1.
+ * `trainerId` scopes the second query — `template_id` is NOT trainer-unique:
+ * `aiInsights.ts`'s `saveAiDraftCards` reuses an existing `template_id` by
+ * matching `(title, body)` with no `trainer_id` filter ("cards created across
+ * multiple students automatically share the same template_id"), and the
+ * migration 015 backfill deduped the same way repo-wide. Two different
+ * trainers' cards can legitimately share a `template_id`. Without this
+ * filter, a collection containing such a shared `template_id` would leak the
+ * OTHER trainer's card content (including free-text `front_text`/
+ * `context_text`/`quote`) into this trainer's response.
+ *
+ * Ownership of the collection itself must be checked by the caller
+ * (`requireTrainerOwnsCollection`/`collectionBelongsToTrainer`) before
+ * calling this — it does not re-verify. Two queries total regardless of
+ * collection size (links, then one `.in(template_id)` batch) — no N+1.
  */
 export async function getCollectionCardsCore(
   supabase: SupabaseClient,
-  collectionId: string
+  collectionId: string,
+  trainerId: string
 ): Promise<SessionInsightCard[]> {
   const { data: links } = await supabase
     .from("insight_collection_cards")
@@ -535,6 +547,7 @@ export async function getCollectionCardsCore(
   const { data: cards } = await supabase
     .from("insight_cards")
     .select(INSIGHT_CARD_COLUMNS)
+    .eq("trainer_id", trainerId)
     .in("template_id", templateIds);
 
   const byTemplate = new Map<string, Record<string, unknown>>();
