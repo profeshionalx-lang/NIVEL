@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getLocale } from "@/lib/i18n";
 import Link from "next/link";
+import { attachFrameUrls } from "@/lib/core/frames";
 import type { InsightCard } from "@/lib/types";
 import { AudioUploader } from "@/components/sessions/AudioUploader";
 import { PasteInsightsButton } from "@/components/sessions/PasteInsightsButton";
@@ -53,7 +54,7 @@ export default async function SessionDetailPage({
     .eq("session_id", id)
     .order("position");
 
-  const allCards = (cards ?? []) as InsightCard[];
+  const allCards = await attachFrameUrls(supabase, (cards ?? []) as InsightCard[]);
   const draftCards = allCards.filter((c) => c.trainer_status === "draft");
   const approvedCards = allCards.filter((c) => c.trainer_status === "approved");
   const pendingForStudent = approvedCards.filter(

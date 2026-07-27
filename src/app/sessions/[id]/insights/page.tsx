@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import InsightTinder from "@/components/insights/InsightTinder";
 import BackButton from "@/components/navigation/BackButton";
+import { attachFrameUrls } from "@/lib/core/frames";
 import type { InsightCardWithRelations } from "@/lib/types";
 
 export default async function SessionInsightsPage({
@@ -47,7 +48,8 @@ export default async function SessionInsightsPage({
   }
 
   const { data } = await query;
-  const cards = (data ?? []) as unknown as InsightCardWithRelations[];
+  const rawCards = (data ?? []) as unknown as InsightCardWithRelations[];
+  const cards = await attachFrameUrls(supabase, rawCards);
 
   return (
     <div className="min-h-screen bg-background">

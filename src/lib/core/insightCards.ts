@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { maybeCompleteSessionCore } from "@/lib/core/sessions";
 import type { SessionInsightCard } from "@/lib/core/trainerReads";
+import { attachFrameUrls } from "@/lib/core/frames";
 import type {
   InsightCardWithRelations,
   InsightStudentDecision,
@@ -288,7 +289,8 @@ export async function getVaultCardsCore(
     console.error("getVaultCards:", error.message);
     return [];
   }
-  return (data ?? []) as unknown as InsightCardWithRelations[];
+  const cards = (data ?? []) as unknown as InsightCardWithRelations[];
+  return attachFrameUrls(supabase, cards);
 }
 
 export async function getStudentSessionsCore(
@@ -513,6 +515,13 @@ function mapInsightCardRow(raw: Record<string, unknown>): SessionInsightCard {
     student_decision: (raw.student_decision as string | null) ?? null,
     position: (raw.position as number | null) ?? null,
     created_at: raw.created_at as string,
+    // Templates/collections are reusable card definitions, not a specific
+    // recording — frames/moments are tied to one session's video and never
+    // carry over when a template is applied (NIVEL#235 "не переносятся").
+    moment_before_seconds: null,
+    moment_after_seconds: null,
+    frame_before_url: null,
+    frame_after_url: null,
   };
 }
 

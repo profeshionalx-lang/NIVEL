@@ -108,6 +108,9 @@ export interface InsightCard {
   moment_after_seconds: number | null;
   frame_before_path: string | null;
   frame_after_path: string | null;
+  /** Signed URLs, attached on read via `attachFrameUrls` (NIVEL#241). Not persisted. */
+  frame_before_url?: string | null;
+  frame_after_url?: string | null;
 }
 
 export interface InsightCardWithRelations extends InsightCard {
