@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { INSIGHTS_PROMPT } from "@/lib/ai/insightsPrompt";
 import { parseInsightsMarkdown } from "@/lib/ai/parseInsights";
+import { buildTimecodedTranscript } from "@/lib/ai/timecodedTranscript";
+import { normalizeMoments } from "@/lib/ai/moments";
+import type { ProcessedSegment } from "@/lib/stt/postprocess";
 
 /**
  * Прод-анализ идёт не через этот код, а через scripts/analyze-pending.mjs
@@ -65,6 +68,39 @@ describe("scripts/analyze-pending.mjs — дрейф от src/lib/ai", () => {
 
       const scriptCards = script.parseCards(fixture);
       expect(scriptCards).toEqual(coreResult.cards);
+    }
+  });
+
+  it("buildTimecodedTranscript() скрипта даёт тот же результат, что src/lib/ai/timecodedTranscript", async () => {
+    const script = await import(/* @vite-ignore */ SCRIPT_PATH.href);
+
+    const segments: ProcessedSegment[] = [
+      { id: 0, start: 0, end: 5.2, text: "Начинаем разминку" },
+      { id: 1, start: 412.5, end: 418.2, text: "ты опять поздно взял" },
+      { id: 2, start: 430.0, end: 435.5, text: "вот теперь правильно" },
+    ];
+
+    expect(script.buildTimecodedTranscript(segments)).toBe(buildTimecodedTranscript(segments));
+    expect(script.buildTimecodedTranscript([])).toBe(buildTimecodedTranscript([]));
+  });
+
+  it("normalizeMoments() скрипта даёт тот же результат, что src/lib/ai/moments", async () => {
+    const script = await import(/* @vite-ignore */ SCRIPT_PATH.href);
+
+    const segments: ProcessedSegment[] = [
+      { id: 0, start: 10, end: 15, text: "ты опять поздно взял" },
+      { id: 1, start: 400, end: 405, text: "вот теперь правильно" },
+    ];
+
+    const cases = [
+      { momentBefore: 412.5, momentAfter: 430.0, quote: "ты опять поздно взял", segments, durationSeconds: 500 },
+      { momentBefore: null, momentAfter: null, quote: "ты опять поздно взял", segments, durationSeconds: 500 },
+      { momentBefore: 100, momentAfter: 50, quote: "не найдётся в сегментах", segments, durationSeconds: 500 },
+      { momentBefore: -5, momentAfter: 9999, quote: "", segments, durationSeconds: null },
+    ];
+
+    for (const input of cases) {
+      expect(script.normalizeMoments(input)).toEqual(normalizeMoments(input));
     }
   });
 });
