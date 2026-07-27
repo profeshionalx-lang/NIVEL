@@ -75,7 +75,15 @@ async function supaPatch(table, match, body) {
 
 async function supaRpc(fn, body) {
   const r = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, { method: "POST", headers, body: JSON.stringify(body) });
-  return r.json();
+  const json = await r.json();
+  // PostgREST error bodies are `{code, details, hint, message}` — there is no
+  // `.error` key. Callers used to (incorrectly) check `result?.error`, which
+  // never matches a real failure and let errors fall through as if the RPC
+  // had succeeded. Normalize here so every caller can check `.error`.
+  if (!r.ok) {
+    return { error: json?.message ?? `RPC ${fn} вернул ${r.status}`, ...json };
+  }
+  return json;
 }
 
 // ─── Парсер карточек ─────────────────────────────────────────────────────────
@@ -205,8 +213,11 @@ async function analyzeSession(sessionId, rawText) {
   const orphanPaths = rpcResult?.orphan_paths ?? [];
 
   if (orphanPaths.length > 0) {
-    const r = await fetch(`${SUPA_URL}/storage/v1/object/remove/session-frames`, {
-      method: "POST",
+    // Storage API shape (matches @supabase/storage-js `remove()`):
+    // DELETE /storage/v1/object/{bucket} with body {prefixes: [...]}.
+    // There is no POST /object/remove/{bucket} route.
+    const r = await fetch(`${SUPA_URL}/storage/v1/object/session-frames`, {
+      method: "DELETE",
       headers,
       body: JSON.stringify({ prefixes: orphanPaths }),
     });
