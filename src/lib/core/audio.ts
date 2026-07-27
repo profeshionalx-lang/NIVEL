@@ -60,8 +60,8 @@ export async function transcribeSessionCore(
 
     const audioBuffer = Buffer.from(await blob.arrayBuffer());
 
-    const { transcribeAudio } = await import("@/lib/stt/groq");
-    const verboseJson = await transcribeAudio(audioBuffer, filename);
+    const { transcribeAudioChunked } = await import("@/lib/stt/transcribe");
+    const verboseJson = await transcribeAudioChunked(audioBuffer, filename);
 
     const { raw_text, segments } = postprocessTranscript(verboseJson);
 

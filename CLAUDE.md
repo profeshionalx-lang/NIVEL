@@ -73,6 +73,7 @@ SUPABASE_SERVICE_ROLE_KEY      — server-only, bypasses RLS
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 NEXT_PUBLIC_SUPABASE_URL
 GROQ_API_KEY                   — STT через Groq Whisper (https://console.groq.com)
+GROQ_MAX_UPLOAD_MB              — опционально, порог (МБ) для нарезки аудио перед отправкой в Groq; по умолчанию 24 (free-tier лимит 25 МБ), поднять до ~95 если ключ на dev tier (лимит 100 МБ)
 OPENROUTER_API_KEY             — LLM-анализ транскриптов (https://openrouter.ai)
 INSIGHTS_MODEL                 — модель анализа; пусто = дефолт-константа (z-ai/glm-4.5-air:free)
 TELEGRAM_BOT_TOKEN              — server-only, токен бота (sendMessage, getMe)
