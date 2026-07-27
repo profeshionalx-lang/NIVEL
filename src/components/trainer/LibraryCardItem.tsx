@@ -126,6 +126,10 @@ export function LibraryCardItem({
     created_at: template.created_at,
     decided_at: null,
     template_id: template.template_id,
+    moment_before_seconds: null,
+    moment_after_seconds: null,
+    frame_before_path: null,
+    frame_after_path: null,
   };
 
   return (

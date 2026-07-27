@@ -90,6 +90,23 @@ COMMENT ON TABLE public.transcripts IS 'Транскрипт тренировк�
 - Policy: только владелец сессии (тренер) может upload/read
 - TTL подписи: 1 час для upload
 
+### Storage bucket `session-frames` (эпик #235, видео-инсайты)
+
+Бакеты в этом проекте создаются вручную — миграции их не создают. `session-frames` создан командой (см. `supabase/migrations/026_insight_card_frames.sql` для сопутствующих колонок `insight_cards`):
+
+```bash
+curl -s -X POST \
+  "https://api.supabase.com/v1/projects/gqcyaxxhvyvpzuhoysis/database/query" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "insert into storage.buckets (id, name, public) values ('"'"'session-frames'"'"', '"'"'session-frames'"'"', false) on conflict (id) do nothing;"}'
+```
+
+- Private (как `session-audio`) — на кадрах опознаваемые люди, часто дети
+- Путь объекта: `${sessionId}/${cardId}/${slot}-${uuid}.jpg`, `slot ∈ {before, after}` — `sessionId` первым, чтобы уборка по сессии делалась одним `list`+`remove` по префиксу
+- В БД (`insight_cards.frame_before_path` / `frame_after_path`) храним **path**, не URL — подписанный URL истекает, подписываем на чтении (S6, #241)
+- Upload-url/attach/delete эндпоинты — S5 (#240)
+
 ---
 
 ## Issue breakdown (MVP)
