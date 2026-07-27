@@ -5,6 +5,8 @@ export interface InsightCardDraft {
   body: string;
   tag: InsightTag;
   quote: string;
+  momentBeforeSeconds: number | null;
+  momentAfterSeconds: number | null;
 }
 
 export type ParseResult =
@@ -13,7 +15,7 @@ export type ParseResult =
 
 const VALID_TAGS = new Set<InsightTag>(["техника", "тактика", "физика", "менталка"]);
 
-const FIELD_KEYS = ["тема", "заголовок", "описание", "цитата"] as const;
+const FIELD_KEYS = ["тема", "заголовок", "описание", "цитата", "момент до", "момент после"] as const;
 type FieldKey = (typeof FIELD_KEYS)[number];
 
 const FIELD_LINE = new RegExp(
@@ -21,8 +23,47 @@ const FIELD_LINE = new RegExp(
   "i"
 );
 
+/**
+ * Строка похожа на поле списка (`- Ключ: значение`), но ключ не входит в
+ * FIELD_KEYS. Раньше такие строки молча дописывались в предыдущее поле —
+ * любое новое/неизвестное поле от модели портило уже распарсенные данные
+ * (чаще всего Цитату, т.к. она идёт последней). Теперь такая строка сбрасывает
+ * `current` и отбрасывается, не попадая никуда.
+ */
+const UNKNOWN_FIELD_LINE = /^\s*[-–—*•]\s*[^:\n]{1,40}:\s/;
+
 function stripQuotes(s: string): string {
   return s.replace(/^["'«“‘«]+|["'»”’»]+$/g, "").trim();
+}
+
+/**
+ * Парсит секунду момента из значения поля "Момент до"/"Момент после".
+ * Принимает: "412.5", "412", "6:52", "6:52.5", "~412" (обрезает мусор по
+ * краям). Что угодно, не сводящееся к числу секунд — null.
+ */
+export function parseMoment(raw: string): number | null {
+  const s = raw.trim();
+  if (!s) return null;
+
+  // mm:ss или mm:ss.s
+  const mmss = s.match(/^[^\d]*(\d+):(\d{1,2}(?:\.\d+)?)[^\d]*$/);
+  if (mmss) {
+    const minutes = Number(mmss[1]);
+    const seconds = Number(mmss[2]);
+    if (Number.isFinite(minutes) && Number.isFinite(seconds)) {
+      return minutes * 60 + seconds;
+    }
+    return null;
+  }
+
+  // Голое число секунд, возможно с мусором по краям (~, с, sec и т.п.)
+  const bare = s.match(/^[^\d-]*(\d+(?:\.\d+)?)[^\d]*$/);
+  if (bare) {
+    const value = Number(bare[1]);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  return null;
 }
 
 interface CardBlock {
@@ -36,6 +77,8 @@ function parseBlock(lines: string[]): Partial<Record<FieldKey, string>> {
     заголовок: [],
     описание: [],
     цитата: [],
+    "момент до": [],
+    "момент после": [],
   };
   const seen = new Set<FieldKey>();
   let current: FieldKey | null = null;
@@ -47,6 +90,10 @@ function parseBlock(lines: string[]): Partial<Record<FieldKey, string>> {
       current = key;
       seen.add(key);
       acc[key].push(m[2].trim());
+    } else if (UNKNOWN_FIELD_LINE.test(line)) {
+      // Похоже на поле с неизвестным ключом (например галлюцинированное
+      // моделью) — не приклеиваем к предыдущему полю, сбрасываем current.
+      current = null;
     } else if (current) {
       const trimmed = line.trim();
       if (trimmed) acc[current].push(trimmed);
@@ -116,6 +163,8 @@ export function parseInsightsMarkdown(input: string): ParseResult {
       body: fields.описание,
       tag,
       quote: stripQuotes(fields.цитата),
+      momentBeforeSeconds: fields["момент до"] !== undefined ? parseMoment(fields["момент до"]) : null,
+      momentAfterSeconds: fields["момент после"] !== undefined ? parseMoment(fields["момент после"]) : null,
     });
   }
 
