@@ -19,7 +19,7 @@
 - `GET /api/v1/students` → `{ students: [{ id, email, full_name, avatar_url, active_goals, total_sessions }] }`
 - `GET /api/v1/students/{id}` → `{ id, email, full_name, avatar_url, goals:[...], sessions:[...] }`
 - `GET /api/v1/sessions/{id}` → `{ id, goal_id, session_number, status, trainer_notes, scheduled_at, completed_at, exercises:[{id,name,sort_order}] }`
-- `GET /api/v1/sessions/{id}/insight-cards` → `{ cards: [{ id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at }] }`
+- `GET /api/v1/sessions/{id}/insight-cards` → `{ cards: [{ id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at, moment_before_seconds, moment_after_seconds, frame_before_url, frame_after_url }] }` — моменты в секундах (числа, `null` если LLM/fallback их не нашли); `frame_*_url` — подписанный URL (`session-frames`, TTL 24ч), `null` если кадр не приложен. `path` клиенту не отдаётся, подписание батчем на чтении (`src/lib/core/frames.ts` → `signFramePaths`/`attachFrameUrls`, один вызов `createSignedUrls` на весь список карточек)
 - `GET /api/v1/reference` → справочники problem_categories+problems, skills, exercises
 - `GET /api/v1/students/{id}/master-plan` → секции + пункты мастер-плана
 - `GET /api/v1/trainer/overview` → `{ students_count, upcoming_sessions: [{ id, student_id, student_name, session_number, scheduled_at }], pending_review: [{ id, student_id, student_name, session_number, completed_at }] }`

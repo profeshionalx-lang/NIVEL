@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { attachFrameUrls } from "@/lib/core/frames";
 
 /**
  * Read-side business core for trainer-facing data, consumed by `/api/v1`
@@ -180,6 +181,10 @@ export type SessionInsightCard = {
   student_decision: string | null;
   position: number | null;
   created_at: string;
+  moment_before_seconds: number | null;
+  moment_after_seconds: number | null;
+  frame_before_url: string | null;
+  frame_after_url: string | null;
 };
 
 export async function getSessionInsightCardsCore(
@@ -189,11 +194,18 @@ export async function getSessionInsightCardsCore(
   const { data } = await supabase
     .from("insight_cards")
     .select(
-      "id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at"
+      "id, title, body, quote, tags, front_text, context_text, source, trainer_status, student_decision, position, created_at, moment_before_seconds, moment_after_seconds, frame_before_path, frame_after_path"
     )
     .eq("session_id", sessionId)
     .order("position", { ascending: true });
-  return (data ?? []).map((c: Record<string, unknown>) => ({
+
+  const withUrls = await attachFrameUrls(supabase, (data ?? []) as unknown as Array<{
+    frame_before_path: string | null;
+    frame_after_path: string | null;
+    [key: string]: unknown;
+  }>);
+
+  return withUrls.map((c) => ({
     id: c.id as string,
     title: (c.title as string | null) ?? null,
     body: (c.body as string | null) ?? null,
@@ -206,6 +218,10 @@ export async function getSessionInsightCardsCore(
     student_decision: (c.student_decision as string | null) ?? null,
     position: (c.position as number | null) ?? null,
     created_at: c.created_at as string,
+    moment_before_seconds: (c.moment_before_seconds as number | null) ?? null,
+    moment_after_seconds: (c.moment_after_seconds as number | null) ?? null,
+    frame_before_url: c.frame_before_url,
+    frame_after_url: c.frame_after_url,
   }));
 }
 

@@ -101,6 +101,14 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>, calls?: StubCalls):
           calls?.removedPaths?.push(...paths);
           return { data: null, error: null };
         },
+        createSignedUrls: async (paths: string[], _expiresIn: number) => ({
+          data: paths.map((path) => ({
+            path,
+            signedUrl: `https://stub.supabase.co/storage/v1/object/sign/session-frames/${path}?token=tok`,
+            error: null,
+          })),
+          error: null,
+        }),
       }),
     },
   } as unknown as SupabaseClient;
@@ -186,13 +194,15 @@ describe("GET /api/v1/sessions/{id} — getSessionDetailCore", () => {
 });
 
 describe("GET /api/v1/sessions/{id}/insight-cards — getSessionInsightCardsCore", () => {
-  it("шейп карточки стабилен (без session_id/student_id/trainer_id)", async () => {
+  it("шейп карточки стабилен (без session_id/student_id/trainer_id/frame_*_path)", async () => {
     const sb = makeSupabaseStub({
       insight_cards: {
         rows: [{
           id: "c1", title: "T", body: "B", quote: null, tags: ["x"],
           front_text: null, context_text: null, source: null,
           trainer_status: "draft", student_decision: null, position: 0, created_at: "2026-01-01",
+          moment_before_seconds: 41.2, moment_after_seconds: 45.9,
+          frame_before_path: "se1/c1/before-uuid.jpg", frame_after_path: "se1/c1/after-uuid.jpg",
         }],
       },
     });
@@ -201,7 +211,33 @@ describe("GET /api/v1/sessions/{id}/insight-cards — getSessionInsightCardsCore
     expectKeys(cards[0], [
       "id", "title", "body", "quote", "tags", "front_text", "context_text",
       "source", "trainer_status", "student_decision", "position", "created_at",
+      "moment_before_seconds", "moment_after_seconds", "frame_before_url", "frame_after_url",
     ]);
+    expect(cards[0].moment_before_seconds).toBe(41.2);
+    expect(cards[0].moment_after_seconds).toBe(45.9);
+    expect(cards[0].frame_before_url).toMatch(/^https:\/\/.*se1\/c1\/before-uuid\.jpg/);
+    expect(cards[0].frame_after_url).toMatch(/^https:\/\/.*se1\/c1\/after-uuid\.jpg/);
+  });
+
+  it("карточка без кадров/моментов → null в URL и в moment_*, не пустая строка", async () => {
+    const sb = makeSupabaseStub({
+      insight_cards: {
+        rows: [{
+          id: "c2", title: "T2", body: null, quote: null, tags: null,
+          front_text: null, context_text: null, source: null,
+          trainer_status: "draft", student_decision: null, position: 1, created_at: "2026-01-01",
+          moment_before_seconds: null, moment_after_seconds: null,
+          frame_before_path: null, frame_after_path: null,
+        }],
+      },
+    });
+    const cards = await getSessionInsightCardsCore(sb, "se1");
+    expect(cards[0].moment_before_seconds).toBeNull();
+    expect(cards[0].moment_after_seconds).toBeNull();
+    expect(cards[0].frame_before_url).toBeNull();
+    expect(cards[0].frame_after_url).toBeNull();
+    expect(cards[0].frame_before_url).not.toBe("");
+    expect(cards[0].frame_after_url).not.toBe("");
   });
 });
 
@@ -472,7 +508,12 @@ describe("GET /api/v1/collections/{id}/cards — getCollectionCardsCore", () => 
     expectKeys(cards[0], [
       "id", "title", "body", "quote", "tags", "front_text", "context_text",
       "source", "trainer_status", "student_decision", "position", "created_at",
+      "moment_before_seconds", "moment_after_seconds", "frame_before_url", "frame_after_url",
     ]);
+    // Шаблоны/коллекции — переиспользуемые определения карточки, не конкретная
+    // запись; кадры/моменты к ним не переносятся (NIVEL#235).
+    expect(cards[0].moment_before_seconds).toBeNull();
+    expect(cards[0].frame_before_url).toBeNull();
   });
 
   it("пустая коллекция (нет ссылок) → [] без запроса к insight_cards", async () => {
@@ -539,6 +580,7 @@ describe("GET /api/v1/card-templates — searchCardTemplatesCore", () => {
     expectKeys(templates[0], [
       "id", "template_id", "title", "body", "quote", "tags", "front_text", "context_text",
       "source", "trainer_status", "student_decision", "position", "created_at",
+      "moment_before_seconds", "moment_after_seconds", "frame_before_url", "frame_after_url",
     ]);
     expect(templates[0].template_id).toBe("tpl1");
   });

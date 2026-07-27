@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import Link from "next/link";
 import TrainerCardEditor from "@/components/insights/TrainerCardEditor";
 import BackButton from "@/components/navigation/BackButton";
+import { attachFrameUrls } from "@/lib/core/frames";
 import type { InsightCard, ProblemCategory, Problem } from "@/lib/types";
 
 export default async function TrainerSessionInsightsPage({
@@ -35,6 +36,8 @@ export default async function TrainerSessionInsightsPage({
     supabase.from("problems").select("*").order("sort_order"),
   ]);
 
+  const cardsWithFrameUrls = await attachFrameUrls(supabase, (cards ?? []) as InsightCard[]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 glass-nav flex items-center justify-between px-6 h-16">
@@ -48,7 +51,7 @@ export default async function TrainerSessionInsightsPage({
       <main className="px-5 pt-6 pb-36 max-w-[430px] mx-auto">
         <TrainerCardEditor
           sessionId={id}
-          cards={(cards ?? []) as InsightCard[]}
+          cards={cardsWithFrameUrls}
           categories={(categories ?? []) as ProblemCategory[]}
           problems={(problems ?? []) as Problem[]}
           reviewCompleted={session.trainer_review_completed}
