@@ -104,6 +104,10 @@ export interface InsightCard {
   created_at: string;
   decided_at: string | null;
   template_id: string | null;
+  moment_before_seconds: number | null;
+  moment_after_seconds: number | null;
+  frame_before_path: string | null;
+  frame_after_path: string | null;
 }
 
 export interface InsightCardWithRelations extends InsightCard {
