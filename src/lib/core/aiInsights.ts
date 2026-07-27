@@ -33,11 +33,37 @@ export async function saveAiDraftCards(
       body: c.body,
       quote: c.quote,
       tag: c.tag,
+      moment_before: c.momentBeforeSeconds,
+      moment_after: c.momentAfterSeconds,
     })),
   });
 
   if (error) {
     return { error: error.message };
+  }
+
+  // v2 of the RPC (NIVEL#239) returns JSONB `{ inserted, orphan_paths }`
+  // instead of a bare count: replacing the previous draft batch may delete
+  // cards a trainer already attached frames to, and there's no DB→Storage
+  // cascade in Supabase, so the RPC hands back the orphaned object paths for
+  // us to clean up here.
+  const result = data as { inserted: number; orphan_paths?: string[] } | null;
+  const orphanPaths = result?.orphan_paths ?? [];
+
+  if (orphanPaths.length > 0) {
+    const { error: removeError } = await supabase.storage
+      .from("session-frames")
+      .remove(orphanPaths);
+    if (removeError) {
+      // Deletion of orphaned frames is best-effort: failing to clean up a
+      // Storage object is a (recoverable) leak, not a reason to fail an
+      // analysis that already produced new draft cards.
+      console.error(
+        "saveAiDraftCards: failed to remove orphan frames:",
+        removeError.message,
+        orphanPaths
+      );
+    }
   }
 
   // Assign template_id to newly created cards.
@@ -68,7 +94,7 @@ export async function saveAiDraftCards(
     await supabase.from("insight_cards").update({ template_id: tid }).eq("id", card.id);
   }
 
-  return { count: (data as number) ?? cards.length };
+  return { count: result?.inserted ?? cards.length };
 }
 
 export async function pasteInsightsFromClaudeCore(
