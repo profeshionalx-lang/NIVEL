@@ -8,7 +8,16 @@ function requireGroqKey(): string {
 
 const GROQ_API_KEY = requireGroqKey();
 
-const GROQ_TIMEOUT_MS = 280_000;
+/**
+ * Per-request timeout. Groq transcribes much faster than realtime (typically
+ * seconds for an 8-minute chunk — see CHUNK_SECONDS in stt/chunk.ts), so this
+ * is a fail-fast guard against a hung request, not the expected duration.
+ * Long recordings are now sent as multiple sequential chunks within a single
+ * route call (maxDuration=300, see stt/transcribe.ts) — a per-chunk timeout
+ * anywhere near that budget would let one slow chunk starve all the others
+ * and blow the route's own deadline instead of surfacing this error. NIVEL#244.
+ */
+const GROQ_TIMEOUT_MS = 60_000;
 
 export async function transcribeAudio(
   audioBuffer: Buffer,
