@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseInsightsMarkdown } from "../parseInsights";
+import { parseInsightsMarkdown, parseMoment } from "../parseInsights";
 
 const VALID_3_CARDS = `
 ## Карточка 1
@@ -240,5 +240,114 @@ describe("parseInsightsMarkdown", () => {
     if (!result.ok) return;
     expect(result.cards[0].title).toBe("Тест");
     expect(result.cards[0].quote).toBe("тест");
+  });
+
+  describe("моменты до/после", () => {
+    it("парсит момент до/после как числа секунд", () => {
+      const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Тест
+- Описание: Описание.
+- Цитата: "тест"
+- Момент до: 412.5
+- Момент после: 430.0
+`;
+      const result = parseInsightsMarkdown(md);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.cards[0].momentBeforeSeconds).toBe(412.5);
+      expect(result.cards[0].momentAfterSeconds).toBe(430.0);
+    });
+
+    it("парсит момент без десятичной части", () => {
+      const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Тест
+- Описание: Описание.
+- Цитата: "тест"
+- Момент до: 412
+`;
+      const result = parseInsightsMarkdown(md);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.cards[0].momentBeforeSeconds).toBe(412);
+    });
+
+    it("парсит момент в формате mm:ss", () => {
+      const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Тест
+- Описание: Описание.
+- Цитата: "тест"
+- Момент до: 6:52
+- Момент после: 7:15.5
+`;
+      const result = parseInsightsMarkdown(md);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.cards[0].momentBeforeSeconds).toBe(6 * 60 + 52);
+      expect(result.cards[0].momentAfterSeconds).toBe(7 * 60 + 15.5);
+    });
+
+    it("отсутствующие поля момента → null, старые аутпуты парсятся как раньше", () => {
+      const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Тест
+- Описание: Описание.
+- Цитата: "тест"
+`;
+      const result = parseInsightsMarkdown(md);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.cards[0].momentBeforeSeconds).toBeNull();
+      expect(result.cards[0].momentAfterSeconds).toBeNull();
+    });
+
+    it("неизвестное поле не попадает в Цитату и не роняет парсинг", () => {
+      const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Тест
+- Описание: Описание.
+- Цитата: "тест"
+- Мусор: какое-то значение которое раньше приклеилось бы к цитате
+`;
+      const result = parseInsightsMarkdown(md);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.cards[0].quote).toBe("тест");
+    });
+
+    it("неизвестное поле перед известным не портит следующее поле", () => {
+      const md = `
+## Карточка 1
+- Тема: техника
+- Заголовок: Тест
+- Мусор: галлюцинация модели
+- Описание: Описание.
+- Цитата: "тест"
+`;
+      const result = parseInsightsMarkdown(md);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.cards[0].body).toBe("Описание.");
+      expect(result.cards[0].quote).toBe("тест");
+    });
+
+    it("parseMoment: голое число, mm:ss, мусор по краям, невалидное → null", () => {
+      expect(parseMoment("412.5")).toBe(412.5);
+      expect(parseMoment("412")).toBe(412);
+      expect(parseMoment("6:52")).toBe(412);
+      expect(parseMoment("6:52.5")).toBe(412.5);
+      expect(parseMoment("~412")).toBe(412);
+      expect(parseMoment("412с")).toBe(412);
+      expect(parseMoment("нет")).toBeNull();
+      expect(parseMoment("")).toBeNull();
+      expect(parseMoment("null")).toBeNull();
+    });
   });
 });

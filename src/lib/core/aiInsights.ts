@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseInsightsMarkdown, type InsightCardDraft } from "@/lib/ai/parseInsights";
 import { generateInsightsRaw } from "@/lib/ai/openrouter";
+import { buildTimecodedTranscript } from "@/lib/ai/timecodedTranscript";
+import { normalizeMoments } from "@/lib/ai/moments";
+import type { ProcessedSegment } from "@/lib/stt/postprocess";
 
 /**
  * Business core for AI insight-card flows (paste / auto-generate / trainer
@@ -107,7 +110,7 @@ export async function generateAiInsightsCore(
 ): Promise<{ success: true; count: number } | { error: string; mutated: boolean }> {
   const { data: transcript } = await supabase
     .from("transcripts")
-    .select("status, raw_text, analysis_status")
+    .select("status, raw_text, segments_json, duration_seconds, analysis_status")
     .eq("session_id", sessionId)
     .maybeSingle();
 
@@ -126,14 +129,37 @@ export async function generateAiInsightsCore(
     .eq("session_id", sessionId);
 
   try {
-    const raw = await generateInsightsRaw(transcript.raw_text);
+    const segments: ProcessedSegment[] = Array.isArray(transcript.segments_json)
+      ? (transcript.segments_json as ProcessedSegment[])
+      : [];
+    const timecoded = segments.length > 0 ? buildTimecodedTranscript(segments) : "";
+    const raw = await generateInsightsRaw(timecoded || transcript.raw_text);
 
     const parsed = parseInsightsMarkdown(raw);
     if (!parsed.ok) {
       throw new Error(`LLM вернул невалидный формат: ${parsed.error}`);
     }
 
-    const result = await saveAiDraftCards(supabase, sessionId, studentId, trainerId, parsed.cards);
+    // Подстраховка: clamp по длительности + fallback момента "до" по цитате,
+    // на случай если модель не вернула таймкоды или вернула их некорректно.
+    // Сама запись moment_*_seconds в insight_cards — задача S4 (RPC v2).
+    const durationSeconds = transcript.duration_seconds ?? null;
+    const cardsWithMoments = parsed.cards.map((card) => {
+      const normalized = normalizeMoments({
+        momentBefore: card.momentBeforeSeconds,
+        momentAfter: card.momentAfterSeconds,
+        quote: card.quote,
+        segments,
+        durationSeconds,
+      });
+      return {
+        ...card,
+        momentBeforeSeconds: normalized.momentBeforeSeconds,
+        momentAfterSeconds: normalized.momentAfterSeconds,
+      };
+    });
+
+    const result = await saveAiDraftCards(supabase, sessionId, studentId, trainerId, cardsWithMoments);
     if ("error" in result) {
       throw new Error(result.error);
     }
