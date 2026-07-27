@@ -170,12 +170,22 @@ async function analyzeSession(sessionId, rawText) {
     return;
   }
 
-  // Сохраняем через RPC
+  // Сохраняем через RPC. Момент-поля (`c.momentBeforeSeconds`/`AfterSeconds`)
+  // пока не приходят из parseCards() выше — тот парсер их не извлекает
+  // (задача NIVEL#238); поля тихо лягут как null, и заработают сами собой,
+  // когда парсер их добавит.
   const rpcResult = await supaRpc("replace_ai_draft_cards", {
     p_session_id:  sessionId,
     p_student_id:  meta.student_id,
     p_trainer_id:  meta.trainer_id,
-    p_cards: cards.map(c => ({ title: c.title, body: c.body, quote: c.quote, tag: c.tag })),
+    p_cards: cards.map(c => ({
+      title: c.title,
+      body: c.body,
+      quote: c.quote,
+      tag: c.tag,
+      moment_before: c.momentBeforeSeconds ?? null,
+      moment_after: c.momentAfterSeconds ?? null,
+    })),
   });
 
   if (rpcResult?.error) {
@@ -187,12 +197,30 @@ async function analyzeSession(sessionId, rawText) {
     return;
   }
 
+  // v2 RPC возвращает jsonb `{ inserted, orphan_paths }` вместо голого
+  // счётчика: переанализ мог снести драфты, к которым тренер уже приложил
+  // кадры — каскада БД→Storage нет, поэтому чистим Storage сами. Ошибка
+  // удаления не должна ронять уже успешный анализ — логируем и продолжаем.
+  const insertedCount = rpcResult?.inserted ?? cards.length;
+  const orphanPaths = rpcResult?.orphan_paths ?? [];
+
+  if (orphanPaths.length > 0) {
+    const r = await fetch(`${SUPA_URL}/storage/v1/object/remove/session-frames`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ prefixes: orphanPaths }),
+    });
+    if (!r.ok) {
+      log(`[${sessionId.slice(0,8)}] Не удалось удалить осиротевшие кадры (${r.status}): ${await r.text()}`);
+    }
+  }
+
   await supaPatch("transcripts", { session_id: sessionId }, {
     analysis_status: "ready",
     analysis_error: null,
   });
 
-  log(`[${sessionId.slice(0,8)}] Готово: ${cards.length} карточек за ${elapsed}s`);
+  log(`[${sessionId.slice(0,8)}] Готово: ${insertedCount} карточек за ${elapsed}s`);
 }
 
 // ─── Цикл ────────────────────────────────────────────────────────────────────

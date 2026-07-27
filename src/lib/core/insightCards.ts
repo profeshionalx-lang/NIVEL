@@ -347,6 +347,13 @@ export async function applyTemplateToStudentCore(
     .limit(1)
     .maybeSingle();
 
+  // NIVEL#239: `moment_before_seconds`/`moment_after_seconds`/`frame_before_path`/
+  // `frame_after_path` are deliberately NOT copied from `template` here (this
+  // insert lists columns explicitly, so they land as their column default —
+  // NULL). A frame belongs to a specific video of a specific training
+  // session; copying it onto another student's card would show that student
+  // a moment from someone else's session. Same reasoning applies to
+  // `getCardTemplates`/collections — frames never travel with a template.
   const { data: newCard, error: insertErr } = await supabase
     .from("insight_cards")
     .insert({
