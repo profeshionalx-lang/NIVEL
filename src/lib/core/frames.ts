@@ -65,47 +65,37 @@ export interface FrameUrls {
 }
 
 /**
- * The shape `attachFrameUrls` returns for a given row type: raw paths
- * replaced by signed URLs. Use this (not `T` itself) to type props of any
- * `"use client"` component or DTO downstream of `attachFrameUrls` — the
- * removed path fields must not be reintroduced by a stale type annotation.
- */
-export type WithFrameUrls<T extends FramePaths> = Omit<
-  T,
-  "frame_before_path" | "frame_after_path"
-> &
-  FrameUrls;
-
-/**
  * Batch-signs `frame_before_path`/`frame_after_path` for a whole list of cards
  * (or any row shape carrying those two columns) and returns the same rows with
- * `frame_before_url`/`frame_after_url` attached **in place of** the raw paths.
- * One `createSignedUrls` call total regardless of list length.
+ * `frame_before_url`/`frame_after_url` attached. One `createSignedUrls` call
+ * total regardless of list length.
  *
- * The paths are deliberately dropped from the output, not just added
- * alongside the URLs: several callers pass the result straight into
- * `"use client"` components, and Next.js serializes the *entire* prop object
- * into the RSC flight payload sent to the browser regardless of whether the
- * component renders a given field. `session-frames` is a private bucket
- * specifically because frames can show identifiable people, often minors
- * (NIVEL#235) — the raw Storage path must never reach the client, signed or
- * not.
+ * The raw paths are **redacted to `null`** in the returned rows (not just left
+ * alongside the new URL fields): several callers pass the result straight
+ * into `"use client"` components, and Next.js serializes the *entire* prop
+ * object into the RSC flight payload sent to the browser regardless of
+ * whether the component renders a given field. `session-frames` is a private
+ * bucket specifically because frames can show identifiable people, often
+ * minors (NIVEL#235) — the raw Storage path must never reach the client,
+ * signed or not. Redacting the value (rather than deleting the key) keeps the
+ * return type identical to the input type `T`, so this drops into any
+ * existing `InsightCard`/`InsightCardWithRelations`-typed prop or DTO without
+ * a cascade of type changes downstream.
  */
 export async function attachFrameUrls<T extends FramePaths>(
   supabase: SupabaseClient,
   rows: T[]
-): Promise<Array<Omit<T, "frame_before_path" | "frame_after_path"> & FrameUrls>> {
+): Promise<Array<T & FrameUrls>> {
   if (rows.length === 0) return [];
 
   const paths = rows.flatMap((r) => [r.frame_before_path, r.frame_after_path]);
   const urlMap = await signFramePaths(supabase, paths);
 
-  return rows.map((r) => {
-    const { frame_before_path, frame_after_path, ...rest } = r;
-    return {
-      ...rest,
-      frame_before_url: frame_before_path ? urlMap.get(frame_before_path) ?? null : null,
-      frame_after_url: frame_after_path ? urlMap.get(frame_after_path) ?? null : null,
-    };
-  });
+  return rows.map((r) => ({
+    ...r,
+    frame_before_path: null,
+    frame_after_path: null,
+    frame_before_url: r.frame_before_path ? urlMap.get(r.frame_before_path) ?? null : null,
+    frame_after_url: r.frame_after_path ? urlMap.get(r.frame_after_path) ?? null : null,
+  }));
 }

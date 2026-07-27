@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { decideInsightCard } from "@/lib/actions/insightCards";
 import type { InsightCardWithRelations } from "@/lib/types";
 
+type TinderCard = InsightCardWithRelations;
+
 interface Props {
-  cards: InsightCardWithRelations[];
+  cards: TinderCard[];
 }
 
 const SWIPE_THRESHOLD = 110;
@@ -254,7 +256,7 @@ function FrontFace({
   previewOpacity = 0,
   muted,
 }: {
-  card: InsightCardWithRelations;
+  card: TinderCard;
   dx: number;
   preview?: boolean;
   previewOpacity?: number;
@@ -319,7 +321,7 @@ function FrontFace({
   );
 }
 
-function BackFace({ card }: { card: InsightCardWithRelations }) {
+function BackFace({ card }: { card: TinderCard }) {
   const body = card.body || card.context_text || "";
   const quote = card.quote || "";
   const total = body.length + quote.length;

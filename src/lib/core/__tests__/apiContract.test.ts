@@ -37,7 +37,7 @@ import { requeueAiInsightsCore } from "../aiInsights";
 type Fixture = { rows?: Record<string, unknown>[]; count?: number };
 
 /** Запросы на запись (`delete`/`remove`), сделанные стабом — для поведенческих тестов #227. */
-type StubCalls = { deletedTables?: string[]; removedPaths?: string[] };
+type StubCalls = { deletedTables?: string[]; removedPaths?: string[]; createSignedUrlsCalls?: number };
 
 /**
  * Минимальный mock supabase: chainable query-builder, отдающий канонед-данные по
@@ -101,14 +101,17 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>, calls?: StubCalls):
           calls?.removedPaths?.push(...paths);
           return { data: null, error: null };
         },
-        createSignedUrls: async (paths: string[], _expiresIn: number) => ({
-          data: paths.map((path) => ({
-            path,
-            signedUrl: `https://stub.supabase.co/storage/v1/object/sign/session-frames/${path}?token=tok`,
+        createSignedUrls: async (paths: string[], _expiresIn: number) => {
+          if (calls) calls.createSignedUrlsCalls = (calls.createSignedUrlsCalls ?? 0) + 1;
+          return {
+            data: paths.map((path) => ({
+              path,
+              signedUrl: `https://stub.supabase.co/storage/v1/object/sign/session-frames/${path}?token=tok`,
+              error: null,
+            })),
             error: null,
-          })),
-          error: null,
-        }),
+          };
+        },
       }),
     },
   } as unknown as SupabaseClient;
@@ -238,6 +241,22 @@ describe("GET /api/v1/sessions/{id}/insight-cards — getSessionInsightCardsCore
     expect(cards[0].frame_after_url).toBeNull();
     expect(cards[0].frame_before_url).not.toBe("");
     expect(cards[0].frame_after_url).not.toBe("");
+  });
+
+  it("10 карточек с кадрами → один вызов createSignedUrls, не N (NIVEL#241 acceptance)", async () => {
+    const calls: StubCalls = {};
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      id: `c${i}`, title: `T${i}`, body: null, quote: null, tags: null,
+      front_text: null, context_text: null, source: null,
+      trainer_status: "draft", student_decision: null, position: i, created_at: "2026-01-01",
+      moment_before_seconds: null, moment_after_seconds: null,
+      frame_before_path: `se1/c${i}/before.jpg`, frame_after_path: `se1/c${i}/after.jpg`,
+    }));
+    const sb = makeSupabaseStub({ insight_cards: { rows } }, calls);
+    const cards = await getSessionInsightCardsCore(sb, "se1");
+    expect(cards).toHaveLength(10);
+    expect(cards.every((c) => c.frame_before_url && c.frame_after_url)).toBe(true);
+    expect(calls.createSignedUrlsCalls).toBe(1);
   });
 });
 
