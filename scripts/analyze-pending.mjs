@@ -3,7 +3,8 @@
  * Фоновый поллер: каждые 5 минут проверяет Supabase на наличие транскриптов
  * с analysis_status='idle', прогоняет каждый через Claude (claude -p),
  * парсит ответ (включая моменты "до"/"после") и сохраняет draft-карточки
- * через RPC replace_ai_draft_cards.
+ * через RPC v2 replace_ai_draft_cards (моменты + чистка осиротевших кадров
+ * в Storage, см. #249).
  *
  * Запуск: pm2 start scripts/analyze-pending.mjs --name nivel-analyzer
  * Логи:   pm2 logs nivel-analyzer
