@@ -5,6 +5,7 @@ import type { InsightCardWithRelations } from "@/lib/types";
 import UseAtMatchModal, {
   type UpcomingMatchOption,
 } from "@/components/insights/UseAtMatchModal";
+import { InsightFramesRow } from "@/components/insights/InsightFramesRow";
 import type { Locale } from "@/lib/i18n/dict";
 
 interface Props {
@@ -71,6 +72,7 @@ export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Pro
         const isFlipped = flipped.has(card.id);
         const front = card.student_edited_text || card.title || card.front_text;
         const back = card.body || card.context_text;
+        const hasFrames = !!(card.frame_before_url || card.frame_after_url);
         return (
           <div
             key={card.id}
@@ -96,15 +98,31 @@ export default function VaultGrid({ cards, upcomingMatches, locale = "ru" }: Pro
                   flip
                 </span>
               </div>
-              <div className="vault-card-face vault-card-back">
+              {/* overflow-y-auto: safety net for the fixed aspect-ratio card
+                  (scrollbar is globally hidden, see globals.css) — frames
+                  take real space, so a long body no longer just fits by
+                  construction like it used to. */}
+              <div className="vault-card-face vault-card-back overflow-y-auto">
                 {back ? (
-                  <p className="text-xs text-on-surface leading-snug flex-1 line-clamp-4">
+                  <p
+                    className={`text-xs text-on-surface leading-snug flex-1 ${
+                      hasFrames ? "line-clamp-2" : "line-clamp-4"
+                    }`}
+                  >
                     {back}
                   </p>
                 ) : (
                   <p className="text-xs text-on-surface-variant italic flex-1">
                     Дополнительного контекста нет.
                   </p>
+                )}
+                {hasFrames && (
+                  <InsightFramesRow
+                    beforeUrl={card.frame_before_url}
+                    afterUrl={card.frame_after_url}
+                    sizes="90px"
+                    className="mt-1 flex-shrink-0"
+                  />
                 )}
                 {card.quote && (
                   <p className="text-[10px] text-on-surface-variant italic border-l-2 border-primary/40 pl-2 mt-1 line-clamp-2">
