@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { decideInsightCard } from "@/lib/actions/insightCards";
+import { InsightFramesRow } from "./InsightFramesRow";
 import type { InsightCardWithRelations } from "@/lib/types";
 
 type TinderCard = InsightCardWithRelations;
@@ -324,6 +325,7 @@ function FrontFace({
 function BackFace({ card }: { card: TinderCard }) {
   const body = card.body || card.context_text || "";
   const quote = card.quote || "";
+  const hasFrames = !!(card.frame_before_url || card.frame_after_url);
   const total = body.length + quote.length;
 
   const bodySize =
@@ -338,7 +340,12 @@ function BackFace({ card }: { card: TinderCard }) {
     "text-sm";
 
   return (
-    <div className="h-full w-full p-5 flex flex-col">
+    // overflow-y-auto is a safety net (scrollbar is globally hidden, see
+    // globals.css): a long body + two 16:9 frames + quote can exceed the
+    // fixed .tinder-stack height, and .insight-flip-face clips at inset:0 —
+    // this keeps that clipping from ever eating content instead of just
+    // scrolling it, without changing anything for cards that already fit.
+    <div className="h-full w-full p-5 flex flex-col overflow-y-auto">
       <div className="flex items-center gap-2 text-gray-400 mb-3 flex-shrink-0">
         <span className="material-symbols-outlined text-base">flip_to_front</span>
         <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
@@ -350,6 +357,13 @@ function BackFace({ card }: { card: TinderCard }) {
           {body}
         </p>
       )}
+      {hasFrames && (
+        <InsightFramesRow
+          beforeUrl={card.frame_before_url}
+          afterUrl={card.frame_after_url}
+          className="mt-4 flex-shrink-0"
+        />
+      )}
       <div className="flex-1" />
       {quote && (
         <p
@@ -358,7 +372,7 @@ function BackFace({ card }: { card: TinderCard }) {
           «{quote}»
         </p>
       )}
-      {!body && !quote && (
+      {!body && !quote && !hasFrames && (
         <p className="text-sm text-gray-500">Описание не добавлено.</p>
       )}
     </div>
