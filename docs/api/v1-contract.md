@@ -64,6 +64,27 @@ N+1. `GET /collections/{id}/cards` — представитель `insight_cards
 - `POST /api/v1/sessions/{id}/transcript/reset` (#227) → `{ ok }` — удаляет строку `transcripts` и файл в Storage (если остался), тренер грузит аудио заново; идемпотентен
 - `DELETE /api/v1/sessions/{id}/transcript` (#227) → `{ ok }` — тот же `deleteTranscriptCore`, что и reset; после вызова `GET .../transcript` → 404; идемпотентен
 
+## Кадры инсайт-карточек (S5, #240)
+
+Часть эпика «видео-инсайты» (#235). Как и аудио — файл идёт напрямую в Supabase Storage по
+signed URL, минуя функцию Vercel. Bucket `session-frames` — приватный (создан S1, #245); подписание
+URL на чтение — отдельный путь (S6, #241, `signFramePaths`/`attachFrameUrls`), этим эндпоинтам не
+касается. Ядро — `src/lib/core/frames.ts`. Все три — только тренер-владелец карточки (`guardCard`).
+
+| Метод / путь | Вход | Успех |
+|---|---|---|
+| `POST /cards/{id}/frames/upload-url` | `{ slot: "before"\|"after", ext?: "jpg" }` | `{ uploadUrl, storagePath }` |
+| `POST /cards/{id}/frames` | `{ slot, storagePath }` | `{ ok: true }` |
+| `DELETE /cards/{id}/frames/{slot}` | — | `{ ok: true }` |
+
+- Путь объекта: `${sessionId}/${cardId}/${slot}-${randomUUID()}.jpg`. Разрешённые расширения:
+  `jpg`, `jpeg` (белый список, как у аудио); неизвестный `ext` нормализуется в `jpg`.
+- `POST .../frames` (attach) проверяет, что `storagePath` начинается с `${sessionId}/${cardId}/` —
+  иначе 400 (`storagePath does not belong to this card`), не даёт привязать чужой объект.
+- attach на непустой слот удаляет предыдущий объект из bucket, затем пишет новый path.
+- Неверный `slot` (не `before`/`after`) на любом из трёх эндпоинтов → 400.
+- `DELETE .../frames/{slot}` идемпотентен: пустой слот → `{ ok: true }`, не 404.
+
 ## ⚠️ Канон нейминга карточек (решение для реконсиляции)
 Эндпоинт карточек сессии **канонически** — `GET /api/v1/sessions/{id}/insight-cards` (как в A3 #191;
 соответствует таблице `insight_cards`).
@@ -111,6 +132,9 @@ N+1. `GET /collections/{id}/cards` — представитель `insight_cards
 | `POST /cards/{id}/reject` | — | `{ ok }` |
 | `POST /sessions/{id}/cards/reorder` | `{ orderedIds: string[] }` | `{ ok }` |
 | `POST /sessions/{id}/review-complete` | `{ completed?: boolean }` (деф. true) | `{ ok }` |
+| `POST /cards/{id}/frames/upload-url` (S5, #240) | `{ slot, ext? }` | `{ uploadUrl, storagePath }` — см. «Кадры инсайт-карточек» выше |
+| `POST /cards/{id}/frames` (S5, #240) | `{ slot, storagePath }` | `{ ok }` |
+| `DELETE /cards/{id}/frames/{slot}` (S5, #240) | — | `{ ok }`, идемпотентен |
 
 > См. «Канон нейминга карточек» выше: review-роуты карточек пока под `/cards/*`; чтение — под
 > канонический `…/insight-cards`.
@@ -142,8 +166,9 @@ N+1. `GET /collections/{id}/cards` — представитель `insight_cards
 
 ## Поддержание контракта (контракт-тесты)
 
-`src/lib/core/__tests__/apiContract.test.ts` (`npm test`) фиксирует **форму ответов** read- и
-audio-ядер (`trainerReads.ts`, `audio.ts`) — тех, чьи шейпы мапятся в DTO нативного клиента
+`src/lib/core/__tests__/apiContract.test.ts` (`npm test`) фиксирует **форму ответов** read-,
+audio- и frame-ядер (`trainerReads.ts`, `audio.ts`, `frames.ts`) — тех, чьи шейпы мапятся в DTO
+нативного клиента
 (`nivel-android/.../data/remote/Dto.kt`). Тесты прогоняют ядра на mock-supabase и сверяют **точный
 набор ключей** каждого объекта. Если поле переименовали/убрали/добавили — тест **падает**, пока не
 обновишь и ядро, и ожидание в тесте, и этот документ (и DTO в `nivel-android`).
