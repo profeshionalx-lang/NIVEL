@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approveInsightCard, rejectInsightCard } from "@/lib/actions/aiInsights";
+import { InsightFramesRow } from "./InsightFramesRow";
 import type { InsightCard } from "@/lib/types";
 
 interface Props {
@@ -65,6 +66,11 @@ export function AiInsightCard({ card, isTrainer, onEdit }: Props) {
           «{card.quote}»
         </p>
       )}
+
+      <InsightFramesRow
+        beforeUrl={card.frame_before_url}
+        afterUrl={card.frame_after_url}
+      />
 
       {isDraft && isTrainer && (
         <div className="flex gap-2 pt-1">

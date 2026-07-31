@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { deleteAiInsightCard } from "@/lib/actions/aiInsights";
 import { EditAiCardModal } from "./EditAiCardModal";
+import { InsightFramesRow } from "./InsightFramesRow";
 import type { InsightCard } from "@/lib/types";
 
 interface Props {
@@ -82,6 +83,10 @@ export function ApprovedInsightCard({ card, onSaved }: Props) {
                     {displayBody}
                   </p>
                 )}
+                <InsightFramesRow
+                  beforeUrl={card.frame_before_url}
+                  afterUrl={card.frame_after_url}
+                />
                 {card.quote && (
                   <p className="text-xs text-gray-500 italic border-l-2 border-amber-400 pl-2">
                     «{card.quote}»

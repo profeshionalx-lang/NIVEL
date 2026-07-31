@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InsightFramesRow } from "@/components/insights/InsightFramesRow";
 import type { InsightCardWithRelations } from "@/lib/types";
 
 interface Props {
@@ -51,6 +52,11 @@ export default function VaultPreview({ cards, totalCount }: Props) {
               <p className="text-xs font-bold text-on-surface leading-snug line-clamp-4">
                 {card.student_edited_text || card.title || card.front_text}
               </p>
+              <InsightFramesRow
+                beforeUrl={card.frame_before_url}
+                afterUrl={card.frame_after_url}
+                sizes="72px"
+              />
             </Link>
           ))}
         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateAiInsightCard } from "@/lib/actions/aiInsights";
+import { InsightFramesRow } from "./InsightFramesRow";
 import type { InsightCard } from "@/lib/types";
 
 const TAGS = ["техника", "тактика", "физика", "менталка"] as const;
@@ -68,6 +69,14 @@ export function EditAiCardModal({ card, onClose, onSaved }: Props) {
             <span className="material-symbols-outlined text-base">close</span>
           </button>
         </div>
+
+        {/* Read-only — frames come from the phone scrubber (S6, #241), the
+            web edit modal never uploads/replaces them, only shows what's
+            attached. */}
+        <InsightFramesRow
+          beforeUrl={card.frame_before_url}
+          afterUrl={card.frame_after_url}
+        />
 
         <div className="space-y-1">
           <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
