@@ -14,6 +14,11 @@ import {
   getTranscriptCore,
   deleteTranscriptCore,
 } from "../audio";
+import {
+  requestFrameUploadUrlCore,
+  attachFrameCore,
+  deleteFrameCore,
+} from "../frames";
 import { getStudentInviteCore } from "../students";
 import { searchSkillsCore, searchExercisesCore } from "../library";
 import {
@@ -88,10 +93,13 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>, calls?: StubCalls):
   return {
     from: (table: string) => buildFor(table),
     storage: {
-      from: () => ({
+      // `bucket` comes from the caller's `.storage.from(bucket)` — baked into
+      // the returned URL so audio (`session-audio`) and frame (`session-frames`)
+      // core functions can share this one stub without cross-contaminating URLs.
+      from: (bucket: string) => ({
         createSignedUploadUrl: async (path: string) => ({
           data: {
-            signedUrl: `https://stub.supabase.co/storage/v1/object/upload/sign/session-audio/${path}?token=tok`,
+            signedUrl: `https://stub.supabase.co/storage/v1/object/upload/sign/${bucket}/${path}?token=tok`,
             path,
             token: "tok",
           },
@@ -106,7 +114,7 @@ function makeSupabaseStub(fixtures: Record<string, Fixture>, calls?: StubCalls):
           return {
             data: paths.map((path) => ({
               path,
-              signedUrl: `https://stub.supabase.co/storage/v1/object/sign/session-frames/${path}?token=tok`,
+              signedUrl: `https://stub.supabase.co/storage/v1/object/sign/${bucket}/${path}?token=tok`,
               error: null,
             })),
             error: null,
@@ -449,6 +457,110 @@ describe("POST /api/v1/sessions/{id}/audio/upload-url — requestAudioUploadUrlC
   it("неизвестное расширение нормализуется в m4a", async () => {
     const r = await requestAudioUploadUrlCore(makeSupabaseStub({}), "sess-1", "exe");
     expect((r as { storagePath: string }).storagePath).toMatch(/\.m4a$/);
+  });
+});
+
+describe("POST /api/v1/cards/{id}/frames/upload-url — requestFrameUploadUrlCore (S5, #240)", () => {
+  it("шейп ответа стабилен для обоих слотов; storagePath = <sessionId>/<cardId>/<slot>-<uuid>.jpg", async () => {
+    for (const slot of ["before", "after"] as const) {
+      const r = await requestFrameUploadUrlCore(makeSupabaseStub({}), "se1", "c1", slot, "jpg");
+      expectKeys(r, ["uploadUrl", "storagePath"]);
+      expect((r as { storagePath: string }).storagePath).toMatch(
+        new RegExp(`^se1/c1/${slot}-.+\\.jpg$`)
+      );
+      expect((r as { uploadUrl: string }).uploadUrl).toContain("/object/upload/sign/session-frames/");
+    }
+  });
+
+  it("неверный slot → { error } (роут маппит в 400)", async () => {
+    const r = await requestFrameUploadUrlCore(makeSupabaseStub({}), "se1", "c1", "sideways", "jpg");
+    expect(r).toHaveProperty("error");
+  });
+});
+
+describe("POST /api/v1/cards/{id}/frames — attachFrameCore (S5, #240)", () => {
+  it("happy path: путь начинается с sessionId/cardId/ → ok:true, оба слота", async () => {
+    for (const slot of ["before", "after"] as const) {
+      const sb = makeSupabaseStub({
+        insight_cards: {
+          rows: [{ frame_before_path: null, frame_after_path: null }],
+        },
+      });
+      const r = await attachFrameCore(sb, "se1", "c1", slot, `se1/c1/${slot}-uuid.jpg`);
+      expect(r).toEqual({ ok: true });
+    }
+  });
+
+  it("чужой storagePath (не начинается с sessionId/cardId/) → error", async () => {
+    const sb = makeSupabaseStub({
+      insight_cards: { rows: [{ frame_before_path: null, frame_after_path: null }] },
+    });
+    const r = await attachFrameCore(sb, "se1", "c1", "before", "se2/c9/before-uuid.jpg");
+    expect(r).toHaveProperty("error");
+  });
+
+  it("неверный slot → error", async () => {
+    const sb = makeSupabaseStub({
+      insight_cards: { rows: [{ frame_before_path: null, frame_after_path: null }] },
+    });
+    const r = await attachFrameCore(sb, "se1", "c1", "sideways", "se1/c1/sideways-uuid.jpg");
+    expect(r).toHaveProperty("error");
+  });
+
+  it("замена кадра удаляет прежний объект из Storage перед записью нового", async () => {
+    const calls: StubCalls = { removedPaths: [] };
+    const sb = makeSupabaseStub(
+      {
+        insight_cards: {
+          rows: [{ frame_before_path: "se1/c1/before-old.jpg", frame_after_path: null }],
+        },
+      },
+      calls
+    );
+    const r = await attachFrameCore(sb, "se1", "c1", "before", "se1/c1/before-new.jpg");
+    expect(r).toEqual({ ok: true });
+    expect(calls.removedPaths).toEqual(["se1/c1/before-old.jpg"]);
+  });
+
+  it("пустой слот → ничего не удаляется, просто пишется новый путь", async () => {
+    const calls: StubCalls = { removedPaths: [] };
+    const sb = makeSupabaseStub(
+      { insight_cards: { rows: [{ frame_before_path: null, frame_after_path: null }] } },
+      calls
+    );
+    const r = await attachFrameCore(sb, "se1", "c1", "after", "se1/c1/after-new.jpg");
+    expect(r).toEqual({ ok: true });
+    expect(calls.removedPaths).toEqual([]);
+  });
+});
+
+describe("DELETE /api/v1/cards/{id}/frames/{slot} — deleteFrameCore (S5, #240)", () => {
+  it("непустой слот → удаляет объект из Storage и null колонку, ok:true", async () => {
+    const calls: StubCalls = { removedPaths: [] };
+    const sb = makeSupabaseStub(
+      { insight_cards: { rows: [{ frame_before_path: "se1/c1/before-uuid.jpg" }] } },
+      calls
+    );
+    const r = await deleteFrameCore(sb, "c1", "before");
+    expect(r).toEqual({ ok: true });
+    expect(calls.removedPaths).toEqual(["se1/c1/before-uuid.jpg"]);
+  });
+
+  it("идемпотентен: пустой слот → ok:true (не 404), Storage не трогается", async () => {
+    const calls: StubCalls = { removedPaths: [] };
+    const sb = makeSupabaseStub(
+      { insight_cards: { rows: [{ frame_after_path: null }] } },
+      calls
+    );
+    const r = await deleteFrameCore(sb, "c1", "after");
+    expect(r).toEqual({ ok: true });
+    expect(calls.removedPaths).toEqual([]);
+  });
+
+  it("неверный slot → error", async () => {
+    const sb = makeSupabaseStub({ insight_cards: { rows: [{ frame_before_path: null }] } });
+    const r = await deleteFrameCore(sb, "c1", "sideways");
+    expect(r).toHaveProperty("error");
   });
 });
 
