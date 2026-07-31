@@ -261,12 +261,42 @@ export async function setAiCardTrainerStatusCore(
   return { success: true };
 }
 
+/**
+ * Deletes a card row and, best-effort, its attached frame objects (S8,
+ * NIVEL#243). There's no DB→Storage cascade in Supabase, so without this the
+ * two JPEGs a trainer attached would leak forever. The row delete happens
+ * first and its result is what the caller gets back — a Storage failure is
+ * logged and swallowed, never surfaced as an error, so an unreachable bucket
+ * can't block a trainer from deleting a card.
+ */
 export async function deleteAiInsightCardCore(
   supabase: SupabaseClient,
   cardId: string
 ): Promise<{ success: true } | { error: string }> {
+  const { data: card } = await supabase
+    .from("insight_cards")
+    .select("frame_before_path, frame_after_path")
+    .eq("id", cardId)
+    .maybeSingle();
+
   const { error } = await supabase.from("insight_cards").delete().eq("id", cardId);
   if (error) return { error: error.message };
+
+  const framePaths = [card?.frame_before_path, card?.frame_after_path].filter(
+    (p): p is string => !!p
+  );
+
+  if (framePaths.length > 0) {
+    const { error: removeError } = await supabase.storage.from("session-frames").remove(framePaths);
+    if (removeError) {
+      console.error(
+        "deleteAiInsightCardCore: failed to remove frames:",
+        removeError.message,
+        framePaths
+      );
+    }
+  }
+
   return { success: true };
 }
 

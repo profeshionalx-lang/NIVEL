@@ -230,3 +230,65 @@ export async function deleteFrameCore(
 
   return { ok: true };
 }
+
+/**
+ * Recursively collects every object path under a Storage prefix. Folders in
+ * Supabase Storage are virtual: `list()` only returns one level, and frame
+ * objects live two levels deep (`${sessionId}/${cardId}/${slot}-uuid.jpg`),
+ * so a folder entry (`id === null`) needs a second `list()` call to reach the
+ * actual files. Best-effort — a failed `list()` at any level just yields no
+ * paths for that branch rather than throwing, since the only caller
+ * (`deleteSessionFramesCore`) must never block the operation it's cleaning up
+ * after on a flaky Storage list call.
+ */
+async function listAllObjectPaths(
+  supabase: SupabaseClient,
+  bucket: string,
+  prefix: string
+): Promise<string[]> {
+  const { data, error } = await supabase.storage.from(bucket).list(prefix);
+  if (error || !data) return [];
+
+  const paths: string[] = [];
+  for (const item of data) {
+    const itemPath = `${prefix}/${item.name}`;
+    if (item.id) {
+      // Real object.
+      paths.push(itemPath);
+    } else {
+      // Virtual folder (e.g. a card id) — one more level down.
+      paths.push(...(await listAllObjectPaths(supabase, bucket, itemPath)));
+    }
+  }
+  return paths;
+}
+
+/**
+ * Deletes every `session-frames` object under `${sessionId}/` — the cleanup
+ * for the "delete/reset a whole session's transcript" path (S8, NIVEL#243).
+ * There's no DB→Storage cascade in Supabase, and this is the last chance to
+ * remove a session's frames since deleting the session/transcript row does
+ * not touch Storage.
+ *
+ * Best-effort by design: Storage errors (list or remove) are logged and
+ * swallowed, never thrown. An unreachable Storage bucket must not block a
+ * trainer from deleting a transcript/session — that would turn a Storage
+ * outage into a hard block on core trainer workflows.
+ */
+export async function deleteSessionFramesCore(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<void> {
+  try {
+    const paths = await listAllObjectPaths(supabase, SESSION_FRAMES_BUCKET, sessionId);
+    if (paths.length === 0) return;
+
+    const { error } = await supabase.storage.from(SESSION_FRAMES_BUCKET).remove(paths);
+    if (error) {
+      console.error("deleteSessionFramesCore: failed to remove frames:", error.message, paths);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("deleteSessionFramesCore: unexpected error cleaning up frames:", message);
+  }
+}

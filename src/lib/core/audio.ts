@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { postprocessTranscript } from "@/lib/stt/postprocess";
+import { deleteSessionFramesCore } from "@/lib/core/frames";
 
 /**
  * Business core for the audio → transcript pipeline. Auth-agnostic: callers
@@ -159,6 +160,13 @@ export async function getTranscriptCore(
 /**
  * Removes the transcript row (and any leftover storage file) for a session.
  * Shared by both reset and delete flows — the web wrappers add revalidate+redirect.
+ *
+ * Also sweeps every `session-frames` object under `${sessionId}/` (S8,
+ * NIVEL#243): this is the only place a whole session's frames get cleaned up
+ * — there's no DB→Storage cascade, and reset/delete of the transcript is as
+ * close as this codebase gets to "delete the session". `deleteSessionFramesCore`
+ * is best-effort internally (logs, never throws), so a Storage outage cannot
+ * block a trainer from resetting/deleting a transcript.
  */
 export async function deleteTranscriptCore(
   supabase: SupabaseClient,
@@ -175,4 +183,6 @@ export async function deleteTranscriptCore(
   }
 
   await supabase.from("transcripts").delete().eq("session_id", sessionId);
+
+  await deleteSessionFramesCore(supabase, sessionId);
 }
