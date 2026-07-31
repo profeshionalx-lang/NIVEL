@@ -159,6 +159,17 @@ export async function getTranscriptCore(
 /**
  * Removes the transcript row (and any leftover storage file) for a session.
  * Shared by both reset and delete flows — the web wrappers add revalidate+redirect.
+ *
+ * Deliberately does **not** touch `session-frames` (NIVEL#243): this function
+ * only ever removes the `transcripts` row, never `insight_cards`, and both
+ * callers (`resetTranscript` to retry STT, `deleteTranscript` to clear a
+ * stuck/failed transcript) can run while cards from a previous analysis —
+ * including already-approved ones with frames attached — still exist for
+ * this session. A prefix sweep of `session-frames/${sessionId}/` here would
+ * delete objects still referenced by those cards. If a real "delete session"
+ * feature is ever built (none exists today — no route/action deletes a
+ * `sessions` row), call `removeSessionFramesCore` (`lib/core/frames.ts`)
+ * alongside it, after `insight_cards`/`transcripts` are gone.
  */
 export async function deleteTranscriptCore(
   supabase: SupabaseClient,

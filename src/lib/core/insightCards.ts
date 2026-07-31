@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { maybeCompleteSessionCore } from "@/lib/core/sessions";
 import type { SessionInsightCard } from "@/lib/core/trainerReads";
-import { attachFrameUrls } from "@/lib/core/frames";
+import { attachFrameUrls, removeFramePaths } from "@/lib/core/frames";
 import type {
   InsightCardWithRelations,
   InsightStudentDecision,
@@ -171,19 +171,35 @@ export async function setTrainerCardStatusCore(
   return { success: true, sessionId: card.session_id as string };
 }
 
+/**
+ * Deletes an insight card (manual/template-applied path — the "any other
+ * card-delete path" from NIVEL#243, separate from `deleteAiInsightCardCore`).
+ * Same Storage-cleanup contract: frame paths are collected before the row
+ * delete, objects removed after it succeeds, best-effort (see
+ * `removeFramePaths`).
+ */
 export async function deleteInsightCardCore(
   supabase: SupabaseClient,
   cardId: string
 ): Promise<Ok<{ sessionId: string | null }> | Err> {
   const { data: card } = await supabase
     .from("insight_cards")
-    .select("session_id")
+    .select("session_id, frame_before_path, frame_after_path")
     .eq("id", cardId)
     .single();
 
   const { error } = await supabase.from("insight_cards").delete().eq("id", cardId);
 
   if (error) return { success: false, error: error.message };
+
+  await removeFramePaths(
+    supabase,
+    [
+      card?.frame_before_path as string | null | undefined,
+      card?.frame_after_path as string | null | undefined,
+    ],
+    "deleteInsightCardCore"
+  );
 
   return { success: true, sessionId: (card?.session_id as string | undefined) ?? null };
 }
