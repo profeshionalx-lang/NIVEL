@@ -3,6 +3,7 @@ import { parseInsightsMarkdown, type InsightCardDraft } from "@/lib/ai/parseInsi
 import { generateInsightsRaw } from "@/lib/ai/openrouter";
 import { buildTimecodedTranscript } from "@/lib/ai/timecodedTranscript";
 import { normalizeMoments } from "@/lib/ai/moments";
+import { removeFramePaths } from "@/lib/core/frames";
 import type { ProcessedSegment } from "@/lib/stt/postprocess";
 
 /**
@@ -50,21 +51,10 @@ export async function saveAiDraftCards(
   const result = data as { inserted: number; orphan_paths?: string[] } | null;
   const orphanPaths = result?.orphan_paths ?? [];
 
-  if (orphanPaths.length > 0) {
-    const { error: removeError } = await supabase.storage
-      .from("session-frames")
-      .remove(orphanPaths);
-    if (removeError) {
-      // Deletion of orphaned frames is best-effort: failing to clean up a
-      // Storage object is a (recoverable) leak, not a reason to fail an
-      // analysis that already produced new draft cards.
-      console.error(
-        "saveAiDraftCards: failed to remove orphan frames:",
-        removeError.message,
-        orphanPaths
-      );
-    }
-  }
+  // Deletion of orphaned frames is best-effort: failing to clean up a Storage
+  // object is a (recoverable) leak, not a reason to fail an analysis that
+  // already produced new draft cards. See `removeFramePaths` (NIVEL#243).
+  await removeFramePaths(supabase, orphanPaths, "saveAiDraftCards");
 
   // Assign template_id to newly created cards.
   // Reuse existing template_id if a card with the same title+body already exists,
@@ -261,12 +251,33 @@ export async function setAiCardTrainerStatusCore(
   return { success: true };
 }
 
+/**
+ * Deletes an AI-draft/analyzed insight card. There's no DB→Storage cascade in
+ * Supabase, so `frame_before_path`/`frame_after_path` are collected *before*
+ * the row goes away and their Storage objects removed *after* the row delete
+ * succeeds (NIVEL#243) — a Storage failure is logged and swallowed, it never
+ * blocks the card from being deleted (see `removeFramePaths`).
+ */
 export async function deleteAiInsightCardCore(
   supabase: SupabaseClient,
   cardId: string
 ): Promise<{ success: true } | { error: string }> {
+  const { data: card } = await supabase
+    .from("insight_cards")
+    .select("frame_before_path, frame_after_path")
+    .eq("id", cardId)
+    .maybeSingle();
+
   const { error } = await supabase.from("insight_cards").delete().eq("id", cardId);
   if (error) return { error: error.message };
+
+  const framePaths = card as { frame_before_path: string | null; frame_after_path: string | null } | null;
+  await removeFramePaths(
+    supabase,
+    [framePaths?.frame_before_path, framePaths?.frame_after_path],
+    "deleteAiInsightCardCore"
+  );
+
   return { success: true };
 }
 

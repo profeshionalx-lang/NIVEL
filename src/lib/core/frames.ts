@@ -55,6 +55,105 @@ export async function signFramePaths(
   return map;
 }
 
+/**
+ * Batch-removes objects from `session-frames`, given a list of possibly-null
+ * paths (falsy entries and duplicates are filtered out — the common case is
+ * `[frame_before_path, frame_after_path]` where either or both can be null).
+ * Best-effort: every caller here is already committed to a Postgres delete
+ * (card row, orphaned draft batch, ...) by the time it calls this, so a
+ * Storage failure is logged and swallowed, never thrown — Storage being down
+ * must not block a trainer from deleting a card (NIVEL#243). `context` only
+ * labels the log line so call sites are distinguishable.
+ */
+export async function removeFramePaths(
+  supabase: SupabaseClient,
+  paths: Array<string | null | undefined>,
+  context: string
+): Promise<void> {
+  const uniquePaths = Array.from(new Set(paths.filter((p): p is string => !!p)));
+  if (uniquePaths.length === 0) return;
+
+  const { error } = await supabase.storage.from(SESSION_FRAMES_BUCKET).remove(uniquePaths);
+  if (error) {
+    console.error(`${context}: failed to remove frame objects:`, error.message, uniquePaths);
+  }
+}
+
+/**
+ * Recursively lists every object path under `prefix` in `bucket`. Supabase
+ * Storage's `list()` only returns the immediate children of a path — a
+ * "folder" entry comes back with `id: null` (no file metadata) — so nested
+ * prefixes (like `session-frames`'s `${sessionId}/${cardId}/${file}`) need
+ * one recursive call per folder level. `maxDepth` is a safety cap against a
+ * pathological/looping listing, not a real limit for this bucket's 2-level
+ * convention.
+ */
+async function listAllObjectPaths(
+  supabase: SupabaseClient,
+  bucket: string,
+  prefix: string,
+  maxDepth = 5
+): Promise<{ paths: string[]; error?: string }> {
+  const { data, error } = await supabase.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error) return { paths: [], error: error.message };
+  if (!data || data.length === 0) return { paths: [] };
+
+  const paths: string[] = [];
+  for (const entry of data) {
+    const fullPath = `${prefix}/${entry.name}`;
+    const isFolder = entry.id == null;
+    if (isFolder) {
+      if (maxDepth <= 0) continue;
+      const sub = await listAllObjectPaths(supabase, bucket, fullPath, maxDepth - 1);
+      if (sub.error) return { paths, error: sub.error };
+      paths.push(...sub.paths);
+    } else {
+      paths.push(fullPath);
+    }
+  }
+  return { paths };
+}
+
+/**
+ * Prefix-sweep of every `session-frames` object under `${sessionId}/`
+ * (list + batch remove). Last-resort safety net for when a whole session's
+ * worth of `insight_cards` disappears without per-row cleanup running — e.g.
+ * a future "delete session" feature, or any cascade at the DB level
+ * (`insight_cards.session_id` / `transcripts.session_id` are both
+ * `ON DELETE CASCADE` on `sessions.id`).
+ *
+ * There is currently **no call site**: this repo has no "delete session"
+ * route/action, and `deleteTranscriptCore` (the only function that removes
+ * session-scoped rows today) deliberately does not call this — it's shared
+ * by both `deleteTranscript` and `resetTranscript`, neither of which deletes
+ * `insight_cards`, so a blind prefix sweep there would delete frame objects
+ * still referenced by cards that remain (including already-approved cards
+ * visible to the student). Wire this in next to the `sessions` row delete
+ * if/when that feature is built. A sweeper that reconciles the whole bucket
+ * against the DB is explicitly out of scope for v1 (NIVEL#243) — this is
+ * narrower: one session's prefix, invoked at the moment that session's data
+ * is torn down.
+ *
+ * Best-effort like `removeFramePaths`: list/remove errors are logged, never
+ * thrown. Idempotent — an empty/already-clean prefix is a no-op.
+ */
+export async function removeSessionFramesCore(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<void> {
+  const { paths, error } = await listAllObjectPaths(supabase, SESSION_FRAMES_BUCKET, sessionId);
+  if (error) {
+    console.error("removeSessionFramesCore: failed to list objects:", error, sessionId);
+    return;
+  }
+  if (paths.length === 0) return;
+
+  const { error: removeError } = await supabase.storage.from(SESSION_FRAMES_BUCKET).remove(paths);
+  if (removeError) {
+    console.error("removeSessionFramesCore: failed to remove objects:", removeError.message, paths);
+  }
+}
+
 export interface FramePaths {
   frame_before_path: string | null;
   frame_after_path: string | null;
