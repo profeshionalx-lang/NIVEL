@@ -19,6 +19,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 
 // ─── Конфиг ─────────────────────────────────────────────────────────────────
 
@@ -545,9 +546,18 @@ async function main() {
   setInterval(tick, POLL_INTERVAL_MS);
 }
 
-// Запускаем демон только при прямом вызове (`node scripts/analyze-pending.mjs`),
-// не при импорте модуля (напр. из guard-тестов analyzePendingParity.test.ts) —
-// иначе тест уронит сеть/бесконечный setInterval внутри vitest.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Запускаем демон только при прямом вызове (`node scripts/analyze-pending.mjs`
+// или через pm2), не при импорте модуля (напр. из guard-тестов
+// analyzePendingParity.test.ts) — иначе тест уронит сеть/бесконечный setInterval
+// внутри vitest.
+//
+// ВАЖНО: под pm2 `process.argv[1]` — это обёртка pm2 (ProcessContainerFork.js),
+// а не наш скрипт, поэтому сравнение только с argv[1] молча выключало демон:
+// процесс числился online, но main() не вызывался никогда и очередь не
+// разбиралась. Реальный путь входа pm2 кладёт в `pm_exec_path`.
+// pathToFileURL — вместо ручной склейки `file://`: корректно кодирует пробелы
+// и не-ASCII в пути.
+const entryPath = process.env.pm_exec_path || process.argv[1];
+if (entryPath && import.meta.url === pathToFileURL(entryPath).href) {
   main();
 }
